@@ -3,6 +3,11 @@
 ## 🎯 Overview
 This plan breaks down the implementation into logical phases, each with 1-2 focused steps to ensure steady progress and testable milestones.
 
+## 🏗️ **Architectural Guidelines**
+- **SQL Code Location**: All raw SQL queries, database functions, and complex queries should be in `infrastructure/` (under `scripts/` or similar)
+- **Services Layer**: Should only contain business logic and database calls via SQLAlchemy models/repositories - NO raw SQL
+- **Clean Separation**: Infrastructure handles data access, Services handle business logic
+
 ---
 
 ## **Phase 1: Foundation Setup**
