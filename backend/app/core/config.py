@@ -12,15 +12,14 @@ class Settings(BaseSettings):
     port: int = 8000
     
     # Supabase Configuration
-    supabase_url: str = "https://vacjeufoyrwuwzliwple.supabase.co"
-    supabase_anon_key: str = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InZhY2pldWZveXJ3dXd6bGl3cGxlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDk4NDAyNjksImV4cCI6MjA2NTQxNjI2OX0.dJ637xyt9XDVZCIRz3P3r7r9m-6dQm6Ulj9v4v48qW8"
-    supabase_service_role_key: Optional[str] = None
+    supabase_url: str = os.getenv("SUPABASE_URL")   
+    supabase_anon_key: str = os.getenv('SUPABASE_ANON_KEY')
     
     # Database
-    database_url: Optional[str] = None
+    database_url: Optional[str] = os.getenv("DATABASE_URL")
     
     # OpenRouter API
-    openrouter_api_key: Optional[str] = None
+    openrouter_api_key: Optional[str] = os.getenv("OPENROUTER_API_KEY")
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     
     # Security & JWT
@@ -44,9 +43,3 @@ class Settings(BaseSettings):
 
 
 settings = Settings()
-
-# Construct database URL if not provided
-if not settings.database_url and settings.supabase_url:
-    # Extract project ref from Supabase URL
-    project_ref = settings.supabase_url.split('//')[1].split('.')[0]
-    settings.database_url = f"postgresql://postgres:[YOUR-PASSWORD]@db.{project_ref}.supabase.co:5432/postgres" 

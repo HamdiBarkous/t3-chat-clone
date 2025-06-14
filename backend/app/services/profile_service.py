@@ -3,7 +3,6 @@ from uuid import UUID
 
 from app.infrastructure.repositories.profile_repository import ProfileRepository
 from app.schemas.profile import ProfileCreate, ProfileUpdate, ProfileResponse
-from app.models.profile import Profile
 
 
 class ProfileService:

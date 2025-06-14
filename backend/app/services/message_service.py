@@ -73,13 +73,6 @@ class MessageService:
             return MessageResponse.model_validate(message)
         return None
 
-    async def update_message_status(self, message_id: UUID, status: MessageStatus) -> Optional[MessageResponse]:
-        """Update message status"""
-        message = await self.message_repo.update_status(message_id, status)
-        if message:
-            return MessageResponse.model_validate(message)
-        return None
-
     async def update_message_content(self, message_id: UUID, content: str, status: MessageStatus, model_used: Optional[str] = None) -> Optional[MessageResponse]:
         """Update message content and status (used for AI responses)"""
         message = await self.message_repo.update_content_and_status(message_id, content, status, model_used)

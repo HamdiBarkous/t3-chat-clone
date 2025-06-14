@@ -4,7 +4,6 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.repositories.conversation_repository import ConversationRepository
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, ConversationResponse, ConversationListItem
-from app.models.conversation import Conversation
 
 
 class ConversationService:

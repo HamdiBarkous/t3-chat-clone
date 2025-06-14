@@ -1,8 +1,7 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query, Form, Body
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, HTTPException, Query
 from sse_starlette.sse import EventSourceResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from typing import List, Optional
+from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -96,7 +95,7 @@ async def create_message(
         return message
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to create message")
 
 
@@ -126,7 +125,7 @@ async def get_conversation_messages(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to retrieve messages")
 
 
@@ -173,7 +172,7 @@ async def stream_chat_response(
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
-    except Exception as e:
+    except Exception:
         raise HTTPException(status_code=500, detail="Failed to stream chat response")
 
 

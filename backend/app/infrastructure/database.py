@@ -1,11 +1,12 @@
 from sqlalchemy.ext.asyncio import AsyncSession, create_async_engine, async_sessionmaker
 from sqlalchemy.orm import declarative_base
 from sqlalchemy import MetaData
+from typing import AsyncGenerator
 from app.core.config import settings
 
 # Create the async engine
 engine = create_async_engine(
-    settings.database_url.replace("postgresql://", "postgresql+asyncpg://") if settings.database_url else "postgresql+asyncpg://postgres:password@localhost:5432/t3chat",
+    settings.database_url.replace("postgresql://", "postgresql+asyncpg://"),
     echo=settings.debug,
     future=True,
 )
@@ -24,7 +25,7 @@ Base = declarative_base()
 metadata = MetaData()
 
 
-async def get_db_session() -> AsyncSession:
+async def get_db_session() -> AsyncGenerator[AsyncSession, None]:
     """Dependency to get database session"""
     async with AsyncSessionLocal() as session:
         try:
