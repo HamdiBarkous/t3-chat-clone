@@ -13,14 +13,10 @@ class ConversationService:
     async def get_conversation(
         self, 
         conversation_id: UUID, 
-        user_id: UUID, 
-        db: AsyncSession = None
+        user_id: UUID
     ) -> Optional[ConversationResponse]:
         """Get conversation by ID"""
-        if db:
-            conversation = await self.conversation_repo.get_by_id_with_db(conversation_id, user_id, db)
-        else:
-            conversation = await self.conversation_repo.get_by_id(conversation_id, user_id)
+        conversation = await self.conversation_repo.get_by_id(conversation_id, user_id)
         if conversation:
             return ConversationResponse.model_validate(conversation)
         return None
@@ -49,8 +45,7 @@ class ConversationService:
         self, 
         conversation_id: UUID, 
         user_id: UUID, 
-        title: str, 
-        db: AsyncSession = None
+        title: str
     ) -> Optional[ConversationResponse]:
         """Update conversation title (used by auto-title generation)"""
         update_data = ConversationUpdate(title=title)

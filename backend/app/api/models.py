@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends
-from sqlalchemy.ext.asyncio import AsyncSession
+from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
 
 from app.dependencies.auth import get_current_user
@@ -14,12 +13,16 @@ from app.services.openrouter_service import OpenRouterService
 router = APIRouter()
 
 
-async def get_openrouter_service(db: AsyncSession = Depends(get_db_session)) -> OpenRouterService:
-    """Dependency to get OpenRouter service with all dependencies"""
-    message_repo = MessageRepository(db)
-    conversation_repo = ConversationRepository(db)
-    message_service = MessageService(message_repo)
-    conversation_service = ConversationService(conversation_repo)
+async def get_message_service(db = Depends(get_db_session)) -> MessageService:
+    return MessageService(MessageRepository(db))
+
+async def get_conversation_service(db = Depends(get_db_session)) -> ConversationService:
+    return ConversationService(ConversationRepository(db))
+
+async def get_openrouter_service(
+    message_service: MessageService = Depends(get_message_service),
+    conversation_service: ConversationService = Depends(get_conversation_service)
+) -> OpenRouterService:
     return OpenRouterService(message_service, conversation_service)
 
 
@@ -29,5 +32,18 @@ async def get_available_models(
     openrouter_service: OpenRouterService = Depends(get_openrouter_service)
 ):
     """Get list of available AI models from OpenRouter"""
-    models = await openrouter_service.get_available_models()
-    return models 
+    try:
+        models = await openrouter_service.get_available_models()
+        return models
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to fetch models: {str(e)}")
+
+
+@router.get("/health")
+async def models_health_check():
+    """Health check for models service"""
+    return {
+        "status": "healthy",
+        "service": "models",
+        "message": "Models service is operational"
+    } 

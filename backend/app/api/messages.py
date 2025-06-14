@@ -1,12 +1,11 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from sse_starlette.sse import EventSourceResponse
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel
 
 from app.dependencies.auth import get_current_user
-from app.infrastructure.database import get_db_session as get_db
+from app.infrastructure.database import get_db_session
 from app.infrastructure.repositories.message_repository import MessageRepository
 from app.infrastructure.repositories.conversation_repository import ConversationRepository
 from app.services.message_service import MessageService
@@ -31,23 +30,24 @@ class EnhancedMessageCreate(BaseModel):
 router = APIRouter()
 
 
-def get_message_service(db: AsyncSession = Depends(get_db)) -> MessageService:
+async def get_message_service(db = Depends(get_db_session)) -> MessageService:
     return MessageService(MessageRepository(db))
 
-def get_conversation_service(db: AsyncSession = Depends(get_db)) -> ConversationService:
+async def get_conversation_service(db = Depends(get_db_session)) -> ConversationService:
     return ConversationService(ConversationRepository(db))
 
-def get_openrouter_service(
+async def get_openrouter_service(
     message_service: MessageService = Depends(get_message_service),
     conversation_service: ConversationService = Depends(get_conversation_service)
 ) -> OpenRouterService:
     return OpenRouterService(message_service, conversation_service)
 
-def get_streaming_service(
+async def get_streaming_service(
     message_service: MessageService = Depends(get_message_service),
-    openrouter_service: OpenRouterService = Depends(get_openrouter_service)
+    openrouter_service: OpenRouterService = Depends(get_openrouter_service),
+    conversation_service: ConversationService = Depends(get_conversation_service)
 ) -> StreamingService:
-    return StreamingService(message_service, openrouter_service)
+    return StreamingService(message_service, openrouter_service, conversation_service)
 
 
 @router.post("/{conversation_id}/messages", response_model=MessageResponse)
@@ -56,8 +56,7 @@ async def create_message(
     message_data: EnhancedMessageCreate,
     current_user: dict = Depends(get_current_user),
     message_service: MessageService = Depends(get_message_service),
-    conversation_service: ConversationService = Depends(get_conversation_service),
-    db: AsyncSession = Depends(get_db)
+    conversation_service: ConversationService = Depends(get_conversation_service)
 ):
     """Create a new message in a conversation with optional model switching"""
     user_id = UUID(current_user["id"])
@@ -66,7 +65,7 @@ async def create_message(
         # If model is specified, update conversation's current model
         if message_data.model:
             # Verify conversation exists and user has access
-            conversation = await conversation_service.get_conversation(conversation_id, user_id, db)
+            conversation = await conversation_service.get_conversation(conversation_id, user_id)
             if not conversation:
                 raise ValueError("Conversation not found")
             
@@ -89,8 +88,7 @@ async def create_message(
         
         message = await message_service.create_message(
             message_create=message_create,
-            user_id=user_id,
-            db=db
+            user_id=user_id
         )
         return message
     except ValueError as e:
@@ -106,8 +104,7 @@ async def get_conversation_messages(
     before_sequence: Optional[int] = Query(default=None),
     after_sequence: Optional[int] = Query(default=None),
     current_user: dict = Depends(get_current_user),
-    message_service: MessageService = Depends(get_message_service),
-    db: AsyncSession = Depends(get_db)
+    message_service: MessageService = Depends(get_message_service)
 ):
     """Get messages for a conversation with pagination"""
     query = MessageHistoryQuery(
@@ -120,7 +117,6 @@ async def get_conversation_messages(
         return await message_service.get_conversation_messages(
             conversation_id=conversation_id,
             user_id=UUID(current_user["id"]),
-            db=db,
             query=query
         )
     except ValueError as e:
@@ -134,14 +130,12 @@ async def get_message(
     conversation_id: UUID,
     message_id: UUID,
     current_user: dict = Depends(get_current_user),
-    message_service: MessageService = Depends(get_message_service),
-    db: AsyncSession = Depends(get_db)
+    message_service: MessageService = Depends(get_message_service)
 ):
     """Get a specific message by ID"""
     message = await message_service.get_message_by_id(
         message_id=message_id,
-        user_id=UUID(current_user["id"]),
-        db=db
+        user_id=UUID(current_user["id"])
     )
     
     if not message:
@@ -155,8 +149,7 @@ async def stream_chat_response(
     conversation_id: UUID,
     request: StreamChatRequest,
     current_user: dict = Depends(get_current_user),
-    streaming_service: StreamingService = Depends(get_streaming_service),
-    db: AsyncSession = Depends(get_db)
+    streaming_service: StreamingService = Depends(get_streaming_service)
 ):
     """Stream a chat response in real-time via Server-Sent Events with optional model switching"""
     try:
@@ -165,8 +158,7 @@ async def stream_chat_response(
                 conversation_id=str(conversation_id),
                 user_message=request.message_content,
                 user_id=current_user["id"],
-                model=request.model,
-                db=db
+                model=request.model
             ),
             media_type="text/event-stream"
         )

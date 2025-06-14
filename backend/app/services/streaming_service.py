@@ -20,18 +20,19 @@ class StreamingService:
     def __init__(
         self,
         message_service: MessageService,
-        openrouter_service: OpenRouterService
+        openrouter_service: OpenRouterService,
+        conversation_service: ConversationService
     ):
         self.message_service = message_service
         self.openrouter_service = openrouter_service
+        self.conversation_service = conversation_service
     
     async def stream_chat_response(
         self,
         conversation_id: str,
         user_message: str,
         user_id: str,
-        model: Optional[str] = None,
-        db: AsyncSession = None
+        model: Optional[str] = None
     ) -> AsyncGenerator[str, None]:
         """
         Stream a complete chat response including user message creation,
@@ -44,18 +45,14 @@ class StreamingService:
         try:
             # Handle model switching if specified
             if model:
-                # Get conversation service for model updates
-                from app.infrastructure.repositories.conversation_repository import ConversationRepository
-                conversation_service = ConversationService(ConversationRepository(db))
-                
                 # Get current conversation
-                conversation = await conversation_service.get_conversation(conversation_uuid, user_uuid, db)
+                conversation = await self.conversation_service.get_conversation(conversation_uuid, user_uuid)
                 if not conversation:
                     raise ValueError("Conversation not found")
                 
                 # Update model if different
                 if model != conversation.current_model:
-                    await conversation_service.update_conversation(
+                    await self.conversation_service.update_conversation(
                         conversation_uuid,
                         user_uuid,
                         ConversationUpdate(current_model=model)
@@ -77,8 +74,7 @@ class StreamingService:
             
             user_message_obj = await self.message_service.create_message(
                 message_create=user_msg_create,
-                user_id=user_uuid,
-                db=db
+                user_id=user_uuid
             )
             
             # Send user message event
@@ -102,7 +98,6 @@ class StreamingService:
             assistant_message_obj = await self.message_service.create_message(
                 message_create=assistant_msg_create,
                 user_id=user_uuid,
-                db=db,
                 status=MessageStatus.PENDING
             )
             assistant_message_id = assistant_message_obj.id
@@ -120,8 +115,7 @@ class StreamingService:
             # Step 3: Update message status to streaming
             await self.message_service.update_message_status(
                 message_id=assistant_message_id,
-                status=MessageStatus.STREAMING,
-                db=db
+                status=MessageStatus.STREAMING
             )
             
             # Step 4: Stream AI response
@@ -129,8 +123,7 @@ class StreamingService:
             async for chunk in self.openrouter_service.stream_chat_completion(
                 conversation_id=conversation_id,
                 user_id=user_id,
-                model=model,
-                db=db
+                model=model
             ):
                 if chunk:
                     full_content += chunk
@@ -145,8 +138,7 @@ class StreamingService:
             await self.message_service.update_message_content_and_status(
                 message_id=assistant_message_id,
                 content=full_content,
-                status=MessageStatus.COMPLETED,
-                db=db
+                status=MessageStatus.COMPLETED
             )
             
             # Send completion event
@@ -160,8 +152,7 @@ class StreamingService:
             # Step 6: Trigger title generation if this is the first exchange
             conversation_messages = await self.message_service.get_conversation_messages(
                 conversation_id=conversation_uuid,
-                user_id=user_uuid,
-                db=db
+                user_id=user_uuid
             )
             
             if len(conversation_messages.messages) == 2:  # First user + first assistant message
@@ -170,8 +161,7 @@ class StreamingService:
                     asyncio.create_task(
                         self.openrouter_service.generate_conversation_title(
                             conversation_id=conversation_id,
-                            user_id=user_id,
-                            db=db
+                            user_id=user_id
                         )
                     )
                     yield self._format_sse_event("title_generation_started", {
@@ -188,8 +178,7 @@ class StreamingService:
                 try:
                     await self.message_service.update_message_status(
                         message_id=assistant_message_id,
-                        status=MessageStatus.FAILED,
-                        db=db
+                        status=MessageStatus.FAILED
                     )
                 except Exception as update_error:
                     logger.error(f"Failed to update message status: {update_error}")

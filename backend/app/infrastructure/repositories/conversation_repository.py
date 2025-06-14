@@ -22,14 +22,7 @@ class ConversationRepository:
         )
         return result.scalar_one_or_none()
 
-    async def get_by_id_with_db(self, conversation_id: UUID, user_id: UUID, db: AsyncSession) -> Optional[Conversation]:
-        """Get conversation by ID for a specific user using provided database session"""
-        result = await db.execute(
-            select(Conversation)
-            .where(Conversation.id == conversation_id, Conversation.user_id == user_id)
-            .options(selectinload(Conversation.messages))
-        )
-        return result.scalar_one_or_none()
+
 
     async def create(self, user_id: UUID, conversation_data: ConversationCreate) -> Conversation:
         """Create a new conversation"""

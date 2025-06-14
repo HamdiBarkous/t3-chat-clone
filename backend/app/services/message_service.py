@@ -1,6 +1,5 @@
 from typing import Optional, List
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.repositories.message_repository import MessageRepository
 from app.schemas.message import MessageCreate, MessageResponse, MessageListResponse, MessageHistoryQuery
@@ -15,15 +14,13 @@ class MessageService:
         self,
         message_create: MessageCreate,
         user_id: UUID,
-        db: AsyncSession,
         status: MessageStatus = MessageStatus.COMPLETED
     ) -> MessageResponse:
         """Create a new message with specified status"""
         message = await self.message_repo.create_message(
             message_create=message_create,
             user_id=user_id,
-            status=status,
-            db=db
+            status=status
         )
         return MessageResponse.model_validate(message)
 
@@ -31,15 +28,13 @@ class MessageService:
         self, 
         conversation_id: UUID, 
         user_id: UUID, 
-        message_data: MessageCreate,
-        db: AsyncSession
+        message_data: MessageCreate
     ) -> MessageResponse:
         """Create a user message"""
         message = await self.message_repo.create_message(
             message_create=message_data,
             user_id=user_id,
-            status=MessageStatus.COMPLETED,
-            db=db
+            status=MessageStatus.COMPLETED
         )
         return MessageResponse.model_validate(message)
 
@@ -48,8 +43,7 @@ class MessageService:
         conversation_id: UUID, 
         user_id: UUID, 
         content: str, 
-        model_used: str,
-        db: AsyncSession
+        model_used: str
     ) -> MessageResponse:
         """Create an assistant message"""
         message_data = MessageCreate(
@@ -61,21 +55,13 @@ class MessageService:
         message = await self.message_repo.create_message(
             message_create=message_data,
             user_id=user_id,
-            status=MessageStatus.COMPLETED,
-            db=db
+            status=MessageStatus.COMPLETED
         )
         return MessageResponse.model_validate(message)
 
     async def get_message(self, message_id: UUID, user_id: UUID) -> Optional[MessageResponse]:
         """Get message by ID"""
-        message = await self.message_repo.get_by_id(message_id, user_id)
-        if message:
-            return MessageResponse.model_validate(message)
-        return None
-
-    async def update_message_content(self, message_id: UUID, content: str, status: MessageStatus, model_used: Optional[str] = None) -> Optional[MessageResponse]:
-        """Update message content and status (used for AI responses)"""
-        message = await self.message_repo.update_content_and_status(message_id, content, status, model_used)
+        message = await self.message_repo.get_message_by_id(message_id, user_id)
         if message:
             return MessageResponse.model_validate(message)
         return None
@@ -84,7 +70,6 @@ class MessageService:
         self, 
         conversation_id: UUID, 
         user_id: UUID,
-        db: AsyncSession,
         query: Optional[MessageHistoryQuery] = None
     ) -> MessageListResponse:
         """Get messages for a conversation with optional pagination"""
@@ -96,8 +81,7 @@ class MessageService:
             user_id=user_id,
             limit=query.limit,
             before_sequence=query.before_sequence,
-            after_sequence=query.after_sequence,
-            db=db
+            after_sequence=query.after_sequence
         )
         
         return MessageListResponse(
@@ -111,28 +95,24 @@ class MessageService:
     async def get_message_by_id(
         self,
         message_id: UUID,
-        user_id: UUID,
-        db: AsyncSession
+        user_id: UUID
     ) -> Optional[MessageResponse]:
         """Get a specific message by ID"""
         message = await self.message_repo.get_message_by_id(
             message_id=message_id,
-            user_id=user_id,
-            db=db
+            user_id=user_id
         )
         return MessageResponse.model_validate(message) if message else None
 
     async def update_message_status(
         self,
         message_id: UUID,
-        status: MessageStatus,
-        db: AsyncSession
+        status: MessageStatus
     ) -> Optional[MessageResponse]:
         """Update message status"""
         message = await self.message_repo.update_message_status(
             message_id=message_id,
-            status=status,
-            db=db
+            status=status
         )
         return MessageResponse.model_validate(message) if message else None
 
@@ -140,41 +120,35 @@ class MessageService:
         self,
         message_id: UUID,
         content: str,
-        status: MessageStatus,
-        db: AsyncSession
+        status: MessageStatus
     ) -> Optional[MessageResponse]:
         """Update message content and status"""
         message = await self.message_repo.update_message_content_and_status(
             message_id=message_id,
             content=content,
-            status=status,
-            db=db
+            status=status
         )
         return MessageResponse.model_validate(message) if message else None
 
     async def get_conversation_context_for_ai(
         self, 
         conversation_id: UUID, 
-        user_id: UUID,
-        db: AsyncSession
+        user_id: UUID
     ) -> List[MessageResponse]:
         """Get all completed messages for AI context (in chronological order)"""
         messages = await self.message_repo.get_conversation_context(
             conversation_id=conversation_id,
-            user_id=user_id,
-            db=db
+            user_id=user_id
         )
         return [MessageResponse.model_validate(msg) for msg in messages]
 
     async def get_first_completed_message(
         self, 
-        conversation_id: UUID,
-        db: AsyncSession
+        conversation_id: UUID
     ) -> Optional[MessageResponse]:
         """Get first completed message (for title generation)"""
         message = await self.message_repo.get_first_completed_message_in_conversation(
-            conversation_id=conversation_id,
-            db=db
+            conversation_id=conversation_id
         )
         if message:
             return MessageResponse.model_validate(message)

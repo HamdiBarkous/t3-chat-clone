@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from sqlalchemy.ext.asyncio import AsyncSession
+from typing import Optional
 from uuid import UUID
 
 from app.dependencies.auth import get_current_user
@@ -12,7 +12,7 @@ from app.schemas.profile import ProfileResponse, ProfileUpdate
 router = APIRouter()
 
 
-async def get_profile_service(db: AsyncSession = Depends(get_db_session)) -> ProfileService:
+async def get_profile_service(db = Depends(get_db_session)) -> ProfileService:
     """Dependency to get profile service with repository"""
     profile_repo = ProfileRepository(db)
     return ProfileService(profile_repo)
@@ -25,16 +25,16 @@ async def get_user_profile(
 ):
     """Get current user's profile"""
     user_id = UUID(current_user["id"])
-    
-    # Try to get existing profile
     profile = await profile_service.get_profile(user_id)
     
     if not profile:
-        # Create profile if it doesn't exist (from user data)
-        profile = await profile_service.ensure_profile_exists(
-            user_id, 
-            name=current_user.get("email", "").split("@")[0]  # Use email prefix as default name
+        # Create default profile if doesn't exist
+        from app.schemas.profile import ProfileCreate
+        default_profile = ProfileCreate(
+            name=current_user.get("email", "User"),
+            preferred_model="gpt-4o-mini"
         )
+        profile = await profile_service.create_profile(user_id, default_profile)
     
     return profile
 
@@ -47,17 +47,39 @@ async def update_user_profile(
 ):
     """Update current user's profile"""
     user_id = UUID(current_user["id"])
+    profile = await profile_service.update_profile(user_id, profile_data)
     
-    # Ensure profile exists first
-    await profile_service.ensure_profile_exists(user_id)
-    
-    # Update profile
-    updated_profile = await profile_service.update_profile(user_id, profile_data)
-    
-    if not updated_profile:
+    if not profile:
         raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="Failed to update profile"
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Profile not found"
         )
     
-    return updated_profile 
+    return profile
+
+
+@router.post("/profile", response_model=ProfileResponse, status_code=status.HTTP_201_CREATED)
+async def create_user_profile(
+    current_user: dict = Depends(get_current_user),
+    profile_service: ProfileService = Depends(get_profile_service)
+):
+    """Create a new user profile"""
+    user_id = UUID(current_user["id"])
+    
+    # Check if profile already exists
+    existing_profile = await profile_service.get_profile(user_id)
+    if existing_profile:
+        raise HTTPException(
+            status_code=status.HTTP_409_CONFLICT,
+            detail="Profile already exists"
+        )
+    
+    # Create default profile
+    from app.schemas.profile import ProfileCreate
+    default_profile = ProfileCreate(
+        name=current_user.get("email", "User"),
+        preferred_model="gpt-4o-mini"
+    )
+    
+    profile = await profile_service.create_profile(user_id, default_profile)
+    return profile 

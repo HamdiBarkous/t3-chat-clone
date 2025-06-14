@@ -23,7 +23,7 @@ class ModelUpdate(BaseModel):
 router = APIRouter()
 
 
-async def get_conversation_service(db: AsyncSession = Depends(get_db_session)) -> ConversationService:
+async def get_conversation_service(db = Depends(get_db_session)) -> ConversationService:
     """Dependency to get conversation service with repository"""
     conversation_repo = ConversationRepository(db)
     return ConversationService(conversation_repo)
