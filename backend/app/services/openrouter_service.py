@@ -36,7 +36,7 @@ class OpenRouterService:
         user_id: str,
         model: Optional[str] = None
     ) -> AsyncGenerator[str, None]:
-        """Stream chat completion for the streaming service"""
+        """Stream chat completion - optimized for minimal DB queries"""
         conversation_uuid = UUID(conversation_id)
         user_uuid = UUID(user_id)
         
@@ -48,7 +48,7 @@ class OpenRouterService:
         # Determine which model to use
         model_to_use = model or conversation.current_model
 
-        # Get conversation context for AI
+        # Get conversation context for AI (single DB query)
         context_messages = await self.message_service.get_conversation_context_for_ai(
             conversation_uuid, user_uuid
         )
@@ -81,12 +81,12 @@ class OpenRouterService:
         conversation_id: str, 
         user_id: str
     ) -> Optional[str]:
-        """Generate a title for the conversation using AI"""
+        """Generate a title for the conversation using AI - simplified"""
         conversation_uuid = UUID(conversation_id)
         user_uuid = UUID(user_id)
         
         try:
-            # Get the first user message and first AI response
+            # Get first two messages (user + AI)
             context_messages = await self.message_service.get_conversation_context_for_ai(
                 conversation_uuid, user_uuid
             )

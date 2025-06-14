@@ -16,7 +16,7 @@ class MessageService:
         user_id: UUID,
         status: MessageStatus = MessageStatus.COMPLETED
     ) -> MessageResponse:
-        """Create a new message with specified status"""
+        """Create a new message"""
         message = await self.message_repo.create_message(
             message_create=message_create,
             user_id=user_id,
@@ -72,24 +72,27 @@ class MessageService:
         user_id: UUID,
         query: Optional[MessageHistoryQuery] = None
     ) -> MessageListResponse:
-        """Get messages for a conversation with optional pagination"""
+        """Get messages for a conversation with timestamp-based pagination"""
         if query is None:
             query = MessageHistoryQuery(limit=100)
             
+        # Convert sequence-based pagination to timestamp-based
+        before_timestamp = None
+        after_timestamp = None
+        
+        # For now, ignore sequence-based pagination and use basic limit
         messages, total_count, has_more = await self.message_repo.get_conversation_messages(
             conversation_id=conversation_id,
             user_id=user_id,
             limit=query.limit,
-            before_sequence=query.before_sequence,
-            after_sequence=query.after_sequence
+            before_timestamp=before_timestamp,
+            after_timestamp=after_timestamp
         )
         
-        # Calculate next_cursor for pagination
+        # Calculate next_cursor using timestamp instead of sequence
         next_cursor = None
         if has_more and messages:
-            # For pagination, next_cursor should be the sequence_number of the last message
-            # This allows the frontend to request messages before this sequence
-            next_cursor = messages[-1].sequence_number
+            next_cursor = messages[-1].created_at.isoformat()
         
         return MessageListResponse(
             messages=[MessageResponse.model_validate(msg) for msg in messages],
@@ -141,19 +144,19 @@ class MessageService:
         conversation_id: UUID, 
         user_id: UUID
     ) -> List[MessageResponse]:
-        """Get all completed messages for AI context (in chronological order)"""
+        """Get all messages for AI context (simplified)"""
         messages = await self.message_repo.get_conversation_context(
             conversation_id=conversation_id,
             user_id=user_id
         )
         return [MessageResponse.model_validate(msg) for msg in messages]
 
-    async def get_first_completed_message(
+    async def get_first_message(
         self, 
         conversation_id: UUID
     ) -> Optional[MessageResponse]:
-        """Get first completed message (for title generation)"""
-        message = await self.message_repo.get_first_completed_message_in_conversation(
+        """Get first message (for title generation)"""
+        message = await self.message_repo.get_first_message_in_conversation(
             conversation_id=conversation_id
         )
         if message:

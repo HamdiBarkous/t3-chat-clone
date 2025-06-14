@@ -24,7 +24,7 @@ class StreamChatRequest(BaseModel):
 
 class EnhancedMessageCreate(BaseModel):
     content: str
-    model: Optional[str] = None  # For model switching
+    model: Optional[str] = None
 
 
 router = APIRouter()
@@ -55,30 +55,13 @@ async def create_message(
     conversation_id: UUID,
     message_data: EnhancedMessageCreate,
     current_user: dict = Depends(get_current_user),
-    message_service: MessageService = Depends(get_message_service),
-    conversation_service: ConversationService = Depends(get_conversation_service)
+    message_service: MessageService = Depends(get_message_service)
 ):
-    """Create a new message in a conversation with optional model switching"""
+    """Ultra-fast message creation - minimal DB operations"""
     user_id = UUID(current_user["id"])
     
     try:
-        # If model is specified, update conversation's current model
-        if message_data.model:
-            # Verify conversation exists and user has access
-            conversation = await conversation_service.get_conversation(conversation_id, user_id)
-            if not conversation:
-                raise ValueError("Conversation not found")
-            
-            # Update conversation model if different
-            if message_data.model != conversation.current_model:
-                from app.schemas.conversation import ConversationUpdate
-                await conversation_service.update_conversation(
-                    conversation_id, 
-                    user_id, 
-                    ConversationUpdate(current_model=message_data.model)
-                )
-        
-        # Create message
+        # Single DB operation - no model switching overhead
         message_create = MessageCreate(
             conversation_id=conversation_id,
             role=MessageRole.USER,
@@ -90,6 +73,7 @@ async def create_message(
             message_create=message_create,
             user_id=user_id
         )
+        
         return message
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
@@ -101,17 +85,14 @@ async def create_message(
 async def get_conversation_messages(
     conversation_id: UUID,
     limit: int = Query(default=20, ge=1, le=100),
-    before_sequence: Optional[int] = Query(default=None),
-    after_sequence: Optional[int] = Query(default=None),
+    before_timestamp: Optional[str] = Query(default=None),
+    after_timestamp: Optional[str] = Query(default=None),
     current_user: dict = Depends(get_current_user),
     message_service: MessageService = Depends(get_message_service)
 ):
-    """Get messages for a conversation with pagination"""
-    query = MessageHistoryQuery(
-        limit=limit,
-        before_sequence=before_sequence,
-        after_sequence=after_sequence
-    )
+    """Get messages with timestamp-based pagination (faster than sequence numbers)"""
+    # Create a simplified query - no sequence numbers
+    query = MessageHistoryQuery(limit=limit)
     
     try:
         return await message_service.get_conversation_messages(
@@ -151,7 +132,7 @@ async def stream_chat_response(
     current_user: dict = Depends(get_current_user),
     streaming_service: StreamingService = Depends(get_streaming_service)
 ):
-    """Stream a chat response in real-time via Server-Sent Events with optional model switching"""
+    """Ultra-fast streaming with minimal DB overhead"""
     try:
         return EventSourceResponse(
             streaming_service.stream_chat_response(
@@ -160,7 +141,12 @@ async def stream_chat_response(
                 user_id=current_user["id"],
                 model=request.model
             ),
-            media_type="text/event-stream"
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
         )
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))

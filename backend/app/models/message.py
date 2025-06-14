@@ -13,10 +13,9 @@ class MessageRole(str, enum.Enum):
 
 
 class MessageStatus(str, enum.Enum):
-    PENDING = "pending"
-    STREAMING = "streaming"
     COMPLETED = "completed"
     FAILED = "failed"
+    # Removed PENDING and STREAMING - unnecessary DB overhead
 
 
 class Message(Base):
@@ -24,7 +23,7 @@ class Message(Base):
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
-    sequence_number = Column(Integer, nullable=False)
+    # Removed sequence_number - use created_at for ordering (eliminates MAX queries)
     role = Column(Enum(MessageRole, name="message_role", values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     content = Column(Text, nullable=False)
     model_used = Column(Text, nullable=True)
@@ -35,4 +34,4 @@ class Message(Base):
     conversation = relationship("Conversation", back_populates="messages")
 
     def __repr__(self):
-        return f"<Message(id={self.id}, role={self.role}, sequence={self.sequence_number})>" 
+        return f"<Message(id={self.id}, role={self.role}, created_at={self.created_at})>" 

@@ -19,7 +19,6 @@ class MessageCreate(BaseModel):
 class MessageResponse(MessageBase):
     id: UUID4
     conversation_id: UUID4
-    sequence_number: int
     model_used: Optional[str] = None
     status: MessageStatus
     created_at: datetime
@@ -32,10 +31,10 @@ class MessageListResponse(BaseModel):
     messages: list[MessageResponse]
     total_count: int
     has_more: bool
-    next_cursor: Optional[int] = None  # sequence_number for pagination
+    next_cursor: Optional[str] = None  # timestamp for pagination
 
 
 class MessageHistoryQuery(BaseModel):
     limit: int = 20
-    before_sequence: Optional[int] = None  # Get messages before this sequence
-    after_sequence: Optional[int] = None   # Get messages after this sequence 
+    before_timestamp: Optional[str] = None  # Get messages before this timestamp
+    after_timestamp: Optional[str] = None   # Get messages after this timestamp 
