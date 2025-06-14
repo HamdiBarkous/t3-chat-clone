@@ -10,7 +10,7 @@ class Conversation(Base):
     __tablename__ = "conversations"
 
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    user_id = Column(UUID(as_uuid=True), ForeignKey("auth.users.id", ondelete="CASCADE"), nullable=False)
+    user_id = Column(UUID(as_uuid=True), nullable=False)  # Remove FK constraint temporarily
     title = Column(Text, nullable=True)
     current_model = Column(Text, nullable=False)
     system_prompt = Column(Text, nullable=True)

@@ -11,7 +11,9 @@ class MessageBase(BaseModel):
 
 class MessageCreate(BaseModel):
     content: str
-    model: Optional[str] = None  # Optional model override for this message
+    conversation_id: Optional[UUID4] = None  # Optional for API, set internally
+    role: Optional[MessageRole] = None  # Optional for API, set internally
+    model_used: Optional[str] = None  # Optional model override for this message
 
 
 class MessageResponse(MessageBase):

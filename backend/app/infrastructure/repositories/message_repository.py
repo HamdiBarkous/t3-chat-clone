@@ -28,8 +28,16 @@ class MessageRepository:
         if not conversation_check.scalar_one_or_none():
             raise ValueError("Conversation not found or access denied")
 
+        # Get the next sequence number for this conversation
+        max_sequence_result = await db.execute(
+            select(func.coalesce(func.max(Message.sequence_number), 0))
+            .where(Message.conversation_id == message_create.conversation_id)
+        )
+        next_sequence = max_sequence_result.scalar() + 1
+
         message = Message(
             conversation_id=message_create.conversation_id,
+            sequence_number=next_sequence,
             role=message_create.role,
             content=message_create.content,
             model_used=message_create.model_used,
@@ -189,9 +197,14 @@ class MessageRepository:
     # Legacy methods for backward compatibility (to be removed later)
     async def create(self, conversation_id: UUID, user_id: UUID, message_data: MessageCreate, role: MessageRole) -> Message:
         """Legacy create method - use create_message instead"""
-        message_data.conversation_id = conversation_id
-        message_data.role = role
-        return await self.create_message(message_data, user_id, MessageStatus.COMPLETED, self.db)
+        # Create a new MessageCreate with the required fields
+        updated_message_data = MessageCreate(
+            content=message_data.content,
+            conversation_id=conversation_id,
+            role=role,
+            model_used=message_data.model_used
+        )
+        return await self.create_message(updated_message_data, user_id, MessageStatus.COMPLETED, self.db)
 
     async def get_by_id(self, message_id: UUID, user_id: UUID) -> Optional[Message]:
         """Legacy get method - use get_message_by_id instead"""
