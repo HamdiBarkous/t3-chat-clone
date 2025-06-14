@@ -1,5 +1,6 @@
 from typing import Optional, List
 from uuid import UUID
+from sqlalchemy.ext.asyncio import AsyncSession
 
 from app.infrastructure.repositories.conversation_repository import ConversationRepository
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, ConversationResponse, ConversationListItem
@@ -10,9 +11,17 @@ class ConversationService:
     def __init__(self, conversation_repo: ConversationRepository):
         self.conversation_repo = conversation_repo
 
-    async def get_conversation(self, conversation_id: UUID, user_id: UUID) -> Optional[ConversationResponse]:
+    async def get_conversation(
+        self, 
+        conversation_id: UUID, 
+        user_id: UUID, 
+        db: AsyncSession = None
+    ) -> Optional[ConversationResponse]:
         """Get conversation by ID"""
-        conversation = await self.conversation_repo.get_by_id(conversation_id, user_id)
+        if db:
+            conversation = await self.conversation_repo.get_by_id_with_db(conversation_id, user_id, db)
+        else:
+            conversation = await self.conversation_repo.get_by_id(conversation_id, user_id)
         if conversation:
             return ConversationResponse.model_validate(conversation)
         return None
@@ -37,7 +46,13 @@ class ConversationService:
         """List conversations for a user with pagination"""
         return await self.conversation_repo.list_by_user(user_id, limit, offset)
 
-    async def update_conversation_title(self, conversation_id: UUID, user_id: UUID, title: str) -> Optional[ConversationResponse]:
+    async def update_conversation_title(
+        self, 
+        conversation_id: UUID, 
+        user_id: UUID, 
+        title: str, 
+        db: AsyncSession = None
+    ) -> Optional[ConversationResponse]:
         """Update conversation title (used by auto-title generation)"""
         update_data = ConversationUpdate(title=title)
         return await self.update_conversation(conversation_id, user_id, update_data)
