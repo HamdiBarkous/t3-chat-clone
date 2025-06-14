@@ -1,6 +1,6 @@
 import asyncio
 import json
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional, Dict, Any
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from sse_starlette.sse import ServerSentEvent
@@ -35,178 +35,137 @@ class StreamingService:
         user_id: str,
         model: Optional[str] = None
     ) -> AsyncGenerator[ServerSentEvent, None]:
-        """
-        Stream a complete chat response including user message creation,
-        AI response streaming, and status updates. Supports model switching.
-        """
-        assistant_message_id = None
+        """Stream a complete chat response with user message creation and AI response streaming"""
         conversation_uuid = UUID(conversation_id)
         user_uuid = UUID(user_id)
+        assistant_message_id = None
         
         try:
-            # Handle model switching if specified
-            if model:
-                # Get current conversation
-                conversation = await self.conversation_service.get_conversation(conversation_uuid, user_uuid)
-                if not conversation:
-                    raise ValueError("Conversation not found")
-                
-                # Update model if different
-                if model != conversation.current_model:
-                    await self.conversation_service.update_conversation(
-                        conversation_uuid,
-                        user_uuid,
-                        ConversationUpdate(current_model=model)
-                    )
-                    
-                    # Send model switch event
-                    yield ServerSentEvent(
-                        data=json.dumps({
-                            "conversation_id": conversation_id,
-                            "previous_model": conversation.current_model,
-                            "new_model": model
-                        }),
-                        event="model_switched"
-                    )
+            # Handle model switching if needed
+            async for event in self._handle_model_switch(conversation_uuid, user_uuid, conversation_id, model):
+                yield event
             
-            # Step 1: Create and send user message
-            user_msg_create = MessageCreate(
-                conversation_id=conversation_uuid,
-                role=MessageRole.USER,
-                content=user_message
-            )
+            # Create and send user message
+            user_msg = await self._create_user_message(conversation_uuid, user_uuid, user_message)
+            yield self._create_sse_event("user_message", {
+                "id": str(user_msg.id),
+                "conversation_id": conversation_id,
+                "sequence_number": user_msg.sequence_number,
+                "role": "user",
+                "content": user_message,
+                "created_at": user_msg.created_at.isoformat()
+            })
             
-            user_message_obj = await self.message_service.create_message(
-                message_create=user_msg_create,
-                user_id=user_uuid
-            )
+            # Create assistant message and start streaming
+            assistant_msg = await self._create_assistant_message(conversation_uuid, user_uuid, model)
+            assistant_message_id = assistant_msg.id
             
-            # Send user message event
-            yield ServerSentEvent(
-                data=json.dumps({
-                    "id": str(user_message_obj.id),
-                    "conversation_id": conversation_id,
-                    "sequence_number": user_message_obj.sequence_number,
-                    "role": "user",
-                    "content": user_message,
-                    "created_at": user_message_obj.created_at.isoformat()
-                }),
-                event="user_message"
-            )
+            yield self._create_sse_event("assistant_message_start", {
+                "id": str(assistant_msg.id),
+                "conversation_id": conversation_id,
+                "sequence_number": assistant_msg.sequence_number,
+                "role": "assistant",
+                "model_used": model,
+                "status": "streaming"
+            })
             
-            # Step 2: Create pending assistant message
-            assistant_msg_create = MessageCreate(
-                conversation_id=conversation_uuid,
-                role=MessageRole.ASSISTANT,
-                content="",  # Will be filled during streaming
-                model_used=model
-            )
-            
-            assistant_message_obj = await self.message_service.create_message(
-                message_create=assistant_msg_create,
-                user_id=user_uuid,
-                status=MessageStatus.PENDING
-            )
-            assistant_message_id = assistant_message_obj.id
-            
-            # Send assistant message start event
-            yield ServerSentEvent(
-                data=json.dumps({
-                    "id": str(assistant_message_obj.id),
-                    "conversation_id": conversation_id,
-                    "sequence_number": assistant_message_obj.sequence_number,
-                    "role": "assistant",
-                    "model_used": model,
-                    "status": "streaming"
-                }),
-                event="assistant_message_start"
-            )
-            
-            # Step 3: Update message status to streaming
-            await self.message_service.update_message_status(
-                message_id=assistant_message_id,
-                status=MessageStatus.STREAMING
-            )
-            
-            # Step 4: Stream AI response
+            # Stream AI response
             full_content = ""
-            async for chunk in self.openrouter_service.stream_chat_completion(
-                conversation_id=conversation_id,
-                user_id=user_id,
-                model=model
-            ):
+            async for chunk in self.openrouter_service.stream_chat_completion(conversation_id, user_id, model):
                 if chunk:
                     full_content += chunk
-                    # Send content chunk
-                    yield ServerSentEvent(
-                        data=json.dumps({
-                            "message_id": str(assistant_message_id),
-                            "chunk": chunk,
-                            "full_content": full_content
-                        }),
-                        event="content_chunk"
-                    )
+                    yield self._create_sse_event("content_chunk", {
+                        "message_id": str(assistant_message_id),
+                        "chunk": chunk,
+                        "full_content": full_content
+                    })
             
-            # Step 5: Update message with final content and mark as completed
-            await self.message_service.update_message_content_and_status(
-                message_id=assistant_message_id,
-                content=full_content,
-                status=MessageStatus.COMPLETED
-            )
+            # Complete the message
+            await self._complete_assistant_message(assistant_message_id, full_content)
+            yield self._create_sse_event("assistant_message_complete", {
+                "id": str(assistant_message_id),
+                "content": full_content,
+                "status": "completed",
+                "model_used": model
+            })
             
-            # Send completion event
-            yield ServerSentEvent(
-                data=json.dumps({
-                    "id": str(assistant_message_id),
-                    "content": full_content,
-                    "status": "completed",
-                    "model_used": model
-                }),
-                event="assistant_message_complete"
-            )
-            
-            # Step 6: Trigger title generation if this is the first exchange
-            conversation_messages = await self.message_service.get_conversation_messages(
-                conversation_id=conversation_uuid,
-                user_id=user_uuid
-            )
-            
-            if len(conversation_messages.messages) == 2:  # First user + first assistant message
-                try:
-                    # Generate title in background (don't wait for it)
-                    asyncio.create_task(
-                        self.openrouter_service.generate_conversation_title(
-                            conversation_id=conversation_id,
-                            user_id=user_id
-                        )
-                    )
-                    yield ServerSentEvent(
-                        data=json.dumps({
-                            "conversation_id": conversation_id
-                        }),
-                        event="title_generation_started"
-                    )
-                except Exception as title_error:
-                    logger.warning(f"Title generation failed: {title_error}")
+            # Trigger title generation for first exchange
+            await self._maybe_generate_title(conversation_uuid, user_uuid, conversation_id)
             
         except Exception as e:
             logger.error(f"Streaming error: {e}")
-            
-            # If we have an assistant message, mark it as failed
             if assistant_message_id:
-                try:
-                    await self.message_service.update_message_status(
-                        message_id=assistant_message_id,
-                        status=MessageStatus.FAILED
-                    )
-                except Exception as update_error:
-                    logger.error(f"Failed to update message status: {update_error}")
+                await self._fail_message(assistant_message_id)
+            yield self._create_sse_event("error", {
+                "message": "An error occurred while processing your message"
+            })
+    
+    async def _handle_model_switch(
+        self, 
+        conversation_uuid: UUID, 
+        user_uuid: UUID, 
+        conversation_id: str, 
+        model: Optional[str]
+    ) -> AsyncGenerator[ServerSentEvent, None]:
+        """Handle model switching if needed"""
+        if not model:
+            return
             
-            # Send error event
-            yield ServerSentEvent(
-                data=json.dumps({
-                    "message": "An error occurred while processing your message",
-                    "details": str(e) if logger.isEnabledFor(logging.DEBUG) else None
-                }),
-                event="error"
-            ) 
+        conversation = await self.conversation_service.get_conversation(conversation_uuid, user_uuid)
+        if not conversation:
+            raise ValueError("Conversation not found")
+        
+        if model != conversation.current_model:
+            await self.conversation_service.update_conversation(
+                conversation_uuid, user_uuid, ConversationUpdate(current_model=model)
+            )
+            yield self._create_sse_event("model_switched", {
+                "conversation_id": conversation_id,
+                "previous_model": conversation.current_model,
+                "new_model": model
+            })
+    
+    async def _create_user_message(self, conversation_uuid: UUID, user_uuid: UUID, content: str):
+        """Create a user message"""
+        return await self.message_service.create_message(
+            MessageCreate(conversation_id=conversation_uuid, role=MessageRole.USER, content=content),
+            user_uuid
+        )
+    
+    async def _create_assistant_message(self, conversation_uuid: UUID, user_uuid: UUID, model: Optional[str]):
+        """Create a pending assistant message"""
+        assistant_msg = await self.message_service.create_message(
+            MessageCreate(conversation_id=conversation_uuid, role=MessageRole.ASSISTANT, content="", model_used=model),
+            user_uuid,
+            status=MessageStatus.PENDING
+        )
+        await self.message_service.update_message_status(assistant_msg.id, MessageStatus.STREAMING)
+        return assistant_msg
+    
+    async def _complete_assistant_message(self, message_id: UUID, content: str):
+        """Complete an assistant message with final content"""
+        await self.message_service.update_message_content_and_status(
+            message_id, content, MessageStatus.COMPLETED
+        )
+    
+    async def _fail_message(self, message_id: UUID):
+        """Mark a message as failed"""
+        try:
+            await self.message_service.update_message_status(message_id, MessageStatus.FAILED)
+        except Exception as e:
+            logger.error(f"Failed to update message status: {e}")
+    
+    async def _maybe_generate_title(self, conversation_uuid: UUID, user_uuid: UUID, conversation_id: str):
+        """Generate title if this is the first exchange"""
+        messages = await self.message_service.get_conversation_messages(conversation_uuid, user_uuid)
+        if len(messages.messages) == 2:  # First user + first assistant message
+            try:
+                asyncio.create_task(
+                    self.openrouter_service.generate_conversation_title(conversation_id, str(user_uuid))
+                )
+            except Exception as e:
+                logger.warning(f"Title generation failed: {e}")
+    
+    def _create_sse_event(self, event_type: str, data: Dict[str, Any]) -> ServerSentEvent:
+        """Create a properly formatted SSE event"""
+        return ServerSentEvent(data=json.dumps(data), event=event_type) 

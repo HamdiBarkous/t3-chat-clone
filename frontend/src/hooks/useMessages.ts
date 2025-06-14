@@ -66,9 +66,6 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
   const [error, setError] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
-  
-  // Keep track of streaming content for real-time updates
-  const streamingContentRef = useRef<string>('')
 
   const loadMessages = useCallback(async () => {
     if (!conversationId) {
@@ -84,9 +81,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         `/conversations/${conversationId}/messages?limit=100`
       )
       
-      // Convert MessageResponse to Message format
       const messages: Message[] = response.messages.map(convertToMessage)
-      
       setMessages(messages)
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : 'Failed to load messages'
@@ -97,66 +92,51 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     }
   }, [conversationId])
 
+  const createUserMessage = (data: UserMessageData): Message => ({
+    id: data.id,
+    conversation_id: conversationId!,
+    sequence_number: data.sequence_number,
+    sequence: data.sequence_number,
+    role: 'user',
+    content: data.content,
+    status: MessageStatus.COMPLETED,
+    created_at: data.created_at,
+    model_used: undefined
+  })
+
+  const createAssistantMessage = (data: AssistantMessageStartData): Message => ({
+    id: data.id,
+    conversation_id: conversationId!,
+    sequence_number: data.sequence_number,
+    sequence: data.sequence_number,
+    role: 'assistant',
+    content: '',
+    status: MessageStatus.STREAMING,
+    created_at: new Date().toISOString(),
+    model_used: data.model_used
+  })
+
   const sendMessage = useCallback(async (content: string, model?: string) => {
-    if (!conversationId || isStreaming) {
-      return
-    }
+    if (!conversationId || isStreaming) return
 
     try {
       setError(null)
       setIsStreaming(true)
-      streamingContentRef.current = ''
 
       const streamCallbacks: StreamingCallbacks = {
         onUserMessage: (data: unknown) => {
-          console.log('onUserMessage callback triggered with data:', data)
-          const userMessageData = data as UserMessageData
-          // Add user message to the list
-          const userMessage: Message = {
-            id: userMessageData.id,
-            conversation_id: conversationId,
-            sequence_number: userMessageData.sequence_number,
-            sequence: userMessageData.sequence_number, // Add sequence alias
-            role: 'user',
-            content: userMessageData.content,
-            status: MessageStatus.COMPLETED,
-            created_at: userMessageData.created_at,
-            model_used: undefined
-          }
-          
-          console.log('Adding user message to state:', userMessage)
-          setMessages(prev => {
-            console.log('Previous messages:', prev.length)
-            const newMessages = [...prev, userMessage]
-            console.log('New messages:', newMessages.length)
-            return newMessages
-          })
+          const userMessage = createUserMessage(data as UserMessageData)
+          setMessages(prev => [...prev, userMessage])
         },
 
         onAssistantMessageStart: (data: unknown) => {
-          const assistantStartData = data as AssistantMessageStartData
-          // Add pending assistant message
-          const assistantMessage: Message = {
-            id: assistantStartData.id,
-            conversation_id: conversationId,
-            sequence_number: assistantStartData.sequence_number,
-            sequence: assistantStartData.sequence_number, // Add sequence alias
-            role: 'assistant',
-            content: '',
-            status: MessageStatus.STREAMING,
-            created_at: new Date().toISOString(),
-            model_used: assistantStartData.model_used
-          }
-          
-          setStreamingMessageId(assistantStartData.id)
+          const assistantMessage = createAssistantMessage(data as AssistantMessageStartData)
+          setStreamingMessageId(assistantMessage.id)
           setMessages(prev => [...prev, assistantMessage])
         },
 
         onContentChunk: (data: unknown) => {
           const chunkData = data as ContentChunkData
-          // Update streaming message content
-          streamingContentRef.current = chunkData.full_content
-          
           setMessages(prev => 
             prev.map(msg => 
               msg.id === chunkData.message_id 
@@ -168,19 +148,13 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
 
         onAssistantMessageComplete: (data: unknown) => {
           const completeData = data as AssistantMessageCompleteData
-          // Mark message as completed
           setMessages(prev => 
             prev.map(msg => 
               msg.id === completeData.id 
-                ? { 
-                    ...msg, 
-                    content: completeData.content,
-                    status: MessageStatus.COMPLETED
-                  }
+                ? { ...msg, content: completeData.content, status: MessageStatus.COMPLETED }
                 : msg
             )
           )
-          
           setIsStreaming(false)
           setStreamingMessageId(null)
         },
@@ -189,7 +163,6 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           const errorData = data as ErrorData
           setError(errorData.message || 'An error occurred while sending the message')
           
-          // Mark streaming message as failed if it exists
           if (streamingMessageId) {
             setMessages(prev => 
               prev.map(msg => 
@@ -216,13 +189,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         }
       }
 
-      // Start the streaming request
-      await streamingService.startStream(
-        conversationId,
-        content,
-        model,
-        streamCallbacks
-      )
+      await streamingService.startStream(conversationId, content, model, streamCallbacks)
 
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : 'Failed to send message'
