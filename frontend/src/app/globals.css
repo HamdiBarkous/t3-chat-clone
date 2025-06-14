@@ -1,0 +1,101 @@
+@import "tailwindcss";
+
+:root {
+  /* Base colors from the chat interface */
+  --background: #1a1a1a;
+  --foreground: #ffffff;
+  --card: #1e1e1e;
+  --card-foreground: #ffffff;
+  --popover: #1e1e1e;
+  --popover-foreground: #ffffff;
+  --primary: #8b5cf6;
+  --primary-foreground: #ffffff;
+  --secondary: #2d2d2d;
+  --secondary-foreground: #d4d4d8;
+  --muted: #2d2d2d;
+  --muted-foreground: #71717a;
+  --accent: #7c3aed;
+  --accent-foreground: #ffffff;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #3f3f46;
+  --input: #2d2d2d;
+  --ring: #8b5cf6;
+  --radius: 0.5rem;
+  
+  /* Custom chat interface colors */
+  --sidebar-bg: #171717;
+  --sidebar-item-hover: #262626;
+  --chat-bg: #1a1a1a;
+  --message-bg: #2d2d2d;
+  --purple-accent: #8b5cf6;
+  --purple-light: #a78bfa;
+  --purple-dark: #7c3aed;
+  --text-primary: #ffffff;
+  --text-secondary: #d4d4d8;
+  --text-muted: #71717a;
+}
+
+@theme inline {
+  /* Base theme colors */
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  
+  /* Custom chat colors */
+  --color-sidebar-bg: var(--sidebar-bg);
+  --color-sidebar-item-hover: var(--sidebar-item-hover);
+  --color-chat-bg: var(--chat-bg);
+  --color-message-bg: var(--message-bg);
+  --color-purple-accent: var(--purple-accent);
+  --color-purple-light: var(--purple-light);
+  --color-purple-dark: var(--purple-dark);
+  --color-text-primary: var(--text-primary);
+  --color-text-secondary: var(--text-secondary);
+  --color-text-muted: var(--text-muted);
+  
+  /* Font configuration */
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+  
+  /* Border radius */
+  --radius: var(--radius);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* Utility classes for easier usage */
+.sidebar-bg { background-color: var(--sidebar-bg); }
+.chat-bg { background-color: var(--chat-bg); }
+.message-bg { background-color: var(--message-bg); }
+.purple-accent { background-color: var(--purple-accent); }
+.text-primary { color: var(--text-primary); }
+.text-secondary { color: var(--text-secondary); }
+.text-muted { color: var(--text-muted); }
