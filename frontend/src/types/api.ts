@@ -151,4 +151,12 @@ export interface StreamingMessageChunk {
   content: string;
   is_complete: boolean;
   message_id?: UUID;
-} 
+}
+
+// Type aliases for component compatibility
+export interface Message extends Omit<MessageResponse, 'role'> {
+  sequence: number; // alias for sequence_number
+  role: 'user' | 'assistant'; // simplified role type
+}
+
+export type Conversation = ConversationResponse; 

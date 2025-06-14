@@ -7,10 +7,11 @@
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ChatLayout } from '@/components/chat/ChatLayout';
 import { EmptyState } from '@/components/chat/EmptyState';
+import { ChatInterface } from '@/components/chat/ChatInterface';
 import { NewConversationModal } from '@/components/conversation/NewConversationModal';
 import { useState } from 'react';
 
-function ChatInterface() {
+function HomePage() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>(undefined);
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
 
@@ -37,15 +38,17 @@ function ChatInterface() {
       onConversationSelect={handleConversationSelect}
     >
       {selectedConversationId ? (
-        <div className="flex-1 p-8">
-          <div className="text-center text-white">
-            Selected conversation: {selectedConversationId}
-            <br />
-            <span className="text-zinc-400 text-sm">
-              Chat interface will be implemented in Phase 3
-            </span>
-          </div>
-        </div>
+        <ChatInterface 
+          conversationId={selectedConversationId}
+          conversation={selectedConversationId === '1' ? {
+            id: '1',
+            user_id: 'mock-user-id',
+            title: 'Simple Neural Network in Python',
+            current_model: 'gpt-4o',
+            created_at: '2024-06-14T10:30:00Z',
+            updated_at: '2024-06-14T11:45:00Z',
+          } : undefined}
+        />
       ) : (
         <EmptyState onNewChat={handleNewChat} />
       )}
@@ -62,7 +65,7 @@ function ChatInterface() {
 export default function Home() {
   return (
     <AuthGuard>
-      <ChatInterface />
+      <HomePage />
     </AuthGuard>
   );
 }

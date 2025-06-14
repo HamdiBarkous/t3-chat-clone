@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import type { ConversationListItem } from '@/types/api';
 
@@ -43,6 +43,13 @@ export function ConversationList({
   onConversationSelect 
 }: ConversationListProps) {
   const [conversations] = useState<ConversationListItem[]>(mockConversations);
+
+  // Auto-select first conversation for demo purposes
+  useEffect(() => {
+    if (!selectedConversationId && conversations.length > 0 && onConversationSelect) {
+      onConversationSelect(conversations[0].id);
+    }
+  }, [selectedConversationId, conversations, onConversationSelect]);
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
