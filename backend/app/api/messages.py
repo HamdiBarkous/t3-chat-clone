@@ -1,9 +1,10 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Form, Body
 from fastapi.responses import StreamingResponse
 from sse_starlette.sse import EventSourceResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List, Optional
 from uuid import UUID
+from pydantic import BaseModel
 
 from app.dependencies.auth import get_current_user
 from app.infrastructure.database import get_db_session as get_db
@@ -15,6 +16,17 @@ from app.services.openrouter_service import OpenRouterService
 from app.services.streaming_service import StreamingService
 from app.schemas.message import MessageCreate, MessageResponse, MessageListResponse, MessageHistoryQuery
 from app.models.message import MessageRole
+
+
+# Request models for enhanced endpoints
+class StreamChatRequest(BaseModel):
+    message_content: str
+    model: Optional[str] = None
+
+
+class EnhancedMessageCreate(BaseModel):
+    content: str
+    model: Optional[str] = None  # For model switching
 
 
 router = APIRouter()
@@ -42,19 +54,43 @@ def get_streaming_service(
 @router.post("/{conversation_id}/messages", response_model=MessageResponse)
 async def create_message(
     conversation_id: UUID,
-    message_create: MessageCreate,
+    message_data: EnhancedMessageCreate,
     current_user: dict = Depends(get_current_user),
     message_service: MessageService = Depends(get_message_service),
+    conversation_service: ConversationService = Depends(get_conversation_service),
     db: AsyncSession = Depends(get_db)
 ):
-    """Create a new message in a conversation"""
-    # Set the conversation ID from the URL
-    message_create.conversation_id = conversation_id
+    """Create a new message in a conversation with optional model switching"""
+    user_id = UUID(current_user["id"])
     
     try:
+        # If model is specified, update conversation's current model
+        if message_data.model:
+            # Verify conversation exists and user has access
+            conversation = await conversation_service.get_conversation(conversation_id, user_id, db)
+            if not conversation:
+                raise ValueError("Conversation not found")
+            
+            # Update conversation model if different
+            if message_data.model != conversation.current_model:
+                from app.schemas.conversation import ConversationUpdate
+                await conversation_service.update_conversation(
+                    conversation_id, 
+                    user_id, 
+                    ConversationUpdate(current_model=message_data.model)
+                )
+        
+        # Create message
+        message_create = MessageCreate(
+            conversation_id=conversation_id,
+            role=MessageRole.USER,
+            content=message_data.content,
+            model_used=message_data.model
+        )
+        
         message = await message_service.create_message(
             message_create=message_create,
-            user_id=UUID(current_user["id"]),
+            user_id=user_id,
             db=db
         )
         return message
@@ -118,20 +154,19 @@ async def get_message(
 @router.post("/{conversation_id}/messages/stream")
 async def stream_chat_response(
     conversation_id: UUID,
-    message_content: str,
-    model: Optional[str] = None,
+    request: StreamChatRequest,
     current_user: dict = Depends(get_current_user),
     streaming_service: StreamingService = Depends(get_streaming_service),
     db: AsyncSession = Depends(get_db)
 ):
-    """Stream a chat response in real-time via Server-Sent Events"""
+    """Stream a chat response in real-time via Server-Sent Events with optional model switching"""
     try:
         return EventSourceResponse(
             streaming_service.stream_chat_response(
                 conversation_id=str(conversation_id),
-                user_message=message_content,
+                user_message=request.message_content,
                 user_id=current_user["id"],
-                model=model,
+                model=request.model,
                 db=db
             ),
             media_type="text/event-stream"
@@ -139,4 +174,7 @@ async def stream_chat_response(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail="Failed to stream chat response") 
+        raise HTTPException(status_code=500, detail="Failed to stream chat response")
+
+
+ 

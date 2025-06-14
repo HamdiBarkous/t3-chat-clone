@@ -1,13 +1,23 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi import APIRouter, Depends, HTTPException, status, Query, Body
 from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from uuid import UUID
+from pydantic import BaseModel
 
 from app.dependencies.auth import get_current_user
 from app.infrastructure.database import get_db_session
 from app.infrastructure.repositories.conversation_repository import ConversationRepository
 from app.services.conversation_service import ConversationService
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, ConversationResponse, ConversationListItem
+
+
+# Request models for dedicated endpoints
+class SystemPromptUpdate(BaseModel):
+    system_prompt: str
+
+
+class ModelUpdate(BaseModel):
+    model: str
 
 
 router = APIRouter()
@@ -70,7 +80,7 @@ async def update_conversation(
     current_user: dict = Depends(get_current_user),
     conversation_service: ConversationService = Depends(get_conversation_service)
 ):
-    """Update a conversation (system prompt, model, etc.)"""
+    """Update a conversation (system prompt, model, title, etc.)"""
     user_id = UUID(current_user["id"])
     conversation = await conversation_service.update_conversation(conversation_id, user_id, conversation_data)
     
@@ -81,6 +91,71 @@ async def update_conversation(
         )
     
     return conversation
+
+
+@router.patch("/{conversation_id}/system-prompt", response_model=ConversationResponse)
+async def update_system_prompt(
+    conversation_id: UUID,
+    prompt_data: SystemPromptUpdate,
+    current_user: dict = Depends(get_current_user),
+    conversation_service: ConversationService = Depends(get_conversation_service)
+):
+    """Update the system prompt for a conversation"""
+    user_id = UUID(current_user["id"])
+    
+    conversation_update = ConversationUpdate(system_prompt=prompt_data.system_prompt)
+    conversation = await conversation_service.update_conversation(conversation_id, user_id, conversation_update)
+    
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found"
+        )
+    
+    return conversation
+
+
+@router.patch("/{conversation_id}/model", response_model=ConversationResponse)
+async def update_conversation_model(
+    conversation_id: UUID,
+    model_data: ModelUpdate,
+    current_user: dict = Depends(get_current_user),
+    conversation_service: ConversationService = Depends(get_conversation_service)
+):
+    """Update the current model for a conversation"""
+    user_id = UUID(current_user["id"])
+    
+    conversation_update = ConversationUpdate(current_model=model_data.model)
+    conversation = await conversation_service.update_conversation(conversation_id, user_id, conversation_update)
+    
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found"
+        )
+    
+    return conversation
+
+
+@router.delete("/{conversation_id}/system-prompt")
+async def clear_system_prompt(
+    conversation_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    conversation_service: ConversationService = Depends(get_conversation_service)
+):
+    """Clear the system prompt for a conversation"""
+    user_id = UUID(current_user["id"])
+    
+    conversation_update = ConversationUpdate(system_prompt=None)
+    conversation = await conversation_service.update_conversation(conversation_id, user_id, conversation_update)
+    
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found"
+        )
+    
+    return {"message": "System prompt cleared successfully"}
 
 
 @router.delete("/{conversation_id}", status_code=status.HTTP_204_NO_CONTENT)

@@ -5,7 +5,9 @@ from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
 from app.services.message_service import MessageService
 from app.services.openrouter_service import OpenRouterService
+from app.services.conversation_service import ConversationService
 from app.schemas.message import MessageCreate
+from app.schemas.conversation import ConversationUpdate
 from app.models.message import MessageRole, MessageStatus
 import logging
 
@@ -33,13 +35,39 @@ class StreamingService:
     ) -> AsyncGenerator[str, None]:
         """
         Stream a complete chat response including user message creation,
-        AI response streaming, and status updates
+        AI response streaming, and status updates. Supports model switching.
         """
         assistant_message_id = None
         conversation_uuid = UUID(conversation_id)
         user_uuid = UUID(user_id)
         
         try:
+            # Handle model switching if specified
+            if model:
+                # Get conversation service for model updates
+                from app.infrastructure.repositories.conversation_repository import ConversationRepository
+                conversation_service = ConversationService(ConversationRepository(db))
+                
+                # Get current conversation
+                conversation = await conversation_service.get_conversation(conversation_uuid, user_uuid, db)
+                if not conversation:
+                    raise ValueError("Conversation not found")
+                
+                # Update model if different
+                if model != conversation.current_model:
+                    await conversation_service.update_conversation(
+                        conversation_uuid,
+                        user_uuid,
+                        ConversationUpdate(current_model=model)
+                    )
+                    
+                    # Send model switch event
+                    yield self._format_sse_event("model_switched", {
+                        "conversation_id": conversation_id,
+                        "previous_model": conversation.current_model,
+                        "new_model": model
+                    })
+            
             # Step 1: Create and send user message
             user_msg_create = MessageCreate(
                 conversation_id=conversation_uuid,
@@ -125,7 +153,8 @@ class StreamingService:
             yield self._format_sse_event("assistant_message_complete", {
                 "id": str(assistant_message_id),
                 "content": full_content,
-                "status": "completed"
+                "status": "completed",
+                "model_used": model
             })
             
             # Step 6: Trigger title generation if this is the first exchange

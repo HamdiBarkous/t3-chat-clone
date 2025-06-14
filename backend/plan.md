@@ -66,28 +66,28 @@ This plan breaks down the implementation into logical phases, each with 1-2 focu
 
 ---
 
-## **Phase 5: Advanced Features** 🚧 **NEXT**
+## **Phase 5: Advanced Features** ✅ **COMPLETED**
 
-### **Step 5.1: System Prompt Management**
+### **Step 5.1: System Prompt Management** ✅
 - Implement system prompt functionality in conversations
 - Add system prompt update endpoint (PATCH /conversations/{id})
 - Ensure context replacement works correctly with OpenRouter
 
-### **Step 5.2: Model Switching**
+### **Step 5.2: Model Switching** ✅
 - Implement model switching mid-conversation
 - Add model parameter to message creation
 - Update conversation's current_model tracking
 
 ---
 
-## **Phase 6: Auto-Title Generation**
+## **Phase 6: Auto-Title Generation** 🚧 **NEXT**
 
-### **Step 6.1: Title Generation Service**
+### **Step 6.1: Title Generation Service** ✅
 - Implement title generation using gpt-4o-mini
 - Create background task for title generation after first AI response
 - Add title update functionality
 
-### **Step 6.2: Enhanced Conversation Listing**
+### **Step 6.2: Enhanced Conversation Listing** ✅
 - Update conversation listing to include titles and previews
 - Add last message timestamp and message count
 - Optimize queries for conversation overview
