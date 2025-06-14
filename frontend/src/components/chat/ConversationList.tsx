@@ -5,33 +5,9 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { clsx } from 'clsx';
-import type { ConversationListItem } from '@/types/api';
-
-// Mock data for now - will be replaced with API calls
-const mockConversations: ConversationListItem[] = [
-  {
-    id: '1',
-    title: 'Simple Neural Network in Python',
-    current_model: 'gpt-4o',
-    created_at: '2024-06-14T10:30:00Z',
-    updated_at: '2024-06-14T11:45:00Z',
-    message_count: 12,
-    last_message_preview: 'Here\'s a simple implementation of a neural network...',
-    last_message_at: '2024-06-14T11:45:00Z',
-  },
-  {
-    id: '2', 
-    title: 'Greeting Title',
-    current_model: 'gpt-4o-mini',
-    created_at: '2024-06-14T09:15:00Z',
-    updated_at: '2024-06-14T09:30:00Z',
-    message_count: 3,
-    last_message_preview: 'Hello! How can I help you today?',
-    last_message_at: '2024-06-14T09:30:00Z',
-  },
-];
+import { useConversations } from '@/hooks/useConversations';
 
 interface ConversationListProps {
   selectedConversationId?: string;
@@ -42,7 +18,7 @@ export function ConversationList({
   selectedConversationId,
   onConversationSelect 
 }: ConversationListProps) {
-  const [conversations] = useState<ConversationListItem[]>(mockConversations);
+  const { conversations, loading, error, deleteConversation } = useConversations();
 
   // Auto-select first conversation for demo purposes
   useEffect(() => {
@@ -61,6 +37,36 @@ export function ConversationList({
     if (diffInHours < 168) return `${Math.floor(diffInHours / 24)}d ago`;
     return date.toLocaleDateString();
   };
+
+  const handleDeleteConversation = async (conversationId: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    
+    if (confirm('Are you sure you want to delete this conversation?')) {
+      const success = await deleteConversation(conversationId);
+      if (success && selectedConversationId === conversationId) {
+        // If we deleted the selected conversation, clear selection
+        onConversationSelect?.('');
+      }
+    }
+  };
+
+  if (loading) {
+    return (
+      <div className="p-4 text-center">
+        <div className="text-zinc-400 text-sm">Loading conversations...</div>
+      </div>
+    );
+  }
+
+  if (error) {
+    return (
+      <div className="p-4 text-center">
+        <div className="text-red-400 text-sm">
+          Error loading conversations: {error}
+        </div>
+      </div>
+    );
+  }
 
   if (conversations.length === 0) {
     return (
@@ -88,15 +94,15 @@ export function ConversationList({
         
         <div className="space-y-1">
           {conversations.map((conversation) => (
-            <button
+            <div
               key={conversation.id}
-              onClick={() => onConversationSelect?.(conversation.id)}
               className={clsx(
-                'w-full text-left p-3 rounded-lg transition-colors group',
+                'relative p-3 rounded-lg transition-colors group cursor-pointer',
                 selectedConversationId === conversation.id
                   ? 'bg-[#2d2d2d] border border-[#8b5cf6]/30'
                   : 'hover:bg-[#262626] border border-transparent'
               )}
+              onClick={() => onConversationSelect?.(conversation.id)}
             >
               <div className="flex items-start justify-between mb-1">
                 <h3 className={clsx(
@@ -128,7 +134,7 @@ export function ConversationList({
                 </div>
               </div>
 
-              {/* Model indicator */}
+              {/* Model indicator and delete button */}
               <div className="mt-2 flex items-center justify-between">
                 <span className="text-xs text-zinc-500 bg-[#3f3f46] px-2 py-1 rounded">
                   {conversation.current_model}
@@ -136,12 +142,8 @@ export function ConversationList({
                 
                 {selectedConversationId === conversation.id && (
                   <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      // TODO: Implement delete functionality
-                      console.log('Delete conversation:', conversation.id);
-                    }}
-                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-400 transition-all"
+                    onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                    className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-400 transition-all z-10"
                     title="Delete conversation"
                   >
                     <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -150,7 +152,7 @@ export function ConversationList({
                   </button>
                 )}
               </div>
-            </button>
+            </div>
           ))}
         </div>
       </div>

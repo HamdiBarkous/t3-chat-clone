@@ -25,10 +25,10 @@ class Message(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     conversation_id = Column(UUID(as_uuid=True), ForeignKey("conversations.id", ondelete="CASCADE"), nullable=False)
     sequence_number = Column(Integer, nullable=False)
-    role = Column(Enum(MessageRole), nullable=False)
+    role = Column(Enum(MessageRole, name="message_role", values_callable=lambda obj: [e.value for e in obj]), nullable=False)
     content = Column(Text, nullable=False)
     model_used = Column(Text, nullable=True)
-    status = Column(Enum(MessageStatus), default=MessageStatus.COMPLETED)
+    status = Column(Enum(MessageStatus, name="message_status", values_callable=lambda obj: [e.value for e in obj]), default=MessageStatus.COMPLETED)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
 
     # Relationships

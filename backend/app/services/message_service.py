@@ -84,12 +84,18 @@ class MessageService:
             after_sequence=query.after_sequence
         )
         
+        # Calculate next_cursor for pagination
+        next_cursor = None
+        if has_more and messages:
+            # For pagination, next_cursor should be the sequence_number of the last message
+            # This allows the frontend to request messages before this sequence
+            next_cursor = messages[-1].sequence_number
+        
         return MessageListResponse(
             messages=[MessageResponse.model_validate(msg) for msg in messages],
             total_count=total_count,
             has_more=has_more,
-            before_sequence=query.before_sequence,
-            after_sequence=query.after_sequence
+            next_cursor=next_cursor
         )
 
     async def get_message_by_id(

@@ -16,6 +16,11 @@ class ProfileService:
             return ProfileResponse.model_validate(profile)
         return None
 
+    async def create_profile(self, user_id: UUID, profile_data: ProfileCreate) -> ProfileResponse:
+        """Create a new user profile"""
+        profile = await self.profile_repo.create(user_id, profile_data)
+        return ProfileResponse.model_validate(profile)
+
     async def create_or_update_profile(self, user_id: UUID, profile_data: ProfileCreate) -> ProfileResponse:
         """Create or update user profile"""
         profile = await self.profile_repo.create_or_update(user_id, profile_data)

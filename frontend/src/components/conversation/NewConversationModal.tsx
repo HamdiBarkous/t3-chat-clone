@@ -25,14 +25,14 @@ interface ConversationFormData {
 
 // Mock available models - will be replaced with API call
 const availableModels = [
-  { id: 'gpt-4o', name: 'GPT-4o', description: 'Most capable model' },
-  { id: 'gpt-4o-mini', name: 'GPT-4o Mini', description: 'Fast and cost-effective' },
-  { id: 'claude-3.5-sonnet', name: 'Claude 3.5 Sonnet', description: 'Excellent reasoning' },
-  { id: 'claude-3-haiku', name: 'Claude 3 Haiku', description: 'Fast responses' },
+  { id: 'openai/gpt-4o', name: 'GPT-4o', description: 'Most capable model' },
+  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', description: 'Fast and cost-effective' },
+  { id: 'anthropic/claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', description: 'Excellent reasoning' },
+  { id: 'anthropic/claude-3-haiku-20240307', name: 'Claude 3 Haiku', description: 'Fast responses' },
 ];
 
 const systemPromptTemplates = [
-  { name: 'Default', prompt: '' },
+  { name: 'Default', prompt: 'You are a helpful assistant. You are able to answer questions and help with tasks.' },
   { name: 'Creative Writer', prompt: 'You are a creative writer who helps with storytelling, poetry, and imaginative content. Be expressive and inspiring.' },
   { name: 'Code Assistant', prompt: 'You are a helpful programming assistant. Provide clear, well-commented code examples and explain programming concepts thoroughly.' },
   { name: 'Teacher', prompt: 'You are a patient and knowledgeable teacher. Break down complex topics into easy-to-understand explanations with examples.' },

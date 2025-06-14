@@ -3,6 +3,7 @@ import json
 from typing import AsyncGenerator, Optional
 from uuid import UUID
 from sqlalchemy.ext.asyncio import AsyncSession
+from sse_starlette.sse import ServerSentEvent
 from app.services.message_service import MessageService
 from app.services.openrouter_service import OpenRouterService
 from app.services.conversation_service import ConversationService
@@ -33,7 +34,7 @@ class StreamingService:
         user_message: str,
         user_id: str,
         model: Optional[str] = None
-    ) -> AsyncGenerator[str, None]:
+    ) -> AsyncGenerator[ServerSentEvent, None]:
         """
         Stream a complete chat response including user message creation,
         AI response streaming, and status updates. Supports model switching.
@@ -59,11 +60,14 @@ class StreamingService:
                     )
                     
                     # Send model switch event
-                    yield self._format_sse_event("model_switched", {
-                        "conversation_id": conversation_id,
-                        "previous_model": conversation.current_model,
-                        "new_model": model
-                    })
+                    yield ServerSentEvent(
+                        data=json.dumps({
+                            "conversation_id": conversation_id,
+                            "previous_model": conversation.current_model,
+                            "new_model": model
+                        }),
+                        event="model_switched"
+                    )
             
             # Step 1: Create and send user message
             user_msg_create = MessageCreate(
@@ -78,14 +82,17 @@ class StreamingService:
             )
             
             # Send user message event
-            yield self._format_sse_event("user_message", {
-                "id": str(user_message_obj.id),
-                "conversation_id": conversation_id,
-                "sequence_number": user_message_obj.sequence_number,
-                "role": "user",
-                "content": user_message,
-                "created_at": user_message_obj.created_at.isoformat()
-            })
+            yield ServerSentEvent(
+                data=json.dumps({
+                    "id": str(user_message_obj.id),
+                    "conversation_id": conversation_id,
+                    "sequence_number": user_message_obj.sequence_number,
+                    "role": "user",
+                    "content": user_message,
+                    "created_at": user_message_obj.created_at.isoformat()
+                }),
+                event="user_message"
+            )
             
             # Step 2: Create pending assistant message
             assistant_msg_create = MessageCreate(
@@ -103,14 +110,17 @@ class StreamingService:
             assistant_message_id = assistant_message_obj.id
             
             # Send assistant message start event
-            yield self._format_sse_event("assistant_message_start", {
-                "id": str(assistant_message_obj.id),
-                "conversation_id": conversation_id,
-                "sequence_number": assistant_message_obj.sequence_number,
-                "role": "assistant",
-                "model_used": model,
-                "status": "streaming"
-            })
+            yield ServerSentEvent(
+                data=json.dumps({
+                    "id": str(assistant_message_obj.id),
+                    "conversation_id": conversation_id,
+                    "sequence_number": assistant_message_obj.sequence_number,
+                    "role": "assistant",
+                    "model_used": model,
+                    "status": "streaming"
+                }),
+                event="assistant_message_start"
+            )
             
             # Step 3: Update message status to streaming
             await self.message_service.update_message_status(
@@ -128,11 +138,14 @@ class StreamingService:
                 if chunk:
                     full_content += chunk
                     # Send content chunk
-                    yield self._format_sse_event("content_chunk", {
-                        "message_id": str(assistant_message_id),
-                        "chunk": chunk,
-                        "full_content": full_content
-                    })
+                    yield ServerSentEvent(
+                        data=json.dumps({
+                            "message_id": str(assistant_message_id),
+                            "chunk": chunk,
+                            "full_content": full_content
+                        }),
+                        event="content_chunk"
+                    )
             
             # Step 5: Update message with final content and mark as completed
             await self.message_service.update_message_content_and_status(
@@ -142,12 +155,15 @@ class StreamingService:
             )
             
             # Send completion event
-            yield self._format_sse_event("assistant_message_complete", {
-                "id": str(assistant_message_id),
-                "content": full_content,
-                "status": "completed",
-                "model_used": model
-            })
+            yield ServerSentEvent(
+                data=json.dumps({
+                    "id": str(assistant_message_id),
+                    "content": full_content,
+                    "status": "completed",
+                    "model_used": model
+                }),
+                event="assistant_message_complete"
+            )
             
             # Step 6: Trigger title generation if this is the first exchange
             conversation_messages = await self.message_service.get_conversation_messages(
@@ -164,9 +180,12 @@ class StreamingService:
                             user_id=user_id
                         )
                     )
-                    yield self._format_sse_event("title_generation_started", {
-                        "conversation_id": conversation_id
-                    })
+                    yield ServerSentEvent(
+                        data=json.dumps({
+                            "conversation_id": conversation_id
+                        }),
+                        event="title_generation_started"
+                    )
                 except Exception as title_error:
                     logger.warning(f"Title generation failed: {title_error}")
             
@@ -184,11 +203,10 @@ class StreamingService:
                     logger.error(f"Failed to update message status: {update_error}")
             
             # Send error event
-            yield self._format_sse_event("error", {
-                "message": "An error occurred while processing your message",
-                "details": str(e) if logger.isEnabledFor(logging.DEBUG) else None
-            })
-    
-    def _format_sse_event(self, event_type: str, data: dict) -> str:
-        """Format data as Server-Sent Event"""
-        return f"event: {event_type}\ndata: {json.dumps(data)}\n\n" 
+            yield ServerSentEvent(
+                data=json.dumps({
+                    "message": "An error occurred while processing your message",
+                    "details": str(e) if logger.isEnabledFor(logging.DEBUG) else None
+                }),
+                event="error"
+            ) 

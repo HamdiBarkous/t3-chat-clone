@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     jwt_algorithm: str = "HS256"
     
     # Title Generation
-    title_generation_model: str = "gpt-4o-mini"
+    title_generation_model: str = "openai/gpt-4o-mini"
     
     # CORS Settings
     allowed_origins: list[str] = [

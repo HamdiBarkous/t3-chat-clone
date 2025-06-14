@@ -9,22 +9,54 @@ import { ChatLayout } from '@/components/chat/ChatLayout';
 import { EmptyState } from '@/components/chat/EmptyState';
 import { ChatInterface } from '@/components/chat/ChatInterface';
 import { NewConversationModal } from '@/components/conversation/NewConversationModal';
-import { useState } from 'react';
+import { useConversations } from '@/hooks/useConversations';
+import { useState, useMemo } from 'react';
+import type { ConversationResponse } from '@/types/api';
 
 function HomePage() {
   const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>(undefined);
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
+  
+  // Use real conversations hook
+  const { conversations, createConversation } = useConversations();
+  
+  // Get selected conversation and convert to ConversationResponse format
+  const selectedConversation = useMemo((): ConversationResponse | undefined => {
+    const listItem = conversations.find(conv => conv.id === selectedConversationId);
+    if (!listItem) return undefined;
+    
+    // Convert ConversationListItem to ConversationResponse
+    // Note: user_id and system_prompt are not available in list items
+    return {
+      id: listItem.id,
+      user_id: '', // Will be populated when needed
+      title: listItem.title,
+      current_model: listItem.current_model,
+      system_prompt: undefined, // Will be fetched when needed
+      created_at: listItem.created_at,
+      updated_at: listItem.updated_at
+    };
+  }, [conversations, selectedConversationId]);
 
   const handleNewChat = () => {
     setIsNewConversationModalOpen(true);
   };
 
-  const handleCreateConversation = (data: { model: string; systemPrompt?: string; title?: string }) => {
-    // TODO: Implement conversation creation via API
-    console.log('Creating conversation:', data);
-    setIsNewConversationModalOpen(false);
-    // For now, we'll simulate creating a conversation
-    setSelectedConversationId('new-conversation-id');
+  const handleCreateConversation = async (data: { model: string; systemPrompt?: string; title?: string }) => {
+    try {
+      const newConversation = await createConversation({
+        title: data.title,
+        current_model: data.model,
+        system_prompt: data.systemPrompt,
+      });
+      
+      if (newConversation) {
+        setSelectedConversationId(newConversation.id);
+        setIsNewConversationModalOpen(false);
+      }
+    } catch (error) {
+      console.error('Failed to create conversation:', error);
+    }
   };
 
   const handleConversationSelect = (conversationId: string) => {
@@ -37,17 +69,10 @@ function HomePage() {
       selectedConversationId={selectedConversationId}
       onConversationSelect={handleConversationSelect}
     >
-      {selectedConversationId ? (
+      {selectedConversationId && selectedConversation ? (
         <ChatInterface 
           conversationId={selectedConversationId}
-          conversation={selectedConversationId === '1' ? {
-            id: '1',
-            user_id: 'mock-user-id',
-            title: 'Simple Neural Network in Python',
-            current_model: 'gpt-4o',
-            created_at: '2024-06-14T10:30:00Z',
-            updated_at: '2024-06-14T11:45:00Z',
-          } : undefined}
+          conversation={selectedConversation}
         />
       ) : (
         <EmptyState onNewChat={handleNewChat} />

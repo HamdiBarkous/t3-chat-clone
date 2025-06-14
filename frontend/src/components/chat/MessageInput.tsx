@@ -5,9 +5,10 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
 import { Dropdown } from '@/components/ui/Dropdown';
+import { useModels } from '@/hooks/useModels';
 import { clsx } from 'clsx';
 
 interface MessageInputProps {
@@ -17,23 +18,37 @@ interface MessageInputProps {
   onModelChange?: (model: string) => void;
 }
 
-// Mock available models - will be replaced with API call
-const availableModels = [
-  { value: 'gpt-4o', label: 'GPT-4o', description: 'Most capable model' },
-  { value: 'gpt-4o-mini', label: 'GPT-4o Mini', description: 'Fast and cost-effective' },
-  { value: 'claude-3.5-sonnet', label: 'Claude 3.5 Sonnet', description: 'Excellent reasoning' },
-  { value: 'claude-3-haiku', label: 'Claude 3 Haiku', description: 'Fast responses' },
-];
-
 export function MessageInput({
   onSendMessage,
   disabled = false,
-  currentModel = 'gpt-4o',
+  currentModel = 'openai/gpt-4o',
   onModelChange,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [selectedModel, setSelectedModel] = useState(currentModel);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Get models from backend
+  const { models, loading: modelsLoading } = useModels();
+  
+  // Transform models for dropdown
+  const availableModels = useMemo(() => {
+    if (modelsLoading || models.length === 0) {
+      // Fallback models while loading
+      return [
+        { value: 'openai/gpt-4o', label: 'GPT-4o', description: 'Most capable model' },
+        { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', description: 'Fast and cost-effective' },
+        { value: 'anthropic/claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', description: 'Excellent reasoning' },
+        { value: 'anthropic/claude-3-haiku-20240307', label: 'Claude 3 Haiku', description: 'Fast responses' },
+      ];
+    }
+    
+    return models.map(model => ({
+      value: model.id,
+      label: model.name,
+      description: model.description || 'AI model'
+    }));
+  }, [models, modelsLoading]);
 
   // Auto-resize textarea
   useEffect(() => {
