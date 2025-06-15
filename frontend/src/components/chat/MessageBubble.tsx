@@ -31,84 +31,64 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
       isUser ? 'justify-end' : 'justify-start'
     )}>
       <div className={clsx(
-        'flex max-w-[80%] gap-3',
-        isUser ? 'flex-row-reverse' : 'flex-row'
+        'flex flex-col max-w-[80%]',
+        isUser ? 'items-end' : 'items-start'
       )}>
-        {/* Avatar */}
+        {/* Message Bubble */}
         <div className={clsx(
-          'w-8 h-8 rounded-full flex items-center justify-center flex-shrink-0 mt-1',
+          'rounded-lg relative',
           isUser 
-            ? 'bg-[#8b5cf6]' 
-            : 'bg-[#2d2d2d] border border-[#3f3f46]'
+            ? 'bg-[#8b5cf6] text-white px-4 py-3' 
+            : 'bg-[#2d2d2d] text-white border border-[#3f3f46]'
         )}>
+          {/* Message Text */}
           {isUser ? (
-            <span className="text-white text-sm font-medium">U</span>
+            <div className="whitespace-pre-wrap break-words">
+              {message.content}
+            </div>
           ) : (
-            <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-            </svg>
+            <div className={clsx(isAssistant ? 'p-4' : 'px-4 py-3')}>
+              {message.content ? (
+                <MarkdownRenderer content={message.content} />
+              ) : isStreaming ? (
+                // Show typing indicator when streaming and no content yet
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce" />
+                  <div className="w-1.5 h-1.5 bg-[#7c3aed] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+                </div>
+              ) : null}
+              {isStreaming && message.content && (
+                <span className="inline-block w-2 h-5 bg-[#8b5cf6] ml-1 animate-pulse" />
+              )}
+            </div>
           )}
         </div>
 
-        {/* Message Content */}
+        {/* Metadata */}
         <div className={clsx(
-          'flex flex-col',
-          isUser ? 'items-end' : 'items-start'
+          'flex items-center gap-2 mt-1 text-xs text-zinc-500',
+          isUser ? 'flex-row-reverse' : 'flex-row'
         )}>
-          {/* Message Bubble */}
-          <div className={clsx(
-            'rounded-lg relative',
-            isUser 
-              ? 'bg-[#8b5cf6] text-white px-4 py-3' 
-              : 'bg-[#2d2d2d] text-white border border-[#3f3f46]'
-          )}>
-            {/* Message Text */}
-            {isUser ? (
-              <div className="whitespace-pre-wrap break-words">
-                {message.content}
-              </div>
-            ) : (
-              <div className={clsx(isAssistant ? 'p-4' : 'px-4 py-3')}>
-                <MarkdownRenderer content={message.content} />
-                {isStreaming && (
-                  <span className="inline-block w-2 h-5 bg-[#8b5cf6] ml-1 animate-pulse" />
+          <span>{formatTimestamp(message.created_at)}</span>
+          
+          {/* Status indicators - simplified for new backend */}
+          {message.role === 'user' && (
+            <div className="flex items-center gap-1">
+              {message.status === MessageStatus.COMPLETED && (
+                <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                </svg>
+              )}
+              {message.status === MessageStatus.FAILED && (
+                <svg className="w-3 h-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+                </svg>
                 )}
-              </div>
-            )}
-          </div>
+            </div>
+          )}
 
-          {/* Metadata */}
-          <div className={clsx(
-            'flex items-center gap-2 mt-1 text-xs text-zinc-500',
-            isUser ? 'flex-row-reverse' : 'flex-row'
-          )}>
-            <span>{formatTimestamp(message.created_at)}</span>
-            
-            {/* Status indicators - simplified for new backend */}
-            {message.role === 'user' && (
-              <div className="flex items-center gap-1">
-                {message.status === MessageStatus.COMPLETED && (
-                  <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                  </svg>
-                )}
-                {message.status === MessageStatus.FAILED && (
-                  <svg className="w-3 h-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                  </svg>
-                )}
-              </div>
-            )}
 
-            {isAssistant && isStreaming && (
-              <div className="flex items-center gap-1">
-                <div className="w-1 h-1 bg-[#8b5cf6] rounded-full animate-bounce" />
-                <div className="w-1 h-1 bg-[#8b5cf6] rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                <div className="w-1 h-1 bg-[#8b5cf6] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                <span className="text-[#8b5cf6] ml-1">AI is typing...</span>
-              </div>
-            )}
-          </div>
         </div>
       </div>
     </div>

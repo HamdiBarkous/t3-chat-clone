@@ -87,30 +87,7 @@ export function MessageList({
           />
         ))}
 
-        {/* AI Typing indicator - only when AI is responding */}
-        {isLoading && (
-          <div className="flex justify-start mb-6">
-            <div className="flex max-w-[80%] gap-3">
-              {/* AI Avatar with pulsing ring */}
-              <div className="relative w-8 h-8 flex-shrink-0 mt-1">
-                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#2d2d2d] to-[#1a1a1a] border border-[#8b5cf6]/30 shadow-lg shadow-[#8b5cf6]/10"></div>
-                <div className="absolute inset-0 rounded-full border border-[#8b5cf6]/50 animate-ping"></div>
-                <div className="absolute inset-0 rounded-full flex items-center justify-center">
-                  <div className="w-2 h-2 bg-[#8b5cf6] rounded-full animate-pulse"></div>
-                </div>
-              </div>
 
-              {/* Minimal typing bubble */}
-              <div className="bg-gradient-to-br from-[#2d2d2d] to-[#262626] border border-[#8b5cf6]/20 px-4 py-3 rounded-2xl shadow-lg">
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce" />
-                  <div className="w-1.5 h-1.5 bg-[#7c3aed] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
 
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />

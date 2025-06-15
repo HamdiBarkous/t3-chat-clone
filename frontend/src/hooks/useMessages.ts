@@ -100,16 +100,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     timestamp: new Date(data.created_at).getTime()
   })
 
-  const createStreamingAssistantMessage = (): Message => ({
-    id: 'streaming-temp', // Temporary ID until we get the real one
-    conversation_id: conversationId!,
-    role: 'assistant',
-    content: '',
-    status: MessageStatus.COMPLETED, // No more STREAMING status
-    created_at: new Date().toISOString(),
-    model_used: undefined,
-    timestamp: Date.now()
-  })
+
 
   const sendMessage = useCallback(async (content: string, model?: string) => {
     if (!conversationId || isStreaming) return
@@ -125,10 +116,26 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         },
 
         onAssistantMessageStart: () => {
-          // Create temporary streaming message
-          const assistantMessage = createStreamingAssistantMessage()
-          setStreamingMessageId(assistantMessage.id)
-          setMessages(prev => [...prev, assistantMessage])
+          // Create temporary streaming message with timestamp based on current state
+          setStreamingMessageId('streaming-temp')
+          setMessages(prev => {
+            const now = Date.now()
+            const lastMessageTime = prev.length > 0 ? Math.max(...prev.map(m => m.timestamp)) : now
+            const timestamp = Math.max(now, lastMessageTime + 1)
+            
+            const assistantMessage: Message = {
+              id: 'streaming-temp',
+              conversation_id: conversationId!,
+              role: 'assistant',
+              content: '',
+              status: MessageStatus.COMPLETED,
+              created_at: new Date(timestamp).toISOString(),
+              model_used: undefined,
+              timestamp: timestamp
+            }
+            
+            return [...prev, assistantMessage]
+          })
         },
 
         onContentChunk: (data: unknown) => {
@@ -217,7 +224,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setStreamingMessageId(null)
       console.error('Error sending message:', err)
     }
-  }, [conversationId, isStreaming, createUserMessage, createStreamingAssistantMessage, updateConversationTitle])
+  }, [conversationId, isStreaming, createUserMessage, updateConversationTitle])
 
   // Load messages when conversation changes
   useEffect(() => {
