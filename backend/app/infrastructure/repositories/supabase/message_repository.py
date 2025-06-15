@@ -2,7 +2,7 @@ from typing import Optional, List, Tuple
 from uuid import UUID
 import logging
 
-from app.infrastructure.supabase import supabase_client, SupabaseError
+from app.infrastructure.supabase import client, SupabaseError
 from app.types import MessageRow, MessageRowCreate, MessageRole, MessageStatus
 from app.schemas.message import MessageCreate
 
@@ -13,7 +13,7 @@ class SupabaseMessageRepository:
     """Supabase implementation of message repository"""
     
     def __init__(self):
-        self.client = supabase_client
+        self.client = client
         self.table_name = "messages"
 
     async def create_message_simple(
@@ -36,7 +36,7 @@ class SupabaseMessageRepository:
                 status=status
             )
             
-            response = self.client.table(self.table_name).insert(
+            response = await self.client.table(self.table_name).insert(
                 create_data.model_dump()
             ).execute()
             
@@ -68,7 +68,7 @@ class SupabaseMessageRepository:
                 )
                 insert_data.append(create_data.model_dump())
             
-            response = self.client.table(self.table_name).insert(insert_data).execute()
+            response = await self.client.table(self.table_name).insert(insert_data).execute()
             
             if response.data:
                 return [MessageRow(**msg) for msg in response.data]
@@ -102,7 +102,7 @@ class SupabaseMessageRepository:
     ) -> Optional[MessageRow]:
         """Get message by ID with user ownership check"""
         try:
-            response = self.client.table(self.table_name).select("*").eq(
+            response = await self.client.table(self.table_name).select("*").eq(
                 "id", str(message_id)
             ).eq(
                 "user_id", str(user_id)
@@ -123,7 +123,7 @@ class SupabaseMessageRepository:
     ) -> Optional[MessageRow]:
         """Update message status"""
         try:
-            response = self.client.table(self.table_name).update({
+            response = await self.client.table(self.table_name).update({
                 "status": status.value
             }).eq(
                 "id", str(message_id)
@@ -168,7 +168,7 @@ class SupabaseMessageRepository:
             # Apply limit + 1 to check if there are more messages
             query = query.limit(limit + 1)
             
-            response = query.execute()
+            response = await query.execute()
             
             if not response.data:
                 return [], 0, False
@@ -203,7 +203,7 @@ class SupabaseMessageRepository:
     ) -> List[MessageRow]:
         """Get all messages for conversation context (for AI)"""
         try:
-            response = self.client.table(self.table_name).select("*").eq(
+            response = await self.client.table(self.table_name).select("*").eq(
                 "conversation_id", str(conversation_id)
             ).eq(
                 "user_id", str(user_id)
@@ -226,7 +226,7 @@ class SupabaseMessageRepository:
     ) -> Optional[MessageRow]:
         """Get the first message in a conversation"""
         try:
-            response = self.client.table(self.table_name).select("*").eq(
+            response = await self.client.table(self.table_name).select("*").eq(
                 "conversation_id", str(conversation_id)
             ).order(
                 "created_at", desc=False

@@ -2,7 +2,7 @@ from typing import Optional, List
 from uuid import UUID
 import logging
 
-from app.infrastructure.supabase import supabase_client, SupabaseError
+from app.infrastructure.supabase import client, SupabaseError
 from app.types import (
     ConversationRow, 
     ConversationRowCreate, 
@@ -18,13 +18,13 @@ class SupabaseConversationRepository:
     """Supabase implementation of conversation repository"""
     
     def __init__(self):
-        self.client = supabase_client
+        self.client = client
         self.table_name = "conversations"
 
     async def get_by_id(self, conversation_id: UUID, user_id: UUID) -> Optional[ConversationRow]:
         """Get conversation by ID for a specific user"""
         try:
-            response = self.client.table(self.table_name).select("*").eq(
+            response = await self.client.table(self.table_name).select("*").eq(
                 "id", str(conversation_id)
             ).eq(
                 "user_id", str(user_id)
@@ -48,7 +48,7 @@ class SupabaseConversationRepository:
                 system_prompt=conversation_data.system_prompt
             )
             
-            response = self.client.table(self.table_name).insert(
+            response = await self.client.table(self.table_name).insert(
                 create_data.model_dump()
             ).execute()
             
@@ -70,7 +70,7 @@ class SupabaseConversationRepository:
             if not update_data:
                 return await self.get_by_id(conversation_id, user_id)
 
-            response = self.client.table(self.table_name).update(update_data).eq(
+            response = await self.client.table(self.table_name).update(update_data).eq(
                 "id", str(conversation_id)
             ).eq(
                 "user_id", str(user_id)
@@ -87,7 +87,7 @@ class SupabaseConversationRepository:
     async def delete(self, conversation_id: UUID, user_id: UUID) -> bool:
         """Delete a conversation"""
         try:
-            response = self.client.table(self.table_name).delete().eq(
+            response = await self.client.table(self.table_name).delete().eq(
                 "id", str(conversation_id)
             ).eq(
                 "user_id", str(user_id)
@@ -103,7 +103,7 @@ class SupabaseConversationRepository:
         """List conversations for a user with message statistics"""
         try:
             # Get conversations with pagination
-            conversations_response = self.client.table(self.table_name).select("*").eq(
+            conversations_response = await self.client.table(self.table_name).select("*").eq(
                 "user_id", str(user_id)
             ).order(
                 "updated_at", desc=True
@@ -117,7 +117,7 @@ class SupabaseConversationRepository:
             
             # Get message statistics for these conversations
             # Using a more complex query to get stats per conversation
-            stats_response = self.client.table("messages").select(
+            stats_response = await self.client.table("messages").select(
                 "conversation_id, content, created_at"
             ).in_(
                 "conversation_id", conversation_ids

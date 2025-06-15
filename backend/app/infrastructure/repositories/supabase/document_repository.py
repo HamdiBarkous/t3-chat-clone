@@ -2,7 +2,7 @@ from typing import List, Optional
 from uuid import UUID
 import logging
 
-from app.infrastructure.supabase import supabase_client, SupabaseError
+from app.infrastructure.supabase import client, SupabaseError
 from app.schemas.document import DocumentCreate, DocumentUpdate, DocumentResponse, DocumentWithContent
 
 logger = logging.getLogger(__name__)
@@ -12,7 +12,7 @@ class DocumentRepository:
     """Repository for document attachment operations"""
     
     def __init__(self):
-        self.client = supabase_client
+        self.client = client
         self.table_name = "attached_documents"
     
     async def create_document(
@@ -23,7 +23,7 @@ class DocumentRepository:
         """Create a new document attachment"""
         try:
             # Verify the message belongs to the user first
-            message_check = self.client.table("messages") \
+            message_check = await self.client.table("messages") \
                 .select("id, user_id") \
                 .eq("id", str(document_create.message_id)) \
                 .eq("user_id", str(user_id)) \
@@ -41,7 +41,7 @@ class DocumentRepository:
                 "content_text": document_create.content_text
             }
             
-            response = self.client.service_client.table(self.table_name) \
+            response = await self.client.table(self.table_name) \
                 .insert(document_data) \
                 .execute()
             
@@ -73,7 +73,7 @@ class DocumentRepository:
         """Get a document by ID"""
         try:
             # First verify user access through message ownership
-            message_response = self.client.table("attached_documents") \
+            message_response = await self.client.table("attached_documents") \
                 .select("message_id") \
                 .eq("id", str(document_id)) \
                 .execute()
@@ -84,7 +84,7 @@ class DocumentRepository:
             message_id = message_response.data[0]["message_id"]
             
             # Verify message ownership
-            message_check = self.client.table("messages") \
+            message_check = await self.client.table("messages") \
                 .select("id") \
                 .eq("id", message_id) \
                 .eq("user_id", str(user_id)) \
@@ -93,8 +93,8 @@ class DocumentRepository:
             if not message_check.data:
                 return None
             
-            # Get document using service client (bypasses RLS after verification)
-            result = self.client.service_client.table(self.table_name) \
+            # Get document
+            result = await self.client.table(self.table_name) \
                 .select("*") \
                 .eq("id", str(document_id)) \
                 .execute()
@@ -140,7 +140,7 @@ class DocumentRepository:
         """Get all documents for a message"""
         try:
             # Verify message ownership first
-            message_check = self.client.table("messages") \
+            message_check = await self.client.table("messages") \
                 .select("id") \
                 .eq("id", str(message_id)) \
                 .eq("user_id", str(user_id)) \
@@ -149,8 +149,8 @@ class DocumentRepository:
             if not message_check.data:
                 return []
             
-            # Get documents for the message using service client (bypasses RLS after verification)
-            results = self.client.service_client.table(self.table_name) \
+            # Get documents for the message
+            results = await self.client.table(self.table_name) \
                 .select("*") \
                 .eq("message_id", str(message_id)) \
                 .order("created_at", desc=False) \
@@ -195,7 +195,7 @@ class DocumentRepository:
         """Get all documents for a conversation (for AI context)"""
         try:
             # First get all messages in the conversation
-            messages_response = self.client.table("messages") \
+            messages_response = await self.client.table("messages") \
                 .select("id") \
                 .eq("conversation_id", str(conversation_id)) \
                 .eq("user_id", str(user_id)) \
@@ -206,8 +206,8 @@ class DocumentRepository:
             
             message_ids = [msg["id"] for msg in messages_response.data]
             
-            # Get all documents for these messages using service client (bypasses RLS after verification)
-            results = self.client.service_client.table(self.table_name) \
+            # Get all documents for these messages
+            results = await self.client.table(self.table_name) \
                 .select("*") \
                 .in_("message_id", message_ids) \
                 .order("created_at", desc=False) \
@@ -265,7 +265,7 @@ class DocumentRepository:
             if not update_data:
                 return existing  # No changes
             
-            response = self.client.table(self.table_name) \
+            response = await self.client.table(self.table_name) \
                 .update(update_data) \
                 .eq("id", str(document_id)) \
                 .execute()
@@ -299,7 +299,7 @@ class DocumentRepository:
             if not existing:
                 return False
             
-            response = self.client.table(self.table_name) \
+            response = await self.client.table(self.table_name) \
                 .delete() \
                 .eq("id", str(document_id)) \
                 .execute()
@@ -318,7 +318,7 @@ class DocumentRepository:
         """Get count of documents for a message"""
         try:
             # Verify message ownership first
-            message_check = self.client.table("messages") \
+            message_check = await self.client.table("messages") \
                 .select("id") \
                 .eq("id", str(message_id)) \
                 .eq("user_id", str(user_id)) \
@@ -327,8 +327,8 @@ class DocumentRepository:
             if not message_check.data:
                 return 0
             
-            # Count documents using service client (bypasses RLS after verification)
-            response = self.client.service_client.table(self.table_name) \
+            # Count documents
+            response = await self.client.table(self.table_name) \
                 .select("id", count="exact") \
                 .eq("message_id", str(message_id)) \
                 .execute()

@@ -2,7 +2,7 @@ from typing import Optional
 from uuid import UUID
 import logging
 
-from app.infrastructure.supabase import supabase_client, SupabaseError
+from app.infrastructure.supabase import client, SupabaseError
 from app.types import ProfileRow, ProfileRowCreate, ProfileRowUpdate
 from app.schemas.profile import ProfileUpdate
 
@@ -13,13 +13,13 @@ class SupabaseProfileRepository:
     """Supabase implementation of profile repository"""
     
     def __init__(self):
-        self.client = supabase_client
+        self.client = client
         self.table_name = "profiles"
 
     async def get_by_id(self, profile_id: UUID) -> Optional[ProfileRow]:
         """Get profile by ID"""
         try:
-            response = self.client.table(self.table_name).select("*").eq(
+            response = await self.client.table(self.table_name).select("*").eq(
                 "id", str(profile_id)
             ).execute()
             
@@ -34,7 +34,7 @@ class SupabaseProfileRepository:
     async def create(self, profile_data: ProfileRowCreate) -> ProfileRow:
         """Create a new profile"""
         try:
-            response = self.client.table(self.table_name).insert(
+            response = await self.client.table(self.table_name).insert(
                 profile_data.model_dump()
             ).execute()
             
@@ -56,7 +56,7 @@ class SupabaseProfileRepository:
             if not update_data:
                 return await self.get_by_id(profile_id)
 
-            response = self.client.table(self.table_name).update(update_data).eq(
+            response = await self.client.table(self.table_name).update(update_data).eq(
                 "id", str(profile_id)
             ).execute()
             
@@ -71,7 +71,7 @@ class SupabaseProfileRepository:
     async def delete(self, profile_id: UUID) -> bool:
         """Delete a profile"""
         try:
-            response = self.client.table(self.table_name).delete().eq(
+            response = await self.client.table(self.table_name).delete().eq(
                 "id", str(profile_id)
             ).execute()
             

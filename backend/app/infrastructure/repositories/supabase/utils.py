@@ -2,7 +2,7 @@ from typing import Dict, Any, Optional, List
 import logging
 from datetime import datetime
 
-from app.infrastructure.supabase import supabase_client, SupabaseError
+from app.infrastructure.supabase import client, SupabaseError
 
 logger = logging.getLogger(__name__)
 
@@ -11,7 +11,7 @@ class SupabaseQueryBuilder:
     """Helper class for building complex Supabase queries"""
     
     def __init__(self, table_name: str):
-        self.client = supabase_client
+        self.client = client
         self.table_name = table_name
         self._query = None
         self._select_fields = "*"
@@ -133,7 +133,7 @@ class SupabaseQueryBuilder:
         """Execute the query and return results"""
         try:
             query = self.build_query()
-            response = query.execute()
+            response = await query.execute()
             return response.data or []
         except Exception as e:
             logger.error(f"Error executing query on {self.table_name}: {e}")
@@ -172,7 +172,7 @@ class SupabaseQueryBuilder:
                 elif filter_type == "is_":
                     query = query.is_(column, value)
             
-            response = query.execute()
+            response = await query.execute()
             return response.count or 0
         except Exception as e:
             logger.error(f"Error counting rows in {self.table_name}: {e}")
@@ -250,7 +250,7 @@ class BatchOperationHelper:
         for i in range(0, len(data), batch_size):
             batch = data[i:i + batch_size]
             try:
-                response = supabase_client.table(table_name).insert(batch).execute()
+                response = await client.table(table_name).insert(batch).execute()
                 if response.data:
                     all_results.extend(response.data)
             except Exception as e:
@@ -274,11 +274,11 @@ class BatchOperationHelper:
             
             for update_data, filters in batch:
                 try:
-                    query = supabase_client.table(table_name).update(update_data)
+                    query = client.table(table_name).update(update_data)
                     for key, value in filters.items():
                         query = query.eq(key, value)
                     
-                    response = query.execute()
+                    response = await query.execute()
                     if response.data:
                         batch_results.extend(response.data)
                 except Exception as e:

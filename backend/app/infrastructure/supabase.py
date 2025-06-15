@@ -1,4 +1,4 @@
-from supabase import create_client, Client
+from supabase import acreate_client, AsyncClient
 from app.core.config import settings
 import jwt
 import logging
@@ -37,29 +37,32 @@ def handle_supabase_errors(func):
 
 class SupabaseClient:
     def __init__(self):
-        # Client with anon key (for user-facing operations)
-        self.client: Client = create_client(
-            settings.supabase_url,
-            settings.supabase_anon_key
-        )
-        
-        # Service role client (for server operations that bypass RLS)
-        self.service_client: Client = create_client(
-            settings.supabase_url,
-            settings.supabase_service_role_key
-        )
-        
-        # Configure connection settings for optimal performance
-        self._setup_client_config()
+        self._client: Optional[AsyncClient] = None
     
-    def _setup_client_config(self):
+    async def initialize(self):
+        """Initialize the async client"""
+        if not self._client:
+            self._client = await acreate_client(
+                settings.supabase_url,
+                settings.supabase_service_role_key
+            )
+            await self._setup_client_config()
+    
+    @property
+    def client(self) -> AsyncClient:
+        """Get the async client instance"""
+        if not self._client:
+            raise SupabaseError("Client not initialized. Call initialize() first.")
+        return self._client
+    
+    async def _setup_client_config(self):
         """Configure client for optimal database operations"""
-        # Set timeout configurations for both clients
-        for client in [self.client, self.service_client]:
-            client.postgrest.session.timeout = 30
+        if self._client:
+            # Set timeout configurations
+            self._client.postgrest.session.timeout = 30
             
             # Add custom headers for better debugging
-            client.postgrest.session.headers.update({
+            self._client.postgrest.session.headers.update({
                 'User-Agent': 't3-chat-backend',
                 'X-Client-Info': 'supabase-python/2.15.3'
             })
@@ -67,10 +70,10 @@ class SupabaseClient:
     def verify_jwt_token(self, token: str) -> Optional[dict]:
         """Verify JWT token and return user info"""
         try:
-            # Decode JWT token (Supabase uses the anon key for verification)
+            # Decode JWT token (Supabase uses the service role key for verification)
             payload = jwt.decode(
                 token,
-                settings.supabase_anon_key,
+                settings.supabase_service_role_key,
                 algorithms=[settings.jwt_algorithm],
                 options={"verify_signature": False}  # Supabase handles signature verification
             )
@@ -98,7 +101,7 @@ class SupabaseClient:
         """Execute a query with error handling and logging"""
         logger.debug(f"Executing query on table: {table}")
         
-        response = query_builder.execute()
+        response = await query_builder.execute()
         
         if hasattr(response, 'data'):
             logger.debug(f"Query successful, returned {len(response.data) if response.data else 0} rows")
@@ -107,13 +110,11 @@ class SupabaseClient:
             raise SupabaseError("Invalid response format from Supabase")
     
     @handle_supabase_errors
-    async def insert_single(self, table: str, data: Dict[str, Any], use_service_role: bool = True) -> Dict[str, Any]:
+    async def insert_single(self, table: str, data: Dict[str, Any]) -> Dict[str, Any]:
         """Insert a single row with error handling"""
-        logger.debug(f"Inserting into table: {table} (service_role: {use_service_role})")
+        logger.debug(f"Inserting into table: {table}")
         
-        # Use service role client for server operations to bypass RLS
-        client = self.service_client if use_service_role else self.client
-        response = client.table(table).insert(data).execute()
+        response = await self.client.table(table).insert(data).execute()
         
         if response.data and len(response.data) > 0:
             logger.debug(f"Insert successful for table: {table}")
@@ -122,13 +123,11 @@ class SupabaseClient:
             raise SupabaseError(f"Insert failed for table: {table}")
     
     @handle_supabase_errors  
-    async def insert_batch(self, table: str, data: List[Dict[str, Any]], use_service_role: bool = True) -> List[Dict[str, Any]]:
+    async def insert_batch(self, table: str, data: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
         """Insert multiple rows in a single transaction"""
-        logger.debug(f"Batch inserting {len(data)} rows into table: {table} (service_role: {use_service_role})")
+        logger.debug(f"Batch inserting {len(data)} rows into table: {table}")
         
-        # Use service role client for server operations to bypass RLS
-        client = self.service_client if use_service_role else self.client
-        response = client.table(table).insert(data).execute()
+        response = await self.client.table(table).insert(data).execute()
         
         if response.data:
             logger.debug(f"Batch insert successful for table: {table}")
@@ -137,19 +136,17 @@ class SupabaseClient:
             raise SupabaseError(f"Batch insert failed for table: {table}")
     
     @handle_supabase_errors
-    async def update_single(self, table: str, data: Dict[str, Any], filters: Dict[str, Any], use_service_role: bool = True) -> Optional[Dict[str, Any]]:
+    async def update_single(self, table: str, data: Dict[str, Any], filters: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """Update a single row with filters"""
-        logger.debug(f"Updating table: {table} with filters: {filters} (service_role: {use_service_role})")
+        logger.debug(f"Updating table: {table} with filters: {filters}")
         
-        # Use service role client for server operations to bypass RLS
-        client = self.service_client if use_service_role else self.client
-        query = client.table(table).update(data)
+        query = self.client.table(table).update(data)
         
         # Apply filters
         for key, value in filters.items():
             query = query.eq(key, value)
         
-        response = query.execute()
+        response = await query.execute()
         
         if response.data and len(response.data) > 0:
             logger.debug(f"Update successful for table: {table}")
@@ -159,41 +156,36 @@ class SupabaseClient:
             return None
     
     @handle_supabase_errors
-    async def delete_rows(self, table: str, filters: Dict[str, Any], use_service_role: bool = True) -> int:
+    async def delete_rows(self, table: str, filters: Dict[str, Any]) -> int:
         """Delete rows with filters, returns count of deleted rows"""
-        logger.debug(f"Deleting from table: {table} with filters: {filters} (service_role: {use_service_role})")
+        logger.debug(f"Deleting from table: {table} with filters: {filters}")
         
-        # Use service role client for server operations to bypass RLS
-        client = self.service_client if use_service_role else self.client
-        query = client.table(table).delete()
+        query = self.client.table(table).delete()
         
         # Apply filters
         for key, value in filters.items():
             query = query.eq(key, value)
         
-        response = query.execute()
+        response = await query.execute()
         
         deleted_count = len(response.data) if response.data else 0
         logger.debug(f"Deleted {deleted_count} rows from table: {table}")
         return deleted_count
     
-    def table(self, table_name: str, use_service_role: bool = False):
+    def table(self, table_name: str):
         """Get a table reference for building queries"""
-        client = self.service_client if use_service_role else self.client
-        return client.table(table_name)
+        return self.client.table(table_name)
     
     @handle_supabase_errors
-    async def call_rpc(self, function_name: str, params: Optional[Dict[str, Any]] = None, use_service_role: bool = True) -> Any:
+    async def call_rpc(self, function_name: str, params: Optional[Dict[str, Any]] = None) -> Any:
         """Call a Supabase RPC function"""
-        logger.debug(f"Calling RPC function: {function_name} (service_role: {use_service_role})")
+        logger.debug(f"Calling RPC function: {function_name}")
         
-        # Use service role client for server operations to bypass RLS
-        client = self.service_client if use_service_role else self.client
-        response = client.rpc(function_name, params or {}).execute()
+        response = await self.client.rpc(function_name, params or {}).execute()
         
         logger.debug(f"RPC function {function_name} executed successfully")
         return response.data
 
 
 # Global Supabase client instance
-supabase_client = SupabaseClient() 
+client = SupabaseClient() 

@@ -1,71 +1,76 @@
 from fastapi import APIRouter, HTTPException
-import logging
-from datetime import datetime
-
-from app.core.config import settings
-from app.infrastructure.supabase import supabase_client
+from typing import Dict, Any
+import asyncio
+import time
+from app.infrastructure.supabase import client
 
 router = APIRouter()
-logger = logging.getLogger(__name__)
 
-
-@router.get("/")
+@router.get("/health", response_model=Dict[str, Any])
 async def health_check():
-    """Health check endpoint with database connectivity test"""
+    """
+    Basic health check endpoint
+    """
     try:
-        # Test Supabase connectivity
-        try:
-            # Test a simple query - this will fail if Supabase is not accessible
-            _ = supabase_client.client.table("profiles").select("count").limit(1).execute()
-            db_status = "healthy"
-        except Exception as db_error:
-            logger.error(f"Supabase connection failed: {db_error}")
-            db_status = "unhealthy"
-            
+        # Ensure client is initialized
+        await client.initialize()
+        
+        # Simple database connectivity test
+        start_time = time.time()
+        _ = await client.table("profiles").select("count").limit(1).execute()
+        db_response_time = round((time.time() - start_time) * 1000, 2)  # in ms
+        
         return {
-            "status": "healthy" if db_status == "healthy" else "degraded",
-            "timestamp": datetime.utcnow().isoformat(),
-            "version": settings.app_version,
-            "database": db_status,
-            "environment": "development" if settings.debug else "production"
+            "status": "healthy",
+            "timestamp": time.time(),
+            "database": {
+                "status": "connected",
+                "response_time_ms": db_response_time
+            }
         }
     except Exception as e:
-        logger.error(f"Health check failed: {e}")
-        raise HTTPException(status_code=503, detail="Service unavailable")
+        raise HTTPException(
+            status_code=503,
+            detail=f"Service unavailable: {str(e)}"
+        )
 
-
-@router.get("/detailed")
+@router.get("/health/detailed", response_model=Dict[str, Any])
 async def detailed_health_check():
-    """Detailed health check with individual service status"""
+    """
+    Detailed health check with more comprehensive testing
+    """
+    health_data = {
+        "status": "healthy",
+        "timestamp": time.time(),
+        "checks": {}
+    }
     
-    services = {}
-    overall_status = "healthy"
-    
-    # Test Supabase
+    # Database connectivity test
     try:
-        # Test with a simple query
-        response = supabase_client.client.table("profiles").select("count").limit(1).execute()
-        services["supabase"] = {"status": "healthy", "response_time_ms": 0}
+        await client.initialize()
+        
+        start_time = time.time()
+        response = await client.table("profiles").select("count").limit(1).execute()
+        db_response_time = round((time.time() - start_time) * 1000, 2)
+        
+        health_data["checks"]["database"] = {
+            "status": "healthy",
+            "response_time_ms": db_response_time,
+            "message": "Database connection successful"
+        }
     except Exception as e:
-        logger.error(f"Supabase check failed: {e}")
-        services["supabase"] = {"status": "unhealthy", "error": str(e)}
-        overall_status = "degraded"
+        health_data["status"] = "unhealthy"
+        health_data["checks"]["database"] = {
+            "status": "unhealthy",
+            "error": str(e),
+            "message": "Database connection failed"
+        }
     
-    # Test OpenRouter API connectivity (if configured)
-    if settings.openrouter_api_key:
-        try:
-            # Simple connectivity test - don't make actual API call
-            services["openrouter"] = {"status": "configured", "base_url": settings.openrouter_base_url}
-        except Exception as e:
-            services["openrouter"] = {"status": "error", "error": str(e)}
-            overall_status = "degraded"
-    else:
-        services["openrouter"] = {"status": "not_configured"}
+    # If any check failed, return 503
+    if health_data["status"] == "unhealthy":
+        raise HTTPException(
+            status_code=503,
+            detail=health_data
+        )
     
-    return {
-        "status": overall_status,
-        "timestamp": datetime.utcnow().isoformat(),
-        "version": settings.app_version,
-        "services": services,
-        "environment": "development" if settings.debug else "production"
-    } 
+    return health_data 
