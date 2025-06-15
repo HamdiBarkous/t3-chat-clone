@@ -72,31 +72,11 @@ class DocumentRepository:
     ) -> Optional[DocumentResponse | DocumentWithContent]:
         """Get a document by ID"""
         try:
-            # First verify user access through message ownership
-            message_response = await self.client.table("attached_documents") \
-                .select("message_id") \
-                .eq("id", str(document_id)) \
-                .execute()
-            
-            if not message_response.data:
-                return None
-            
-            message_id = message_response.data[0]["message_id"]
-            
-            # Verify message ownership
-            message_check = await self.client.table("messages") \
-                .select("id") \
-                .eq("id", message_id) \
-                .eq("user_id", str(user_id)) \
-                .execute()
-            
-            if not message_check.data:
-                return None
-            
-            # Get document
+            # Direct user_id check (much faster with new index)
             result = await self.client.table(self.table_name) \
                 .select("*") \
                 .eq("id", str(document_id)) \
+                .eq("user_id", str(user_id)) \
                 .execute()
             
             if not result.data:
@@ -176,20 +156,11 @@ class DocumentRepository:
     ) -> List[DocumentResponse | DocumentWithContent]:
         """Get all documents for a message"""
         try:
-            # Verify message ownership first
-            message_check = await self.client.table("messages") \
-                .select("id") \
-                .eq("id", str(message_id)) \
-                .eq("user_id", str(user_id)) \
-                .execute()
-            
-            if not message_check.data:
-                return []
-            
-            # Get documents for the message
+            # Direct user_id and message_id check (optimized with new index)
             results = await self.client.table(self.table_name) \
                 .select("*") \
                 .eq("message_id", str(message_id)) \
+                .eq("user_id", str(user_id)) \
                 .order("created_at", desc=False) \
                 .execute()
             
@@ -354,20 +325,11 @@ class DocumentRepository:
     ) -> int:
         """Get count of documents for a message"""
         try:
-            # Verify message ownership first
-            message_check = await self.client.table("messages") \
-                .select("id") \
-                .eq("id", str(message_id)) \
-                .eq("user_id", str(user_id)) \
-                .execute()
-            
-            if not message_check.data:
-                return 0
-            
-            # Count documents
+            # Direct count with user_id check (optimized with new index)
             response = await self.client.table(self.table_name) \
                 .select("id", count="exact") \
                 .eq("message_id", str(message_id)) \
+                .eq("user_id", str(user_id)) \
                 .execute()
             
             return response.count or 0
