@@ -317,23 +317,3 @@ class DocumentRepository:
         except Exception as e:
             logger.error(f"Error deleting document {document_id}: {e}")
             raise SupabaseError(f"Failed to delete document: {str(e)}")
-    
-    async def get_document_count_for_message(
-        self, 
-        message_id: UUID, 
-        user_id: UUID
-    ) -> int:
-        """Get count of documents for a message"""
-        try:
-            # Direct count with user_id check (optimized with new index)
-            response = await self.client.table(self.table_name) \
-                .select("id", count="exact") \
-                .eq("message_id", str(message_id)) \
-                .eq("user_id", str(user_id)) \
-                .execute()
-            
-            return response.count or 0
-            
-        except Exception as e:
-            logger.error(f"Error counting documents for message {message_id}: {e}")
-            return 0 
