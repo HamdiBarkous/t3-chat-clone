@@ -132,6 +132,10 @@ class StreamingService:
                     'model_used': selected_model,
                     'created_at': ai_message_obj.created_at.isoformat()
                 })
+                
+                # Check if we should generate a title (after first AI response)
+                async for title_event in self._check_and_generate_title_stream(conversation_uuid, user_uuid, conversation_id, user_id):
+                    yield title_event
             
         except Exception as e:
             logger.error(f"Streaming error: {e}")
@@ -160,6 +164,59 @@ class StreamingService:
         except Exception as e:
             logger.error(f"Error creating AI message: {e}")
             raise  # Re-raise to handle in calling function
+    
+    async def _check_and_generate_title_stream(
+        self,
+        conversation_uuid: UUID,
+        user_uuid: UUID,
+        conversation_id: str,
+        user_id: str
+    ):
+        """Check if conversation needs a title and generate it, streaming the events"""
+        try:
+            # Get conversation to check if it already has a title
+            conversation = await self.conversation_service.get_conversation(
+                conversation_uuid, user_uuid
+            )
+            
+            if not conversation or conversation.title:
+                return  # Already has a title, skip
+                
+            # Check if we have exactly 2 messages (user + assistant)
+            messages = await self.message_service.get_conversation_context_for_ai(
+                conversation_uuid, user_uuid
+            )
+            
+            if len(messages) == 2:
+                # Send title generation started event
+                yield self._format_sse_event('title_generation_started', {
+                    'conversation_id': conversation_id
+                })
+                
+                # Generate title
+                try:
+                    title = await self.openrouter_service.generate_conversation_title(
+                        conversation_id=conversation_id,
+                        user_id=user_id
+                    )
+                    
+                    if title:
+                        # Send title complete event
+                        yield self._format_sse_event('title_complete', {
+                            'conversation_id': conversation_id,
+                            'title': title
+                        })
+                        logger.info(f"Generated title '{title}' for conversation {conversation_id}")
+                    else:
+                        yield self._format_sse_event('error', {'message': 'Could not generate title'})
+                        
+                except Exception as e:
+                    logger.error(f"Failed to generate title for conversation {conversation_id}: {e}")
+                    yield self._format_sse_event('error', {'message': f'Title generation failed: {str(e)}'})
+                    
+        except Exception as e:
+            logger.error(f"Error in title generation check: {e}")
+            # Don't raise - we don't want title generation to break the chat flow
     
     async def stream_title_generation(
         self,

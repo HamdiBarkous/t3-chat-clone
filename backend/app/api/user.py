@@ -1,5 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status
-from typing import Optional
 from uuid import UUID
 
 from app.dependencies.auth import get_current_user

@@ -1,7 +1,6 @@
 from typing import Optional, List, Tuple
 from uuid import UUID
 import logging
-from datetime import datetime
 
 from app.infrastructure.supabase import supabase_client, SupabaseError
 from app.types import MessageRow, MessageRowCreate, MessageRole, MessageStatus

@@ -1,11 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
+from fastapi.responses import StreamingResponse
 from typing import List
 from uuid import UUID
 from pydantic import BaseModel
 
 from app.dependencies.auth import get_current_user
-from app.dependencies.repositories import get_conversation_repository, ConversationRepositoryType
+from app.dependencies.repositories import get_conversation_repository, get_message_repository, ConversationRepositoryType, MessageRepositoryType
 from app.services.conversation_service import ConversationService
+from app.services.message_service import MessageService
+from app.services.openrouter_service import OpenRouterService
+from app.services.streaming_service import StreamingService
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, ConversationResponse, ConversationListItem
 
 
@@ -26,6 +30,27 @@ async def get_conversation_service(
 ) -> ConversationService:
     """Dependency to get conversation service with repository"""
     return ConversationService(conversation_repo)
+
+
+async def get_message_service(
+    message_repo: MessageRepositoryType = Depends(get_message_repository)
+) -> MessageService:
+    return MessageService(message_repo)
+
+
+async def get_openrouter_service(
+    message_service: MessageService = Depends(get_message_service),
+    conversation_service: ConversationService = Depends(get_conversation_service)
+) -> OpenRouterService:
+    return OpenRouterService(message_service, conversation_service)
+
+
+async def get_streaming_service(
+    message_service: MessageService = Depends(get_message_service),
+    openrouter_service: OpenRouterService = Depends(get_openrouter_service),
+    conversation_service: ConversationService = Depends(get_conversation_service)
+) -> StreamingService:
+    return StreamingService(message_service, openrouter_service, conversation_service)
 
 
 @router.get("/", response_model=List[ConversationListItem])
@@ -171,4 +196,30 @@ async def delete_conversation(
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Conversation not found"
-        ) 
+        )
+
+
+@router.post("/{conversation_id}/generate-title")  
+async def generate_conversation_title(
+    conversation_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    streaming_service: StreamingService = Depends(get_streaming_service)
+):
+    """Generate a title for the conversation based on the first exchange"""
+    try:
+        return StreamingResponse(
+            streaming_service.stream_title_generation(
+                conversation_id=str(conversation_id),
+                user_id=current_user["id"]
+            ),
+            media_type="text/event-stream",
+            headers={
+                "Cache-Control": "no-cache",
+                "Connection": "keep-alive",
+                "X-Accel-Buffering": "no"
+            }
+        )
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to generate title: {str(e)}") 
