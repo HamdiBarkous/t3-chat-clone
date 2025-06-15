@@ -33,13 +33,13 @@ export function Sidebar({
   return (
     <div className="h-full flex flex-col">
       {/* Header */}
-      <div className="p-4 border-b border-[#3f3f46]">
+      <div className="p-4 border-b border-[#3f3f46] flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
           <h1 className="text-xl font-semibold text-white">T3.chat</h1>
           {/* Close button for mobile */}
           <button
             onClick={onClose}
-            className="p-1 text-zinc-400 hover:text-white transition-colors lg:hidden"
+            className="p-1 text-zinc-400 hover:text-white transition-colors md:hidden"
           >
             <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -50,7 +50,7 @@ export function Sidebar({
         {/* New Chat Button */}
         <Button 
           onClick={handleNewChat}
-          className="w-full mb-4"
+          className="w-full"
           variant="primary"
         >
           <svg className="w-4 h-4 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -60,16 +60,21 @@ export function Sidebar({
         </Button>
       </div>
 
-      {/* Conversation List */}
-      <div className="flex-1 overflow-hidden">
-        <ConversationList 
-          selectedConversationId={selectedConversationId}
-          onConversationSelect={onConversationSelect}
-        />
+      {/* Conversation List - Scrollable */}
+      <div className="flex-1 overflow-y-auto min-h-0">
+        <div className="p-2">
+          <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider px-3 py-2 mb-2">
+            Recent Conversations
+          </h2>
+          <ConversationList 
+            selectedConversationId={selectedConversationId}
+            onConversationSelect={onConversationSelect}
+          />
+        </div>
       </div>
 
       {/* User Section */}
-      <div className="p-4 border-t border-[#3f3f46]">
+      <div className="p-4 border-t border-[#3f3f46] flex-shrink-0">
         <div className="flex items-center justify-between">
           <div className="flex items-center space-x-3 min-w-0">
             {/* Avatar */}
@@ -95,7 +100,7 @@ export function Sidebar({
           <div className="relative">
             <button
               onClick={() => signOut()}
-              className="p-1 text-zinc-400 hover:text-white transition-colors"
+              className="p-1 text-zinc-400 hover:text-white transition-colors rounded hover:bg-[#2d2d2d]"
               title="Sign out"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
