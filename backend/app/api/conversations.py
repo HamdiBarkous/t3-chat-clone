@@ -23,6 +23,10 @@ class ModelUpdate(BaseModel):
     model: str
 
 
+class BranchRequest(BaseModel):
+    message_id: UUID
+
+
 router = APIRouter()
 
 
@@ -230,4 +234,31 @@ async def generate_conversation_title(
     except ValueError as e:
         raise HTTPException(status_code=404, detail=str(e))
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Failed to generate title: {str(e)}") 
+        raise HTTPException(status_code=500, detail=f"Failed to generate title: {str(e)}")
+
+
+@router.post("/{conversation_id}/branch", response_model=ConversationResponse, status_code=status.HTTP_201_CREATED)
+async def create_conversation_branch(
+    conversation_id: UUID,
+    branch_request: BranchRequest,
+    current_user: dict = Depends(get_current_user),
+    conversation_service: ConversationService = Depends(get_conversation_service),
+    message_service: MessageService = Depends(get_message_service),
+    document_service: DocumentService = Depends(get_document_service)
+):
+    """Create a new conversation branch from a specific message"""
+    user_id = UUID(current_user["id"])
+    
+    try:
+        new_conversation = await conversation_service.create_conversation_branch(
+            original_conversation_id=conversation_id,
+            branch_from_message_id=branch_request.message_id,
+            user_id=user_id,
+            message_service=message_service,
+            document_service=document_service
+        )
+        return new_conversation
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to create conversation branch: {str(e)}") 

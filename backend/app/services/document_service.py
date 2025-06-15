@@ -180,6 +180,46 @@ class DocumentService:
         except Exception as e:
             logger.error(f"Error deleting document {document_id}: {e}")
             raise ValueError(f"Failed to delete document: {str(e)}")
+
+    async def copy_document_to_message(
+        self, 
+        source_document_id: UUID, 
+        target_message_id: UUID, 
+        user_id: UUID
+    ) -> DocumentResponse:
+        """Copy a document to a new message"""
+        try:
+            # Get the original document with content
+            original_document = await self.document_repository.get_document_by_id(
+                source_document_id, user_id, include_content=True
+            )
+            
+            if not original_document:
+                raise ValueError("Source document not found")
+
+            # Ensure we have content_text
+            if not hasattr(original_document, 'content_text'):
+                raise ValueError("Original document does not have content text")
+
+            # Create a new document record with the same content
+            document_create = DocumentCreate(
+                message_id=target_message_id,
+                filename=original_document.filename,
+                file_type=original_document.file_type,
+                file_size=original_document.file_size,
+                content_text=original_document.content_text
+            )
+            
+            new_document = await self.document_repository.create_document(
+                document_create, user_id
+            )
+            
+            logger.info(f"Successfully copied document {source_document_id} to message {target_message_id}")
+            return new_document
+            
+        except Exception as e:
+            logger.error(f"Error copying document {source_document_id}: {e}")
+            raise ValueError(f"Failed to copy document: {str(e)}")
     
     async def get_supported_file_types(self) -> dict:
         """Get list of supported file types with descriptions"""

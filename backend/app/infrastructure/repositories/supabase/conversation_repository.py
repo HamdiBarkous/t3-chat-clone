@@ -6,8 +6,6 @@ from app.infrastructure.supabase import client, SupabaseError
 from app.types import (
     ConversationRow, 
     ConversationRowCreate, 
-    ConversationRowUpdate,
-    ConversationWithStats
 )
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, ConversationListItem
 

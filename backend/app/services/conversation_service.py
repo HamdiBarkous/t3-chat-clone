@@ -1,10 +1,14 @@
-from typing import Optional, List, Dict, Any
+from typing import Optional, List, Dict, Any, TYPE_CHECKING
 from uuid import UUID
 import time
 import asyncio
 from collections import defaultdict
 
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, ConversationResponse, ConversationListItem
+
+if TYPE_CHECKING:
+    from app.services.message_service import MessageService
+    from app.services.document_service import DocumentService
 
 
 class ConversationService:
@@ -142,4 +146,92 @@ class ConversationService:
     async def update_conversation_model(self, conversation_id: UUID, user_id: UUID, model: str) -> Optional[ConversationResponse]:
         """Update conversation's current model"""
         update_data = ConversationUpdate(current_model=model)
-        return await self.update_conversation(conversation_id, user_id, update_data) 
+        return await self.update_conversation(conversation_id, user_id, update_data)
+
+    async def create_conversation_branch(
+        self,
+        original_conversation_id: UUID,
+        branch_from_message_id: UUID,
+        user_id: UUID,
+        message_service: "MessageService",
+        document_service: "DocumentService"
+    ) -> ConversationResponse:
+        """Create a new conversation branch from a specific message"""
+        # Get the original conversation
+        original_conversation = await self.get_conversation(original_conversation_id, user_id)
+        if not original_conversation:
+            raise ValueError("Original conversation not found")
+
+        # Verify the message exists and belongs to the conversation
+        branch_message = await message_service.get_message_by_id(branch_from_message_id, user_id)
+        if not branch_message or branch_message.conversation_id != original_conversation_id:
+            raise ValueError("Branch message not found or doesn't belong to this conversation")
+
+        # Get all messages up to and including the branch point
+        all_messages = await message_service.get_conversation_context(original_conversation_id, user_id)
+        
+        # Find messages up to the branch point (messages are already in chronological order)
+        messages_to_copy = []
+        branch_message_found = False
+        
+        for message in all_messages:
+            messages_to_copy.append(message)
+            if message.id == branch_from_message_id:
+                branch_message_found = True
+                break
+
+        if not messages_to_copy:
+            raise ValueError("No messages found to copy")
+        
+        if not branch_message_found:
+            raise ValueError("Branch message not found in conversation history")
+
+        # Create new conversation with same settings as original
+        new_conversation_data = ConversationCreate(
+            title=f"Branch from {original_conversation.title or 'Conversation'}",
+            current_model=original_conversation.current_model,
+            system_prompt=original_conversation.system_prompt
+        )
+
+        new_conversation = await self.create_conversation(user_id, new_conversation_data)
+
+        # Create messages sequentially to guarantee proper order
+        message_id_mapping = {}  # Map old message ID to new message ID
+        
+        for original_message in messages_to_copy:
+            # Create each message individually to preserve order
+            new_message = await message_service.message_repository.create_message_simple(
+                conversation_id=new_conversation.id,
+                user_id=user_id,
+                role=original_message.role,
+                content=original_message.content,
+                model_used=original_message.model_used
+            )
+            
+            message_id_mapping[original_message.id] = new_message.id
+
+        # Copy documents for the copied messages
+        for original_message in messages_to_copy:
+            new_message_id = message_id_mapping[original_message.id]
+            
+            # Get documents for this specific message
+            try:
+                docs_result = await document_service.get_message_documents(original_message.id, user_id)
+                if docs_result.documents:
+                    for document in docs_result.documents:
+                        try:
+                            await document_service.copy_document_to_message(
+                                document.id,
+                                new_message_id,
+                                user_id
+                            )
+                        except Exception as e:
+                            # Log error but don't fail the branching operation
+                            import logging
+                            logging.warning(f"Failed to copy document {document.id}: {e}")
+            except Exception as e:
+                # Log error but continue processing other messages
+                import logging
+                logging.warning(f"Failed to get documents for message {original_message.id}: {e}")
+
+        return new_conversation 

@@ -71,7 +71,10 @@ class SupabaseMessageRepository:
             response = await self.client.table(self.table_name).insert(insert_data).execute()
             
             if response.data:
-                return [MessageRow(**msg) for msg in response.data]
+                # Sort by created_at to ensure chronological order
+                messages = [MessageRow(**msg) for msg in response.data]
+                messages.sort(key=lambda x: x.created_at)
+                return messages
             else:
                 raise SupabaseError("Failed to create messages in batch")
                 
