@@ -25,12 +25,38 @@ export function MessageList({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive
+  // Auto-scroll to bottom when new messages arrive or streaming starts
   useEffect(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
   }, [messages.length, streamingMessageId]);
+
+  // Auto-scroll during streaming when content is being added
+  useEffect(() => {
+    if (isLoading && streamingMessageId && messagesEndRef.current) {
+      // Smooth scroll when streaming starts
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [isLoading, streamingMessageId]);
+
+  // Auto-scroll during content updates for streaming message
+  useEffect(() => {
+    if (streamingMessageId && messagesEndRef.current) {
+      // Find the streaming message and scroll to it smoothly
+      const streamingMessage = messages.find(m => m.id === streamingMessageId);
+      if (streamingMessage && streamingMessage.content) {
+        // Use a slight delay to ensure the content has rendered
+        const timeoutId = setTimeout(() => {
+          if (messagesEndRef.current) {
+            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+          }
+        }, 50);
+        
+        return () => clearTimeout(timeoutId);
+      }
+    }
+  }, [messages, streamingMessageId]);
 
   // Sort messages by timestamp to ensure proper chronological ordering
   const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
