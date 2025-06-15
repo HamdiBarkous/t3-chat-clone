@@ -52,7 +52,7 @@ export function MessageList({
   return (
     <div 
       ref={containerRef}
-      className="flex-1 overflow-y-auto px-4 py-6"
+      className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide"
     >
       <div className="max-w-4xl mx-auto">
         {/* Messages */}

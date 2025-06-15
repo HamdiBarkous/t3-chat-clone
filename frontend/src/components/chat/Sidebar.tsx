@@ -31,7 +31,7 @@ export function Sidebar({
   };
 
   return (
-    <div className="h-full flex flex-col">
+    <div className="h-screen flex flex-col max-h-screen">
       {/* Header */}
       <div className="p-4 border-b border-[#3f3f46] flex-shrink-0">
         <div className="flex items-center justify-between mb-4">
@@ -61,15 +61,17 @@ export function Sidebar({
       </div>
 
       {/* Conversation List - Scrollable */}
-      <div className="flex-1 overflow-y-auto min-h-0">
+      <div className="flex-1 overflow-y-auto min-h-0 max-h-full scrollbar-hide">
         <div className="p-2">
-          <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider px-3 py-2 mb-2">
+          <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider px-3 py-2 mb-2 sticky top-0 bg-[#171717] z-10">
             Recent Conversations
           </h2>
-          <ConversationList 
-            selectedConversationId={selectedConversationId}
-            onConversationSelect={onConversationSelect}
-          />
+          <div className="space-y-1">
+            <ConversationList 
+              selectedConversationId={selectedConversationId}
+              onConversationSelect={onConversationSelect}
+            />
+          </div>
         </div>
       </div>
 
@@ -104,7 +106,7 @@ export function Sidebar({
               title="Sign out"
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
               </svg>
             </button>
           </div>

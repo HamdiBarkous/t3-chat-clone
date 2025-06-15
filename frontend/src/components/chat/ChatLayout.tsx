@@ -25,7 +25,7 @@ export function ChatLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] flex">
+    <div className="h-screen bg-[#1a1a1a] flex overflow-hidden">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div 
@@ -39,7 +39,7 @@ export function ChatLayout({
         className={clsx(
           'z-50 bg-[#171717] border-r border-[#3f3f46] transform transition-all duration-300 ease-in-out',
           // Mobile: fixed overlay
-          'fixed inset-y-0 left-0 w-80 md:relative',
+          'fixed inset-y-0 left-0 w-80 md:relative md:h-full',
           // Desktop: collapsible width
           sidebarOpen 
             ? 'translate-x-0 md:w-80' 
