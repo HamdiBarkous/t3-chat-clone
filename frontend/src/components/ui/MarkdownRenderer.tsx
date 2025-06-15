@@ -28,6 +28,147 @@ interface MarkdownRendererProps {
 }
 
 /**
+ * Language icon component that loads SVG from public directory
+ */
+function LanguageIcon({ language }: { language: string }) {
+  const [iconFailed, setIconFailed] = React.useState(false);
+  const normalizedLang = language.toLowerCase();
+  
+  // Map of language names to their icon file names
+  const iconMap: Record<string, string> = {
+    javascript: 'javascript.svg',
+    js: 'javascript.svg',
+    typescript: 'typescript.svg',
+    ts: 'typescript.svg',
+    python: 'python.svg',
+    py: 'python.svg',
+    java: 'java.svg',
+    csharp: 'csharp.svg',
+    'c#': 'csharp.svg',
+    cpp: 'cpp.svg',
+    'c++': 'cpp.svg',
+    c: 'c.svg',
+    go: 'go.svg',
+    golang: 'go.svg',
+    rust: 'rust.svg',
+    rs: 'rust.svg',
+    php: 'php.svg',
+    ruby: 'ruby.svg',
+    rb: 'ruby.svg',
+    swift: 'swift.svg',
+    kotlin: 'kotlin.svg',
+    kt: 'kotlin.svg',
+    dart: 'dart.svg',
+    html: 'html.svg',
+    html5: 'html.svg',
+    css: 'css.svg',
+    css3: 'css.svg',
+    sql: 'sql.svg',
+    json: 'json.svg',
+    xml: 'xml.svg',
+    yaml: 'yaml.svg',
+    yml: 'yaml.svg',
+    bash: 'bash.svg',
+    shell: 'shell.svg',
+    sh: 'shell.svg',
+    powershell: 'powershell.svg',
+    ps1: 'powershell.svg',
+    dockerfile: 'docker.svg',
+    docker: 'docker.svg',
+    markdown: 'markdown.svg',
+    md: 'markdown.svg',
+    nodejs: 'nodejs.svg',
+    node: 'nodejs.svg',
+    react: 'react.svg',
+    jsx: 'react.svg',
+    tsx: 'react.svg',
+    vue: 'vue.svg',
+    vuejs: 'vue.svg',
+  };
+
+  const iconFile = iconMap[normalizedLang];
+  
+  // If we have an icon file and it hasn't failed to load, show the icon
+  if (iconFile && !iconFailed) {
+    return (
+      <div className="flex items-center justify-center w-5 h-5">
+        <img 
+          src={`/icons/languages/${iconFile}`} 
+          alt={`${language} icon`}
+          className="w-5 h-5 object-contain"
+          onError={() => setIconFailed(true)}
+        />
+      </div>
+    );
+  }
+  
+  // Fallback for unknown languages or failed icon loads
+  return (
+    <div className="w-5 h-5 bg-purple-500 rounded-sm flex items-center justify-center">
+      <span className="text-white text-xs font-bold">{language.charAt(0).toUpperCase()}</span>
+    </div>
+  );
+}
+
+/**
+ * Get file extension for a given language
+ */
+function getFileExtension(language: string): string {
+  const extensionMap: Record<string, string> = {
+    javascript: 'js',
+    js: 'js',
+    typescript: 'ts',
+    ts: 'ts',
+    python: 'py',
+    py: 'py',
+    java: 'java',
+    csharp: 'cs',
+    'c#': 'cs',
+    cpp: 'cpp',
+    'c++': 'cpp',
+    c: 'c',
+    go: 'go',
+    golang: 'go',
+    rust: 'rs',
+    rs: 'rs',
+    php: 'php',
+    ruby: 'rb',
+    rb: 'rb',
+    swift: 'swift',
+    kotlin: 'kt',
+    kt: 'kt',
+    dart: 'dart',
+    html: 'html',
+    html5: 'html',
+    css: 'css',
+    css3: 'css',
+    sql: 'sql',
+    json: 'json',
+    xml: 'xml',
+    yaml: 'yaml',
+    yml: 'yml',
+    bash: 'sh',
+    shell: 'sh',
+    sh: 'sh',
+    powershell: 'ps1',
+    ps1: 'ps1',
+    dockerfile: 'dockerfile',
+    docker: 'dockerfile',
+    markdown: 'md',
+    md: 'md',
+    nodejs: 'js',
+    node: 'js',
+    react: 'jsx',
+    jsx: 'jsx',
+    tsx: 'tsx',
+    vue: 'vue',
+    vuejs: 'vue',
+  };
+  
+  return extensionMap[language.toLowerCase()] || 'txt';
+}
+
+/**
  * Preprocesses markdown content to fix common LaTeX/math rendering issues
  */
 function preprocessMathContent(content: string): string {
@@ -129,45 +270,86 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             const isInline = !match;
             
             if (!isInline && language) {
+              const codeContent = String(children).replace(/\n$/, '');
+              const fileExtension = getFileExtension(language);
+              
+              const handleCopy = () => {
+                navigator.clipboard.writeText(codeContent);
+              };
+              
+              const handleDownload = () => {
+                const blob = new Blob([codeContent], { type: 'text/plain' });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = `code.${fileExtension}`;
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+              };
+              
               return (
-                <div className="relative group">
-                  {/* Language label */}
-                  <div className="absolute top-0 right-0 px-3 py-1 text-xs font-medium text-zinc-400 bg-[#1a1a1a] rounded-bl-lg border-l border-b border-[#3f3f46]">
-                    {language}
+                <div className="relative my-6 rounded-xl overflow-hidden border border-purple-500/20 bg-gradient-to-br from-purple-950/20 to-purple-900/10 shadow-lg">
+                  {/* Header with language icon and action buttons */}
+                  <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-600/10 to-purple-500/5 border-b border-purple-500/20">
+                    {/* Language icon */}
+                    <div className="flex items-center">
+                      <LanguageIcon language={language} />
+                    </div>
+                    
+                    {/* Action buttons */}
+                    <div className="flex items-center gap-2">
+                      {/* Copy button */}
+                      <button
+                        onClick={handleCopy}
+                        className="p-2 text-purple-300 hover:text-white hover:bg-purple-600/20 transition-all duration-200 rounded-lg group"
+                        title="Copy code"
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                        </svg>
+                      </button>
+                      
+                      {/* Download button */}
+                      <button
+                        onClick={handleDownload}
+                        className="p-2 text-purple-300 hover:text-white hover:bg-purple-600/20 transition-all duration-200 rounded-lg group"
+                        title={`Download as .${fileExtension}`}
+                      >
+                        <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                        </svg>
+                      </button>
+                    </div>
                   </div>
                   
-                  {/* Copy button */}
-                  <button
-                    onClick={() => navigator.clipboard.writeText(String(children).replace(/\n$/, ''))}
-                    className="absolute top-2 right-16 p-2 text-zinc-400 hover:text-white transition-colors opacity-0 group-hover:opacity-100 bg-[#2d2d2d] rounded-lg border border-[#3f3f46]"
-                    title="Copy code"
-                  >
-                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
-                  </button>
-                  
-                  <SyntaxHighlighter
-                    style={oneDark as any}
-                    language={language}
-                    PreTag="div"
-                    customStyle={{
-                      margin: 0,
-                      borderRadius: '0.75rem',
-                      background: '#1a1a1a',
-                      border: '1px solid #3f3f46',
-                      fontSize: '0.875rem',
-                      lineHeight: '1.5',
-                    } as any}
-                    codeTagProps={{
-                      style: {
+                  {/* Code content */}
+                  <div className="relative bg-[#0d1117] rounded-b-xl">
+                    <SyntaxHighlighter
+                      style={oneDark as any}
+                      language={language}
+                      PreTag="div"
+                      customStyle={{
+                        margin: 0,
+                        borderRadius: 0,
+                        background: '#0d1117',
+                        border: 'none',
                         fontSize: '0.875rem',
-                        fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
-                      }
-                    }}
-                  >
-                    {String(children).replace(/\n$/, '')}
-                  </SyntaxHighlighter>
+                        lineHeight: '1.6',
+                        padding: '1.5rem',
+                      } as any}
+                      codeTagProps={{
+                        style: {
+                          fontSize: '0.875rem',
+                          fontFamily: 'ui-monospace, SFMono-Regular, "SF Mono", Consolas, "Liberation Mono", Menlo, monospace',
+                          background: 'transparent',
+                        }
+                      }}
+                    >
+                      {codeContent}
+                    </SyntaxHighlighter>
+                  </div>
                 </div>
               );
             }
@@ -175,7 +357,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             // Inline code
             return (
               <code 
-                className="px-1.5 py-0.5 text-sm font-mono bg-[#2d2d2d] text-[#8b5cf6] rounded border border-[#3f3f46]" 
+                className="px-2 py-1 text-sm font-mono bg-purple-500/10 text-purple-300 rounded-md border border-purple-500/20" 
                 {...props}
               >
                 {children}
@@ -185,7 +367,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // Headers
           h1: ({ children }) => (
-            <h1 className="text-2xl font-bold text-white mb-4 mt-6 first:mt-0 border-b border-[#3f3f46] pb-2">
+            <h1 className="text-2xl font-bold text-white mb-4 mt-6 first:mt-0 border-b border-purple-500/30 pb-2">
               {children}
             </h1>
           ),
@@ -235,7 +417,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
               href={href} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-[#8b5cf6] hover:text-[#7c3aed] underline transition-colors"
+              className="text-purple-400 hover:text-purple-300 underline transition-colors"
             >
               {children}
             </a>
@@ -243,7 +425,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // Blockquotes
           blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-[#8b5cf6] pl-4 py-2 my-4 bg-[#8b5cf6]/5 text-zinc-300 italic">
+            <blockquote className="border-l-4 border-purple-500 pl-4 py-2 my-4 bg-purple-500/5 text-zinc-300 italic">
               {children}
             </blockquote>
           ),
@@ -251,30 +433,30 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           // Tables
           table: ({ children }) => (
             <div className="overflow-x-auto mb-4">
-              <table className="min-w-full border border-[#3f3f46] rounded-lg">
+              <table className="min-w-full border border-purple-500/20 rounded-lg">
                 {children}
               </table>
             </div>
           ),
           thead: ({ children }) => (
-            <thead className="bg-[#2d2d2d]">
+            <thead className="bg-purple-600/10">
               {children}
             </thead>
           ),
           th: ({ children }) => (
-            <th className="px-4 py-2 text-left text-white font-semibold border-b border-[#3f3f46]">
+            <th className="px-4 py-2 text-left text-white font-semibold border-b border-purple-500/20">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="px-4 py-2 text-zinc-200 border-b border-[#3f3f46]">
+            <td className="px-4 py-2 text-zinc-200 border-b border-purple-500/20">
               {children}
             </td>
           ),
           
           // Horizontal rule
           hr: () => (
-            <hr className="border-[#3f3f46] my-6" />
+            <hr className="border-purple-500/30 my-6" />
           ),
           
           // Strong/Bold
