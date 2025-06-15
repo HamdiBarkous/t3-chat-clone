@@ -30,8 +30,8 @@ export function MessageList({
     }
   }, [messages.length, streamingMessageId]);
 
-  // Sort messages by sequence to ensure proper ordering
-  const sortedMessages = [...messages].sort((a, b) => a.sequence - b.sequence);
+  // Sort messages by timestamp to ensure proper chronological ordering
+  const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
 
   if (messages.length === 0 && !isLoading) {
     return (

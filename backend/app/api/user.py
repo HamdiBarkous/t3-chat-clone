@@ -3,8 +3,7 @@ from typing import Optional
 from uuid import UUID
 
 from app.dependencies.auth import get_current_user
-from app.infrastructure.database import get_db_session
-from app.infrastructure.repositories.profile_repository import ProfileRepository
+from app.dependencies.repositories import get_profile_repository, ProfileRepositoryType
 from app.services.profile_service import ProfileService
 from app.schemas.profile import ProfileResponse, ProfileUpdate
 
@@ -12,9 +11,10 @@ from app.schemas.profile import ProfileResponse, ProfileUpdate
 router = APIRouter()
 
 
-async def get_profile_service(db = Depends(get_db_session)) -> ProfileService:
+async def get_profile_service(
+    profile_repo: ProfileRepositoryType = Depends(get_profile_repository)
+) -> ProfileService:
     """Dependency to get profile service with repository"""
-    profile_repo = ProfileRepository(db)
     return ProfileService(profile_repo)
 
 

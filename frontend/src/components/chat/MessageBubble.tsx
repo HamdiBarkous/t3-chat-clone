@@ -77,12 +77,9 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
           )}>
             <span>{formatTimestamp(message.created_at)}</span>
             
-            {/* Status indicators */}
+            {/* Status indicators - simplified for new backend */}
             {message.role === 'user' && (
               <div className="flex items-center gap-1">
-                {message.status === MessageStatus.PENDING && (
-                  <div className="w-2 h-2 bg-zinc-500 rounded-full animate-pulse" />
-                )}
                 {message.status === MessageStatus.COMPLETED && (
                   <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />

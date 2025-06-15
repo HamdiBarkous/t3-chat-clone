@@ -2,9 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException
 from typing import List, Dict, Any
 
 from app.dependencies.auth import get_current_user
-from app.infrastructure.database import get_db_session
-from app.infrastructure.repositories.message_repository import MessageRepository
-from app.infrastructure.repositories.conversation_repository import ConversationRepository
+from app.dependencies.repositories import get_message_repository, get_conversation_repository, MessageRepositoryType, ConversationRepositoryType
 from app.services.message_service import MessageService
 from app.services.conversation_service import ConversationService
 from app.services.openrouter_service import OpenRouterService
@@ -13,11 +11,15 @@ from app.services.openrouter_service import OpenRouterService
 router = APIRouter()
 
 
-async def get_message_service(db = Depends(get_db_session)) -> MessageService:
-    return MessageService(MessageRepository(db))
+async def get_message_service(
+    message_repo: MessageRepositoryType = Depends(get_message_repository)
+) -> MessageService:
+    return MessageService(message_repo)
 
-async def get_conversation_service(db = Depends(get_db_session)) -> ConversationService:
-    return ConversationService(ConversationRepository(db))
+async def get_conversation_service(
+    conversation_repo: ConversationRepositoryType = Depends(get_conversation_repository)
+) -> ConversationService:
+    return ConversationService(conversation_repo)
 
 async def get_openrouter_service(
     message_service: MessageService = Depends(get_message_service),

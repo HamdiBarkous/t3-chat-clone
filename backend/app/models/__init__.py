@@ -1,4 +1,4 @@
-from .conversation import Conversation
-from .message import Message
+# SQLAlchemy models have been replaced by Supabase Pydantic models
+# See app.types for the new model definitions
 
-__all__ = ["Conversation", "Message"] 
+__all__ = [] 

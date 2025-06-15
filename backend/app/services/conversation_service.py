@@ -1,14 +1,12 @@
 from typing import Optional, List, Dict, Any
 from uuid import UUID
-from sqlalchemy.ext.asyncio import AsyncSession
 import time
 
-from app.infrastructure.repositories.conversation_repository import ConversationRepository
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, ConversationResponse, ConversationListItem
 
 
 class ConversationService:
-    def __init__(self, conversation_repo: ConversationRepository):
+    def __init__(self, conversation_repo):
         self.conversation_repo = conversation_repo
         # Simple in-memory cache for conversation lists (5 minute TTL)
         self._cache: Dict[str, tuple[Any, float]] = {}

@@ -1,12 +1,10 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
-from sqlalchemy.ext.asyncio import AsyncSession
 from typing import List
 from uuid import UUID
 from pydantic import BaseModel
 
 from app.dependencies.auth import get_current_user
-from app.infrastructure.database import get_db_session
-from app.infrastructure.repositories.conversation_repository import ConversationRepository
+from app.dependencies.repositories import get_conversation_repository, ConversationRepositoryType
 from app.services.conversation_service import ConversationService
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, ConversationResponse, ConversationListItem
 
@@ -23,9 +21,10 @@ class ModelUpdate(BaseModel):
 router = APIRouter()
 
 
-async def get_conversation_service(db = Depends(get_db_session)) -> ConversationService:
+async def get_conversation_service(
+    conversation_repo: ConversationRepositoryType = Depends(get_conversation_repository)
+) -> ConversationService:
     """Dependency to get conversation service with repository"""
-    conversation_repo = ConversationRepository(db)
     return ConversationService(conversation_repo)
 
 

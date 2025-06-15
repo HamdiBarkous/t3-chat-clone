@@ -14,9 +14,7 @@ class Settings(BaseSettings):
     # Supabase Configuration
     supabase_url: str = os.getenv("SUPABASE_URL")   
     supabase_anon_key: str = os.getenv('SUPABASE_ANON_KEY')
-    
-    # Database
-    database_url: Optional[str] = os.getenv("DATABASE_URL")
+    supabase_service_role_key: str = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
     
     # OpenRouter API
     openrouter_api_key: Optional[str] = os.getenv("OPENROUTER_API_KEY")

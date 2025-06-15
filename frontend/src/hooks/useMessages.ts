@@ -4,29 +4,26 @@ import { streamingService, StreamingCallbacks } from '@/lib/streaming'
 import type { Message, MessageListResponse, MessageResponse } from '@/types/api'
 import { MessageStatus } from '@/types/api'
 
-// Streaming event data interfaces
+// Updated streaming event data interfaces for optimized backend
 interface UserMessageData {
   id: string
   conversation_id: string
-  sequence_number: number
   role: string
   content: string
   created_at: string
+  model_used?: string
 }
 
 interface AssistantMessageStartData {
-  id: string
   conversation_id: string
-  sequence_number: number
   role: string
   model_used?: string
   status: string
 }
 
 interface ContentChunkData {
-  message_id: string
   chunk: string
-  full_content: string
+  content_length: number
 }
 
 interface AssistantMessageCompleteData {
@@ -34,11 +31,12 @@ interface AssistantMessageCompleteData {
   content: string
   status: string
   model_used?: string
+  created_at: string
 }
 
 interface ErrorData {
   message: string
-  details?: string
+  error_type?: string
 }
 
 interface UseMessagesReturn {
@@ -51,12 +49,12 @@ interface UseMessagesReturn {
   streamingMessageId: string | null
 }
 
-// Helper function to convert MessageResponse to Message
+// Helper function to convert MessageResponse to Message with timestamp
 function convertToMessage(msgResponse: MessageResponse): Message {
   return {
     ...msgResponse,
-    sequence: msgResponse.sequence_number, // Add sequence alias
-    role: msgResponse.role === 'user' ? 'user' : 'assistant' // Convert enum to string literal
+    role: msgResponse.role === 'user' ? 'user' : 'assistant',
+    timestamp: new Date(msgResponse.created_at).getTime()
   }
 }
 
@@ -95,25 +93,23 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
   const createUserMessage = (data: UserMessageData): Message => ({
     id: data.id,
     conversation_id: conversationId!,
-    sequence_number: data.sequence_number,
-    sequence: data.sequence_number,
     role: 'user',
     content: data.content,
     status: MessageStatus.COMPLETED,
     created_at: data.created_at,
-    model_used: undefined
+    model_used: data.model_used,
+    timestamp: new Date(data.created_at).getTime()
   })
 
-  const createAssistantMessage = (data: AssistantMessageStartData): Message => ({
-    id: data.id,
+  const createStreamingAssistantMessage = (): Message => ({
+    id: 'streaming-temp', // Temporary ID until we get the real one
     conversation_id: conversationId!,
-    sequence_number: data.sequence_number,
-    sequence: data.sequence_number,
     role: 'assistant',
     content: '',
-    status: MessageStatus.STREAMING,
+    status: MessageStatus.COMPLETED, // No more STREAMING status
     created_at: new Date().toISOString(),
-    model_used: data.model_used
+    model_used: undefined,
+    timestamp: Date.now()
   })
 
   const sendMessage = useCallback(async (content: string, model?: string) => {
@@ -130,17 +126,20 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         },
 
         onAssistantMessageStart: (data: unknown) => {
-          const assistantMessage = createAssistantMessage(data as AssistantMessageStartData)
+          // Create temporary streaming message
+          const assistantMessage = createStreamingAssistantMessage()
           setStreamingMessageId(assistantMessage.id)
           setMessages(prev => [...prev, assistantMessage])
         },
 
         onContentChunk: (data: unknown) => {
           const chunkData = data as ContentChunkData
+          
+          // Update the streaming message with new content using functional update to avoid closure issues
           setMessages(prev => 
             prev.map(msg => 
-              msg.id === chunkData.message_id 
-                ? { ...msg, content: chunkData.full_content }
+              msg.id === 'streaming-temp'
+                ? { ...msg, content: msg.content + chunkData.chunk }
                 : msg
             )
           )
@@ -148,13 +147,24 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
 
         onAssistantMessageComplete: (data: unknown) => {
           const completeData = data as AssistantMessageCompleteData
+          
+          // Replace temporary message with real one
           setMessages(prev => 
             prev.map(msg => 
-              msg.id === completeData.id 
-                ? { ...msg, content: completeData.content, status: MessageStatus.COMPLETED }
+              msg.id === 'streaming-temp'
+                ? {
+                    ...msg,
+                    id: completeData.id,
+                    content: completeData.content,
+                    status: MessageStatus.COMPLETED,
+                    created_at: completeData.created_at,
+                    model_used: completeData.model_used,
+                    timestamp: new Date(completeData.created_at).getTime()
+                  }
                 : msg
             )
           )
+          
           setIsStreaming(false)
           setStreamingMessageId(null)
         },
@@ -163,15 +173,8 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           const errorData = data as ErrorData
           setError(errorData.message || 'An error occurred while sending the message')
           
-          if (streamingMessageId) {
-            setMessages(prev => 
-              prev.map(msg => 
-                msg.id === streamingMessageId 
-                  ? { ...msg, status: MessageStatus.FAILED }
-                  : msg
-              )
-            )
-          }
+          // Remove streaming message on error
+          setMessages(prev => prev.filter(msg => msg.id !== 'streaming-temp'))
           
           setIsStreaming(false)
           setStreamingMessageId(null)
@@ -181,6 +184,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setError('Connection error: ' + error.message)
           setIsStreaming(false)
           setStreamingMessageId(null)
+          
+          // Remove streaming message on connection error
+          setMessages(prev => prev.filter(msg => msg.id !== 'streaming-temp'))
         },
 
         onConnectionClose: () => {
@@ -198,23 +204,12 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setStreamingMessageId(null)
       console.error('Error sending message:', err)
     }
-  }, [conversationId, isStreaming, streamingMessageId])
+  }, [conversationId, isStreaming])
 
   // Load messages when conversation changes
   useEffect(() => {
-    if (conversationId) {
-      loadMessages()
-    } else {
-      setMessages([])
-    }
-  }, [conversationId, loadMessages])
-
-  // Cleanup streaming on unmount
-  useEffect(() => {
-    return () => {
-      streamingService.stopStream()
-    }
-  }, [])
+    loadMessages()
+  }, [loadMessages])
 
   return {
     messages,
@@ -223,6 +218,6 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     sendMessage,
     loadMessages,
     isStreaming,
-    streamingMessageId,
+    streamingMessageId
   }
 } 

@@ -1,19 +1,22 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
-from sse_starlette.sse import EventSourceResponse
+from fastapi.responses import StreamingResponse
 from typing import Optional
 from uuid import UUID
 from pydantic import BaseModel
 
 from app.dependencies.auth import get_current_user
-from app.infrastructure.database import get_db_session
-from app.infrastructure.repositories.message_repository import MessageRepository
-from app.infrastructure.repositories.conversation_repository import ConversationRepository
+from app.dependencies.repositories import (
+    get_message_repository, 
+    get_conversation_repository,
+    MessageRepositoryType,
+    ConversationRepositoryType
+)
 from app.services.message_service import MessageService
 from app.services.conversation_service import ConversationService
 from app.services.openrouter_service import OpenRouterService
 from app.services.streaming_service import StreamingService
 from app.schemas.message import MessageCreate, MessageResponse, MessageListResponse, MessageHistoryQuery
-from app.models.message import MessageRole
+from app.types import MessageRole
 
 
 # Request models for enhanced endpoints
@@ -30,11 +33,15 @@ class EnhancedMessageCreate(BaseModel):
 router = APIRouter()
 
 
-async def get_message_service(db = Depends(get_db_session)) -> MessageService:
-    return MessageService(MessageRepository(db))
+async def get_message_service(
+    message_repo: MessageRepositoryType = Depends(get_message_repository)
+) -> MessageService:
+    return MessageService(message_repo)
 
-async def get_conversation_service(db = Depends(get_db_session)) -> ConversationService:
-    return ConversationService(ConversationRepository(db))
+async def get_conversation_service(
+    conversation_repo: ConversationRepositoryType = Depends(get_conversation_repository)
+) -> ConversationService:
+    return ConversationService(conversation_repo)
 
 async def get_openrouter_service(
     message_service: MessageService = Depends(get_message_service),
@@ -134,7 +141,7 @@ async def stream_chat_response(
 ):
     """Ultra-fast streaming with minimal DB overhead"""
     try:
-        return EventSourceResponse(
+        return StreamingResponse(
             streaming_service.stream_chat_response(
                 conversation_id=str(conversation_id),
                 user_message=request.message_content,

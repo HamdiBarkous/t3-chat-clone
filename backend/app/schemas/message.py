@@ -1,7 +1,8 @@
-from pydantic import BaseModel, UUID4
-from typing import Optional
+from pydantic import BaseModel, Field
+from uuid import UUID
+from typing import Optional, List
 from datetime import datetime
-from app.models.message import MessageRole, MessageStatus
+from app.types import MessageRole, MessageStatus
 
 
 class MessageBase(BaseModel):
@@ -10,15 +11,28 @@ class MessageBase(BaseModel):
 
 
 class MessageCreate(BaseModel):
+    conversation_id: UUID
+    role: MessageRole
     content: str
-    conversation_id: Optional[UUID4] = None  # Optional for API, set internally
-    role: Optional[MessageRole] = None  # Optional for API, set internally
-    model_used: Optional[str] = None  # Optional model override for this message
+    model_used: Optional[str] = None
+
+    class Config:
+        from_attributes = True
 
 
-class MessageResponse(MessageBase):
-    id: UUID4
-    conversation_id: UUID4
+class MessageUpdate(BaseModel):
+    content: Optional[str] = None
+    status: Optional[MessageStatus] = None
+
+    class Config:
+        from_attributes = True
+
+
+class MessageResponse(BaseModel):
+    id: UUID
+    conversation_id: UUID
+    role: MessageRole
+    content: str
     model_used: Optional[str] = None
     status: MessageStatus
     created_at: datetime
@@ -28,13 +42,19 @@ class MessageResponse(MessageBase):
 
 
 class MessageListResponse(BaseModel):
-    messages: list[MessageResponse]
+    messages: List[MessageResponse]
     total_count: int
     has_more: bool
     next_cursor: Optional[str] = None  # timestamp for pagination
 
+    class Config:
+        from_attributes = True
+
 
 class MessageHistoryQuery(BaseModel):
-    limit: int = 20
+    limit: int = Field(default=20, ge=1, le=100)
     before_timestamp: Optional[str] = None  # Get messages before this timestamp
     after_timestamp: Optional[str] = None   # Get messages after this timestamp 
+
+    class Config:
+        from_attributes = True 

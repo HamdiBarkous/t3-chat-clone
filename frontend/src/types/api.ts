@@ -13,10 +13,9 @@ export enum MessageRole {
 }
 
 export enum MessageStatus {
-  PENDING = 'pending',
-  STREAMING = 'streaming',
   COMPLETED = 'completed',
   FAILED = 'failed'
+  // Removed PENDING and STREAMING - not used in new optimized backend
 }
 
 export interface MessageBase {
@@ -32,7 +31,7 @@ export interface MessageCreate {
 export interface MessageResponse extends MessageBase {
   id: UUID;
   conversation_id: UUID;
-  sequence_number: number;
+  // Removed sequence_number - using timestamps for ordering
   model_used?: string;
   status: MessageStatus;
   created_at: string;
@@ -42,13 +41,13 @@ export interface MessageListResponse {
   messages: MessageResponse[];
   total_count: number;
   has_more: boolean;
-  next_cursor?: number; // sequence_number for pagination
+  next_cursor?: string; // timestamp for pagination
 }
 
 export interface MessageHistoryQuery {
   limit?: number; // default 20
-  before_sequence?: number; // Get messages before this sequence
-  after_sequence?: number; // Get messages after this sequence
+  before_timestamp?: string; // Get messages before this timestamp
+  after_timestamp?: string; // Get messages after this timestamp
 }
 
 // Conversation types
@@ -141,29 +140,28 @@ export interface ModelUpdate {
   model: string;
 }
 
-// SSE Event types
+// SSE Event types for new optimized streaming
 export interface SSEEvent {
-  type: 'message' | 'error' | 'complete';
+  type: 'user_message' | 'assistant_message_start' | 'content_chunk' | 'assistant_message_complete' | 'error';
   data: unknown;
 }
 
 export interface StreamingMessageChunk {
-  content: string;
-  is_complete: boolean;
-  message_id?: UUID;
+  chunk: string;
+  content_length: number;
 }
 
-// Simplified Message type for components (with consistent role type)
+// Simplified Message type for components
 export interface Message {
   id: UUID;
   conversation_id: UUID;
-  sequence_number: number;
-  sequence: number; // alias for sequence_number for backward compatibility
   role: 'user' | 'assistant'; // simplified string literals for components
   content: string;
   model_used?: string;
   status: MessageStatus;
   created_at: string;
+  // Add computed property for sorting by timestamp
+  timestamp: number; // computed from created_at for sorting
 }
 
 // Type alias for conversation compatibility
