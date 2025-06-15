@@ -3,6 +3,7 @@ import { apiClient, ApiError } from '@/lib/api'
 import { streamingService, StreamingCallbacks } from '@/lib/streaming'
 import type { Message, MessageListResponse, MessageResponse } from '@/types/api'
 import { MessageStatus } from '@/types/api'
+import { useConversations } from './useConversations'
 
 // Updated streaming event data interfaces for optimized backend
 interface UserMessageData {
@@ -64,6 +65,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
   const [error, setError] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
+  
+  // Get conversation hook for title updates
+  const { updateConversationTitle } = useConversations()
 
   const loadMessages = useCallback(async () => {
     if (!conversationId) {
@@ -192,6 +196,20 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onConnectionClose: () => {
           setIsStreaming(false)
           setStreamingMessageId(null)
+        },
+
+        onTitleGenerationStarted: (data: unknown) => {
+          console.log('Title generation started for conversation:', conversationId)
+        },
+
+        onTitleComplete: (data: unknown) => {
+          const titleData = data as { conversation_id: string; title: string }
+          console.log('Title generated:', titleData.title)
+          
+          // Update conversation title in the conversations list
+          if (conversationId) {
+            updateConversationTitle(conversationId, titleData.title)
+          }
         }
       }
 

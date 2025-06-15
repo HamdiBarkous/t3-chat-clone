@@ -1,5 +1,6 @@
 /**
  * Home Page - Protected Chat Interface
+ * Shows empty state or redirects to first conversation
  */
 
 'use client';
@@ -7,36 +8,19 @@
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ChatLayout } from '@/components/chat/ChatLayout';
 import { EmptyState } from '@/components/chat/EmptyState';
-import { ChatInterface } from '@/components/chat/ChatInterface';
 import { NewConversationModal } from '@/components/conversation/NewConversationModal';
 import { useConversations } from '@/hooks/useConversations';
-import { useState, useMemo } from 'react';
-import type { ConversationResponse } from '@/types/api';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
 
 function HomePage() {
-  const [selectedConversationId, setSelectedConversationId] = useState<string | undefined>(undefined);
+  const router = useRouter();
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
   
   // Use real conversations hook
-  const { conversations, createConversation } = useConversations();
-  
-  // Get selected conversation and convert to ConversationResponse format
-  const selectedConversation = useMemo((): ConversationResponse | undefined => {
-    const listItem = conversations.find(conv => conv.id === selectedConversationId);
-    if (!listItem) return undefined;
-    
-    // Convert ConversationListItem to ConversationResponse
-    // Note: user_id and system_prompt are not available in list items
-    return {
-      id: listItem.id,
-      user_id: '', // Will be populated when needed
-      title: listItem.title,
-      current_model: listItem.current_model,
-      system_prompt: undefined, // Will be fetched when needed
-      created_at: listItem.created_at,
-      updated_at: listItem.updated_at
-    };
-  }, [conversations, selectedConversationId]);
+  const { conversations, loading, createConversation } = useConversations();
+
+  // No auto-redirect - let users choose their conversation
 
   const handleNewChat = () => {
     setIsNewConversationModalOpen(true);
@@ -51,7 +35,7 @@ function HomePage() {
       });
       
       if (newConversation) {
-        setSelectedConversationId(newConversation.id);
+        router.push(`/conversations/${newConversation.id}`);
         setIsNewConversationModalOpen(false);
       }
     } catch (error) {
@@ -60,23 +44,31 @@ function HomePage() {
   };
 
   const handleConversationSelect = (conversationId: string) => {
-    setSelectedConversationId(conversationId);
+    router.push(`/conversations/${conversationId}`);
   };
+
+  // Show loading state while conversations are loading
+  if (loading) {
+    return (
+      <ChatLayout
+        onNewChat={handleNewChat}
+        selectedConversationId={undefined}
+        onConversationSelect={handleConversationSelect}
+      >
+        <div className="flex-1 flex items-center justify-center">
+          <div className="text-zinc-400">Loading conversations...</div>
+        </div>
+      </ChatLayout>
+    );
+  }
 
   return (
     <ChatLayout
       onNewChat={handleNewChat}
-      selectedConversationId={selectedConversationId}
+      selectedConversationId={undefined}
       onConversationSelect={handleConversationSelect}
     >
-      {selectedConversationId && selectedConversation ? (
-        <ChatInterface 
-          conversationId={selectedConversationId}
-          conversation={selectedConversation}
-        />
-      ) : (
-        <EmptyState onNewChat={handleNewChat} />
-      )}
+      <EmptyState onNewChat={handleNewChat} />
 
       <NewConversationModal
         isOpen={isNewConversationModalOpen}

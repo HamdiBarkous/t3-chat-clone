@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useEffect } from 'react';
+import React from 'react';
 import { clsx } from 'clsx';
 import { useConversations } from '@/hooks/useConversations';
 
@@ -20,12 +20,7 @@ export function ConversationList({
 }: ConversationListProps) {
   const { conversations, loading, error, deleteConversation } = useConversations();
 
-  // Auto-select first conversation for demo purposes
-  useEffect(() => {
-    if (!selectedConversationId && conversations.length > 0 && onConversationSelect) {
-      onConversationSelect(conversations[0].id);
-    }
-  }, [selectedConversationId, conversations, onConversationSelect]);
+  // Note: Auto-selection is now handled by routing in the main pages
 
   const formatTimeAgo = (dateString: string) => {
     const date = new Date(dateString);
@@ -43,10 +38,7 @@ export function ConversationList({
     
     if (confirm('Are you sure you want to delete this conversation?')) {
       const success = await deleteConversation(conversationId);
-      if (success && selectedConversationId === conversationId) {
-        // If we deleted the selected conversation, clear selection
-        onConversationSelect?.('');
-      }
+      // The parent component will handle navigation if needed
     }
   };
 
