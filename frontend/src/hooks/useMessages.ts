@@ -1,19 +1,11 @@
 import { useState, useEffect, useCallback } from 'react'
-import { apiClient, ApiError } from '@/lib/api'
+import { apiClient, ApiError, supabase } from '@/lib/api'
 import { streamingService, StreamingCallbacks } from '@/lib/streaming'
 import type { Message, MessageListResponse, MessageResponse } from '@/types/api'
 import { MessageStatus } from '@/types/api'
 import { useConversations } from '@/contexts/ConversationsContext'
 
 // Updated streaming event data interfaces for optimized backend
-interface UserMessageData {
-  id: string
-  conversation_id: string
-  role: string
-  content: string
-  created_at: string
-  model_used?: string
-}
 
 // Removed unused interface AssistantMessageStartData
 
@@ -39,7 +31,7 @@ interface UseMessagesReturn {
   messages: Message[]
   loading: boolean
   error: string | null
-  sendMessage: (content: string, model?: string) => Promise<void>
+  sendMessage: (content: string, model?: string, files?: File[]) => Promise<void>
   loadMessages: () => Promise<void>
   isStreaming: boolean
   streamingMessageId: string | null
@@ -89,30 +81,101 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     }
   }, [conversationId])
 
-  const createUserMessage = (data: UserMessageData): Message => ({
-    id: data.id,
-    conversation_id: conversationId!,
-    role: 'user',
-    content: data.content,
-    status: MessageStatus.COMPLETED,
-    created_at: data.created_at,
-    model_used: data.model_used,
-    timestamp: new Date(data.created_at).getTime()
-  })
 
 
-
-  const sendMessage = useCallback(async (content: string, model?: string) => {
+  const sendMessage = useCallback(async (content: string, model?: string, files?: File[]) => {
     if (!conversationId || isStreaming) return
 
     try {
       setError(null)
       setIsStreaming(true)
 
+      // Step 1: Create user message first (non-streaming endpoint)
+      let userMessageId: string | null = null
+      
+      try {
+        const response = await fetch(`http://localhost:8000/api/v1/conversations/${conversationId}/messages`, {
+          method: 'POST',
+          headers: {
+            'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            content: content,
+            model: model
+          }),
+        })
+
+        if (!response.ok) {
+          throw new Error('Failed to create message')
+        }
+
+        const messageData = await response.json()
+        userMessageId = messageData.id
+        
+        // Add user message to UI immediately
+        const userMessage: Message = {
+          id: messageData.id,
+          conversation_id: conversationId,
+          role: 'user',
+          content: content,
+          status: MessageStatus.COMPLETED,
+          created_at: messageData.created_at,
+          model_used: messageData.model_used,
+          timestamp: new Date(messageData.created_at).getTime()
+        }
+        setMessages(prev => [...prev, userMessage])
+
+      } catch (error) {
+        console.error('Failed to create user message:', error)
+        setError('Failed to send message')
+        setIsStreaming(false)
+        return
+      }
+
+      // Step 2: Upload documents if any (BEFORE starting AI stream)
+      if (files && files.length > 0 && userMessageId) {
+        try {
+          const uploadPromises = files.map(async (file) => {
+            const formData = new FormData()
+            formData.append('file', file)
+
+            const response = await fetch(`http://localhost:8000/api/v1/messages/${userMessageId}/documents`, {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
+              },
+              body: formData,
+            })
+
+            if (!response.ok) {
+              throw new Error(`Failed to upload ${file.name}`)
+            }
+
+            return response.json()
+          })
+
+          const uploadedDocs = await Promise.all(uploadPromises)
+          
+          // Update the user message with document metadata
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === userMessageId
+                ? { ...msg, documents: uploadedDocs }
+                : msg
+            )
+          )
+        } catch (error) {
+          console.error('File upload failed:', error)
+          setError('Some files failed to upload, but your message was sent.')
+          // Continue with AI processing even if file upload fails
+        }
+      }
+
+      // Step 3: Now start AI streaming (documents are already uploaded)
       const streamCallbacks: StreamingCallbacks = {
-        onUserMessage: (data: unknown) => {
-          const userMessage = createUserMessage(data as UserMessageData)
-          setMessages(prev => [...prev, userMessage])
+        onUserMessage: async () => {
+          // User message already created and displayed, skip this
         },
 
         onAssistantMessageStart: () => {
@@ -215,7 +278,8 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         }
       }
 
-      await streamingService.startStream(conversationId, content, model, streamCallbacks)
+      // Start streaming for AI response only (user message already created)
+      await streamingService.startStreamWithExistingMessage(conversationId, content, model, userMessageId || undefined, streamCallbacks)
 
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : 'Failed to send message'
@@ -224,7 +288,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setStreamingMessageId(null)
       console.error('Error sending message:', err)
     }
-  }, [conversationId, isStreaming, createUserMessage, updateConversationTitle])
+  }, [conversationId, isStreaming, updateConversationTitle])
 
   // Load messages when conversation changes
   useEffect(() => {

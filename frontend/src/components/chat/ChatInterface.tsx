@@ -32,11 +32,11 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
   
   const { updateConversation } = useConversations();
 
-  const handleSendMessage = async (content: string) => {
-    if (!content.trim() || isStreaming) return;
+  const handleSendMessage = async (content: string, files?: File[]) => {
+    if ((!content.trim() && (!files || files.length === 0)) || isStreaming) return;
     
     try {
-      await sendMessage(content.trim(), currentModel);
+      await sendMessage(content.trim(), currentModel, files);
     } catch (error) {
       console.error('Failed to send message:', error);
     }

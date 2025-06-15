@@ -92,6 +92,7 @@ function LanguageIcon({ language }: { language: string }) {
   if (iconFile && !iconFailed) {
     return (
       <div className="flex items-center justify-center w-5 h-5">
+        {/* eslint-disable-next-line @next/next/no-img-element */}
         <img 
           src={`/icons/languages/${iconFile}`} 
           alt={`${language} icon`}
@@ -185,7 +186,7 @@ function preprocessMathContent(content: string): string {
   // This handles the common issue where LaTeX commands get double-escaped
   processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, (match, mathContent) => {
     // Fix common LaTeX commands that get double-escaped
-    let fixedContent = mathContent
+    const fixedContent = mathContent
       // Fix fractions
       .replace(/\\\\frac/g, '\\frac')
       // Fix square roots
@@ -210,7 +211,7 @@ function preprocessMathContent(content: string): string {
   
   // Fix inline math as well
   processed = processed.replace(/\$([^$\n]+)\$/g, (match, mathContent) => {
-    let fixedContent = mathContent
+    const fixedContent = mathContent
       .replace(/\\\\frac/g, '\\frac')
       .replace(/\\\\sqrt/g, '\\sqrt')
       .replace(/\\\\(alpha|beta|gamma|delta|epsilon|zeta|eta|theta|iota|kappa|lambda|mu|nu|xi|omicron|pi|rho|sigma|tau|upsilon|phi|chi|psi|omega)/g, '\\$1')
@@ -264,6 +265,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
         ]}
         components={{
           // Code blocks with syntax highlighting
+          // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
           code({ node, className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
@@ -327,6 +329,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
                   {/* Code content */}
                   <div className="relative bg-[#0d1117] rounded-b-xl">
                     <SyntaxHighlighter
+                      // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       style={oneDark as any}
                       language={language}
                       PreTag="div"
@@ -338,6 +341,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
                         fontSize: '0.875rem',
                         lineHeight: '1.6',
                         padding: '1.5rem',
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       } as any}
                       codeTagProps={{
                         style: {

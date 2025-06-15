@@ -18,6 +18,22 @@ export enum MessageStatus {
   // Removed PENDING and STREAMING - not used in new optimized backend
 }
 
+// Document types
+export interface DocumentResponse {
+  id: UUID;
+  message_id: UUID;
+  filename: string;
+  file_type: string;
+  file_size: number;
+  created_at: string;
+  // Note: content_text is never included in API responses
+}
+
+export interface DocumentListResponse {
+  documents: DocumentResponse[];
+  total_count: number;
+}
+
 export interface MessageBase {
   content: string;
   role: MessageRole;
@@ -35,6 +51,8 @@ export interface MessageResponse extends MessageBase {
   model_used?: string;
   status: MessageStatus;
   created_at: string;
+  // Document metadata (never includes document content)
+  documents?: DocumentResponse[];
 }
 
 export interface MessageListResponse {
@@ -140,6 +158,31 @@ export interface ModelUpdate {
   model: string;
 }
 
+// Document upload types
+export interface DocumentUploadRequest {
+  message_id: UUID;
+}
+
+export interface DocumentValidationResult {
+  valid: boolean;
+  error?: string;
+  filename?: string;
+  file_type?: string;
+  file_size?: number;
+  estimated_processing_time?: number;
+}
+
+export interface SupportedFileTypes {
+  documents: Record<string, string>;
+  text_files: Record<string, string>;
+  code_files: Record<string, string>;
+  limits: {
+    max_file_size: string;
+    max_content_length: string;
+    supported_count: number;
+  };
+}
+
 // SSE Event types for new optimized streaming
 export interface SSEEvent {
   type: 'user_message' | 'assistant_message_start' | 'content_chunk' | 'assistant_message_complete' | 'error';
@@ -162,6 +205,8 @@ export interface Message {
   created_at: string;
   // Add computed property for sorting by timestamp
   timestamp: number; // computed from created_at for sorting
+  // Document attachments (metadata only)
+  documents?: DocumentResponse[];
 }
 
 // Type alias for conversation compatibility

@@ -10,6 +10,7 @@ import { clsx } from 'clsx';
 import type { Message } from '@/types/api';
 import { MessageStatus } from '@/types/api';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
+import { DocumentBadge } from '@/components/ui/DocumentBadge';
 
 interface MessageBubbleProps {
   message: Message;
@@ -34,6 +35,24 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
         'flex flex-col max-w-[80%]',
         isUser ? 'items-end' : 'items-start'
       )}>
+        {/* Document Attachments (for user messages) */}
+        {isUser && message.documents && message.documents.length > 0 && (
+          <div className="mb-2 max-w-full">
+            <div className="text-xs text-zinc-500 mb-1">
+              Attached files ({message.documents.length}):
+            </div>
+            <div className="flex flex-wrap gap-1">
+              {message.documents.map((doc) => (
+                <DocumentBadge
+                  key={doc.id}
+                  document={doc}
+                  size="sm"
+                />
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Message Bubble */}
         <div className={clsx(
           'rounded-lg relative',
