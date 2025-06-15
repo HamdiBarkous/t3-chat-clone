@@ -9,7 +9,7 @@ import React, { useState } from 'react';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { useMessages } from '@/hooks/useMessages';
-import { useConversations } from '@/hooks/useConversations';
+import { useConversations } from '@/contexts/ConversationsContext';
 import type { Conversation } from '@/types/api';
 
 interface ChatInterfaceProps {

@@ -7,7 +7,7 @@
 
 import React from 'react';
 import { clsx } from 'clsx';
-import { useConversations } from '@/hooks/useConversations';
+import { useConversations } from '@/contexts/ConversationsContext';
 
 interface ConversationListProps {
   selectedConversationId?: string;
@@ -37,7 +37,7 @@ export function ConversationList({
     e.stopPropagation();
     
     if (confirm('Are you sure you want to delete this conversation?')) {
-      const success = await deleteConversation(conversationId);
+      await deleteConversation(conversationId);
       // The parent component will handle navigation if needed
     }
   };

@@ -1,9 +1,9 @@
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { apiClient, ApiError } from '@/lib/api'
 import { streamingService, StreamingCallbacks } from '@/lib/streaming'
 import type { Message, MessageListResponse, MessageResponse } from '@/types/api'
 import { MessageStatus } from '@/types/api'
-import { useConversations } from './useConversations'
+import { useConversations } from '@/contexts/ConversationsContext'
 
 // Updated streaming event data interfaces for optimized backend
 interface UserMessageData {
@@ -15,12 +15,7 @@ interface UserMessageData {
   model_used?: string
 }
 
-interface AssistantMessageStartData {
-  conversation_id: string
-  role: string
-  model_used?: string
-  status: string
-}
+// Removed unused interface AssistantMessageStartData
 
 interface ContentChunkData {
   chunk: string
@@ -129,7 +124,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setMessages(prev => [...prev, userMessage])
         },
 
-        onAssistantMessageStart: (data: unknown) => {
+        onAssistantMessageStart: () => {
           // Create temporary streaming message
           const assistantMessage = createStreamingAssistantMessage()
           setStreamingMessageId(assistantMessage.id)
@@ -198,7 +193,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setStreamingMessageId(null)
         },
 
-        onTitleGenerationStarted: (data: unknown) => {
+        onTitleGenerationStarted: () => {
           console.log('Title generation started for conversation:', conversationId)
         },
 
@@ -222,7 +217,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setStreamingMessageId(null)
       console.error('Error sending message:', err)
     }
-  }, [conversationId, isStreaming])
+  }, [conversationId, isStreaming, createUserMessage, createStreamingAssistantMessage, updateConversationTitle])
 
   // Load messages when conversation changes
   useEffect(() => {

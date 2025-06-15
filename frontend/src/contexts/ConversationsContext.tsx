@@ -1,8 +1,15 @@
-import { useState, useEffect, useCallback } from 'react'
-import { apiClient, ApiError } from '@/lib/api'
-import type { ConversationListItem, ConversationCreate, ConversationUpdate, ConversationResponse } from '@/types/api'
+/**
+ * Conversations Context Provider
+ * Manages conversations state globally to avoid multiple API calls
+ */
 
-interface UseConversationsReturn {
+'use client';
+
+import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { apiClient, ApiError } from '@/lib/api';
+import type { ConversationListItem, ConversationCreate, ConversationUpdate, ConversationResponse } from '@/types/api';
+
+interface ConversationsContextType {
   conversations: ConversationListItem[]
   loading: boolean
   error: string | null
@@ -13,10 +20,13 @@ interface UseConversationsReturn {
   updateConversationTitle: (id: string, title: string) => void
 }
 
-export function useConversations(): UseConversationsReturn {
+const ConversationsContext = createContext<ConversationsContextType | undefined>(undefined);
+
+export function ConversationsProvider({ children }: { children: React.ReactNode }) {
   const [conversations, setConversations] = useState<ConversationListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const [initialized, setInitialized] = useState(false)
 
   const fetchConversations = useCallback(async () => {
     try {
@@ -31,6 +41,7 @@ export function useConversations(): UseConversationsReturn {
       console.error('Error fetching conversations:', err)
     } finally {
       setLoading(false)
+      setInitialized(true)
     }
   }, [])
 
@@ -114,12 +125,14 @@ export function useConversations(): UseConversationsReturn {
     )
   }, [])
 
-  // Load conversations on mount
+  // Load conversations on mount (only once)
   useEffect(() => {
-    fetchConversations()
-  }, [fetchConversations])
+    if (!initialized) {
+      fetchConversations()
+    }
+  }, [fetchConversations, initialized])
 
-  return {
+  const value: ConversationsContextType = {
     conversations,
     loading,
     error,
@@ -129,4 +142,18 @@ export function useConversations(): UseConversationsReturn {
     refreshConversations,
     updateConversationTitle,
   }
+
+  return (
+    <ConversationsContext.Provider value={value}>
+      {children}
+    </ConversationsContext.Provider>
+  );
+}
+
+export function useConversations(): ConversationsContextType {
+  const context = useContext(ConversationsContext);
+  if (context === undefined) {
+    throw new Error('useConversations must be used within a ConversationsProvider');
+  }
+  return context;
 } 

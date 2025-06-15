@@ -9,7 +9,7 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ChatLayout } from '@/components/chat/ChatLayout';
 import { EmptyState } from '@/components/chat/EmptyState';
 import { NewConversationModal } from '@/components/conversation/NewConversationModal';
-import { useConversations } from '@/hooks/useConversations';
+import { useConversations } from '@/contexts/ConversationsContext';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 
@@ -18,7 +18,7 @@ function HomePage() {
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
   
   // Use real conversations hook
-  const { conversations, loading, createConversation } = useConversations();
+  const { loading, createConversation } = useConversations();
 
   // No auto-redirect - let users choose their conversation
 

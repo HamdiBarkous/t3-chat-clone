@@ -9,7 +9,7 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ChatLayout } from '@/components/chat/ChatLayout';
 import { ChatInterface } from '@/components/chat/ChatInterface';
 import { NewConversationModal } from '@/components/conversation/NewConversationModal';
-import { useConversations } from '@/hooks/useConversations';
+import { useConversations } from '@/contexts/ConversationsContext';
 import { useState, useMemo, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ConversationResponse } from '@/types/api';
