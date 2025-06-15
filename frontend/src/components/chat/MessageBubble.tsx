@@ -5,12 +5,14 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState } from 'react';
 import { clsx } from 'clsx';
+import { useRouter } from 'next/navigation';
 import type { Message } from '@/types/api';
 import { MessageStatus } from '@/types/api';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
+import { useConversations } from '@/contexts/ConversationsContext';
 
 interface MessageBubbleProps {
   message: Message;
@@ -20,10 +22,30 @@ interface MessageBubbleProps {
 export function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
+  const router = useRouter();
+  const { branchConversation } = useConversations();
+  const [isBranching, setIsBranching] = useState(false);
 
   const formatTimestamp = (timestamp: string) => {
     const date = new Date(timestamp);
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+  };
+
+  const handleBranchFromHere = async () => {
+    if (isBranching) return;
+    
+    setIsBranching(true);
+    try {
+      const newConversation = await branchConversation(message.conversation_id, message.id);
+      if (newConversation) {
+        // Navigate to the new conversation
+        router.push(`/conversations/${newConversation.id}`);
+      }
+    } catch (error) {
+      console.error('Error branching conversation:', error);
+    } finally {
+      setIsBranching(false);
+    }
   };
 
   return (
@@ -107,6 +129,25 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
             </div>
           )}
 
+          {/* Branch button for assistant messages */}
+          {isAssistant && !isStreaming && (
+            <button
+              onClick={handleBranchFromHere}
+              disabled={isBranching}
+              className={clsx(
+                'flex items-center gap-1 px-2 py-1 rounded text-xs',
+                'hover:bg-zinc-800 transition-colors',
+                'disabled:opacity-50 disabled:cursor-not-allowed',
+                isBranching ? 'text-zinc-500' : 'text-zinc-400 hover:text-zinc-200'
+              )}
+              title="Branch from here"
+            >
+              <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
+              <span>{isBranching ? 'Branching...' : 'Branch'}</span>
+            </button>
+          )}
 
         </div>
       </div>

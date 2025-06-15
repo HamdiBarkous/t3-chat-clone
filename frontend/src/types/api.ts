@@ -158,6 +158,10 @@ export interface ModelUpdate {
   model: string;
 }
 
+export interface BranchRequest {
+  message_id: UUID;
+}
+
 // Document upload types
 export interface DocumentUploadRequest {
   message_id: UUID;

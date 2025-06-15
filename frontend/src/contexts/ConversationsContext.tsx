@@ -7,7 +7,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError } from '@/lib/api';
-import type { ConversationListItem, ConversationCreate, ConversationUpdate, ConversationResponse } from '@/types/api';
+import type { ConversationListItem, ConversationCreate, ConversationUpdate, ConversationResponse, BranchRequest } from '@/types/api';
 
 interface ConversationsContextType {
   conversations: ConversationListItem[]
@@ -16,6 +16,7 @@ interface ConversationsContextType {
   createConversation: (data: ConversationCreate) => Promise<ConversationResponse | null>
   updateConversation: (id: string, data: ConversationUpdate) => Promise<ConversationResponse | null>
   deleteConversation: (id: string) => Promise<boolean>
+  branchConversation: (conversationId: string, messageId: string) => Promise<ConversationResponse | null>
   refreshConversations: () => Promise<void>
   updateConversationTitle: (id: string, title: string) => void
 }
@@ -112,6 +113,37 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     }
   }, [])
 
+  const branchConversation = useCallback(async (
+    conversationId: string, 
+    messageId: string
+  ): Promise<ConversationResponse | null> => {
+    try {
+      setError(null)
+      
+      const branchData: BranchRequest = { message_id: messageId }
+      const newConversation = await apiClient.post<ConversationResponse>(
+        `/conversations/${conversationId}/branch`, 
+        branchData
+      )
+      
+      // Convert to ConversationListItem format and add to the beginning of the list
+      const listItem: ConversationListItem = {
+        ...newConversation,
+        message_count: 0,
+        last_message_preview: undefined,
+        last_message_at: undefined
+      }
+      setConversations(prev => [listItem, ...prev])
+      
+      return newConversation
+    } catch (err) {
+      const errorMessage = err instanceof ApiError ? err.message : 'Failed to branch conversation'
+      setError(errorMessage)
+      console.error('Error branching conversation:', err)
+      return null
+    }
+  }, [])
+
   const refreshConversations = useCallback(async () => {
     await fetchConversations()
   }, [fetchConversations])
@@ -139,6 +171,7 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     createConversation,
     updateConversation,
     deleteConversation,
+    branchConversation,
     refreshConversations,
     updateConversationTitle,
   }

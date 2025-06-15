@@ -91,14 +91,21 @@ export function ConversationList({
           onClick={() => onConversationSelect?.(conversation.id)}
         >
           <div className="flex items-start justify-between mb-1">
-            <h3 className={clsx(
-              'font-medium text-sm truncate flex-1 mr-2',
-              selectedConversationId === conversation.id
-                ? 'text-white'
-                : 'text-zinc-200 group-hover:text-white'
-            )}>
-              {conversation.title || 'New Conversation'}
-            </h3>
+            <div className="flex items-center flex-1 mr-2">
+              {conversation.title?.startsWith('Branch from ') && (
+                <svg className="w-3 h-3 text-[#8b5cf6] mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              )}
+              <h3 className={clsx(
+                'font-medium text-sm truncate',
+                selectedConversationId === conversation.id
+                  ? 'text-white'
+                  : 'text-zinc-200 group-hover:text-white'
+              )}>
+                {conversation.title || 'New Conversation'}
+              </h3>
+            </div>
             
             <span className="text-xs text-zinc-500 flex-shrink-0">
               {formatTimeAgo(conversation.updated_at)}
