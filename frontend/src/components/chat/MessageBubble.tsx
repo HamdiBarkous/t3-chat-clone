@@ -9,6 +9,7 @@ import React from 'react';
 import { clsx } from 'clsx';
 import type { Message } from '@/types/api';
 import { MessageStatus } from '@/types/api';
+import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 
 interface MessageBubbleProps {
   message: Message;
@@ -56,18 +57,24 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
         )}>
           {/* Message Bubble */}
           <div className={clsx(
-            'px-4 py-3 rounded-lg relative',
+            'rounded-lg relative',
             isUser 
-              ? 'bg-[#8b5cf6] text-white' 
+              ? 'bg-[#8b5cf6] text-white px-4 py-3' 
               : 'bg-[#2d2d2d] text-white border border-[#3f3f46]'
           )}>
             {/* Message Text */}
-            <div className="whitespace-pre-wrap break-words">
-              {message.content}
-              {isStreaming && (
-                <span className="inline-block w-2 h-5 bg-current ml-1 animate-pulse" />
-              )}
-            </div>
+            {isUser ? (
+              <div className="whitespace-pre-wrap break-words">
+                {message.content}
+              </div>
+            ) : (
+              <div className={clsx(isAssistant ? 'p-4' : 'px-4 py-3')}>
+                <MarkdownRenderer content={message.content} />
+                {isStreaming && (
+                  <span className="inline-block w-2 h-5 bg-[#8b5cf6] ml-1 animate-pulse" />
+                )}
+              </div>
+            )}
           </div>
 
           {/* Metadata */}
