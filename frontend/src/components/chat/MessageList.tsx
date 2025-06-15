@@ -13,12 +13,14 @@ interface MessageListProps {
   messages: Message[];
   streamingMessageId?: string;
   isLoading?: boolean;
+  isLoadingConversation?: boolean;
 }
 
 export function MessageList({ 
   messages, 
   streamingMessageId,
-  isLoading = false 
+  isLoading = false,
+  isLoadingConversation = false
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -33,11 +35,32 @@ export function MessageList({
   // Sort messages by timestamp to ensure proper chronological ordering
   const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
 
+  // Show conversation loading state when switching conversations
+  if (isLoadingConversation) {
+    return (
+      <div className="flex-1 flex items-center justify-center p-8">
+        <div className="relative w-8 h-8">
+          {/* Spinning gradient icon */}
+          <div className="absolute inset-0 bg-gradient-to-r from-[#8b5cf6] via-[#7c3aed] to-[#8b5cf6] rounded-full animate-spin animate-pulse" 
+               style={{ animationDuration: '1.5s' }}>
+          </div>
+          
+          {/* Inner icon */}
+          <div className="absolute inset-1 bg-[#1a1a1a] rounded-full flex items-center justify-center">
+            <svg className="w-4 h-4 text-[#8b5cf6] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
+            </svg>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   if (messages.length === 0 && !isLoading) {
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-[#2d2d2d] rounded-full flex items-center justify-center">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#2d2d2d] to-[#1a1a1a] rounded-full flex items-center justify-center border border-[#3f3f46]">
             <svg className="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
@@ -64,23 +87,25 @@ export function MessageList({
           />
         ))}
 
-        {/* Loading indicator */}
+        {/* AI Typing indicator - only when AI is responding */}
         {isLoading && (
           <div className="flex justify-start mb-6">
             <div className="flex max-w-[80%] gap-3">
-              {/* AI Avatar */}
-              <div className="w-8 h-8 rounded-full bg-[#2d2d2d] border border-[#3f3f46] flex items-center justify-center flex-shrink-0 mt-1">
-                <svg className="w-4 h-4 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.75 17L9 20l-1 1h8l-1-1-.75-3M3 13h18M5 17h14a2 2 0 002-2V5a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                </svg>
+              {/* AI Avatar with pulsing ring */}
+              <div className="relative w-8 h-8 flex-shrink-0 mt-1">
+                <div className="absolute inset-0 rounded-full bg-gradient-to-br from-[#2d2d2d] to-[#1a1a1a] border border-[#8b5cf6]/30 shadow-lg shadow-[#8b5cf6]/10"></div>
+                <div className="absolute inset-0 rounded-full border border-[#8b5cf6]/50 animate-ping"></div>
+                <div className="absolute inset-0 rounded-full flex items-center justify-center">
+                  <div className="w-2 h-2 bg-[#8b5cf6] rounded-full animate-pulse"></div>
+                </div>
               </div>
 
-              {/* Loading bubble */}
-              <div className="bg-[#2d2d2d] border border-[#3f3f46] px-4 py-3 rounded-lg">
-                <div className="flex items-center gap-1">
-                  <div className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" />
-                  <div className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0.1s' }} />
-                  <div className="w-2 h-2 bg-zinc-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+              {/* Minimal typing bubble */}
+              <div className="bg-gradient-to-br from-[#2d2d2d] to-[#262626] border border-[#8b5cf6]/20 px-4 py-3 rounded-2xl shadow-lg">
+                <div className="flex items-center gap-1.5">
+                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce" />
+                  <div className="w-1.5 h-1.5 bg-[#7c3aed] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
                 </div>
               </div>
             </div>

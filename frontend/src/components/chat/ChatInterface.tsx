@@ -94,7 +94,8 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
       <MessageList 
         messages={messages}
         streamingMessageId={streamingMessageId || undefined}
-        isLoading={loading}
+        isLoading={isStreaming}
+        isLoadingConversation={loading && messages.length === 0}
       />
 
       {/* Message Input */}
