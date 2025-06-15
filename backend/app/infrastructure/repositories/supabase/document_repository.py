@@ -131,6 +131,43 @@ class DocumentRepository:
             logger.error(f"Error getting document {document_id}: {e}")
             raise SupabaseError(f"Failed to get document: {str(e)}")
     
+    async def get_documents_for_messages_batch(
+        self, 
+        message_ids: List[UUID], 
+        user_id: UUID
+    ) -> List[DocumentResponse]:
+        """OPTIMIZED: Get documents for multiple messages in single query"""
+        try:
+            if not message_ids:
+                return []
+            
+            # Convert UUIDs to strings for the query
+            message_id_strings = [str(mid) for mid in message_ids]
+            
+            # Single query to get all documents for all messages
+            results = await self.client.table(self.table_name) \
+                .select("id, message_id, filename, file_type, file_size, created_at") \
+                .in_("message_id", message_id_strings) \
+                .order("created_at", desc=False) \
+                .execute()
+            
+            documents = []
+            for result in results.data or []:
+                documents.append(DocumentResponse(
+                    id=result["id"],
+                    message_id=result["message_id"],
+                    filename=result["filename"],
+                    file_type=result["file_type"],
+                    file_size=result["file_size"],
+                    created_at=result["created_at"]
+                ))
+            
+            return documents
+            
+        except Exception as e:
+            logger.error(f"Error in batch document query: {e}")
+            return []
+    
     async def get_message_documents(
         self, 
         message_id: UUID, 

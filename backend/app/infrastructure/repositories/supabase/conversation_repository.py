@@ -100,76 +100,102 @@ class SupabaseConversationRepository:
             raise SupabaseError(f"Failed to delete conversation: {str(e)}")
 
     async def list_by_user(self, user_id: UUID, limit: int = 20, offset: int = 0) -> List[ConversationListItem]:
-        """List conversations for a user with message statistics"""
+        """OPTIMIZED: List conversations with message stats in single query"""
         try:
-            # Get conversations with pagination
-            conversations_response = await self.client.table(self.table_name).select("*").eq(
-                "user_id", str(user_id)
-            ).order(
-                "updated_at", desc=True
-            ).limit(limit).offset(offset).execute()
+            # Use RPC function for complex query (we'll create this)
+            response = await self.client.call_rpc('get_conversations_with_stats', {
+                'p_user_id': str(user_id),
+                'p_limit': limit,
+                'p_offset': offset
+            })
             
-            if not conversations_response.data:
-                return []
-            
-            conversations = [ConversationRow(**conv) for conv in conversations_response.data]
-            conversation_ids = [str(conv.id) for conv in conversations]
-            
-            # Get message statistics for these conversations
-            # Using a more complex query to get stats per conversation
-            stats_response = await self.client.table("messages").select(
-                "conversation_id, content, created_at"
-            ).in_(
-                "conversation_id", conversation_ids
-            ).order("created_at", desc=True).execute()
-            
-            # Process stats manually since Supabase doesn't support window functions directly
-            stats_dict = {}
-            for message in stats_response.data or []:
-                conv_id = message["conversation_id"]
-                if conv_id not in stats_dict:
-                    stats_dict[conv_id] = {
-                        'message_count': 0,
-                        'last_message_at': None,
-                        'last_message_preview': None
-                    }
-                
-                stats_dict[conv_id]['message_count'] += 1
-                
-                # Update latest message info if this is more recent
-                if (not stats_dict[conv_id]['last_message_at'] or 
-                    message['created_at'] > stats_dict[conv_id]['last_message_at']):
-                    stats_dict[conv_id]['last_message_at'] = message['created_at']
-                    stats_dict[conv_id]['last_message_preview'] = message['content'][:100] if message['content'] else None
-
-            # Combine results
+            # Convert results to ConversationListItem objects
             result_conversations = []
-            for conversation in conversations:
-                stats = stats_dict.get(str(conversation.id), {
-                    'message_count': 0,
-                    'last_message_at': None,
-                    'last_message_preview': None
-                })
-                
+            for row in response:
                 result_conversations.append(ConversationListItem(
-                    id=conversation.id,
-                    title=conversation.title,
-                    current_model=conversation.current_model,
-                    created_at=conversation.created_at,
-                    updated_at=conversation.updated_at,
-                    message_count=stats['message_count'],
-                    last_message_at=stats['last_message_at'],
-                    last_message_preview=stats['last_message_preview']
+                    id=UUID(row["id"]),
+                    title=row["title"],
+                    current_model=row["current_model"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"],
+                    message_count=row["message_count"] or 0,
+                    last_message_at=row["last_message_at"],
+                    last_message_preview=row["last_message_preview"]
                 ))
-            
-            # Sort by last message activity
-            result_conversations.sort(
-                key=lambda c: c.last_message_at or c.updated_at,
-                reverse=True
-            )
             
             return result_conversations
             
         except Exception as e:
-            logger.error(f"Error listing conversations for user {user_id}: {e}")
-            raise SupabaseError(f"Failed to list conversations: {str(e)}") 
+            logger.error(f"Error in optimized conversation list: {e}")
+            # Fallback to original method
+            return await self._list_by_user_fallback(user_id, limit, offset)
+    
+    async def _list_by_user_fallback(self, user_id: UUID, limit: int = 20, offset: int = 0) -> List[ConversationListItem]:
+        """Fallback method using original approach"""
+        # Get conversations with pagination
+        conversations_response = await self.client.table(self.table_name).select("*").eq(
+            "user_id", str(user_id)
+        ).order(
+            "updated_at", desc=True
+        ).limit(limit).offset(offset).execute()
+        
+        if not conversations_response.data:
+            return []
+        
+        conversations = [ConversationRow(**conv) for conv in conversations_response.data]
+        conversation_ids = [str(conv.id) for conv in conversations]
+        
+        # Get message statistics for these conversations
+        # Using a more complex query to get stats per conversation
+        stats_response = await self.client.table("messages").select(
+            "conversation_id, content, created_at"
+        ).in_(
+            "conversation_id", conversation_ids
+        ).order("created_at", desc=True).execute()
+        
+        # Process stats manually since Supabase doesn't support window functions directly
+        stats_dict = {}
+        for message in stats_response.data or []:
+            conv_id = message["conversation_id"]
+            if conv_id not in stats_dict:
+                stats_dict[conv_id] = {
+                    'message_count': 0,
+                    'last_message_at': None,
+                    'last_message_preview': None
+                }
+            
+            stats_dict[conv_id]['message_count'] += 1
+            
+            # Update latest message info if this is more recent
+            if (not stats_dict[conv_id]['last_message_at'] or 
+                message['created_at'] > stats_dict[conv_id]['last_message_at']):
+                stats_dict[conv_id]['last_message_at'] = message['created_at']
+                stats_dict[conv_id]['last_message_preview'] = message['content'][:100] if message['content'] else None
+
+        # Combine results
+        result_conversations = []
+        for conversation in conversations:
+            stats = stats_dict.get(str(conversation.id), {
+                'message_count': 0,
+                'last_message_at': None,
+                'last_message_preview': None
+            })
+            
+            result_conversations.append(ConversationListItem(
+                id=conversation.id,
+                title=conversation.title,
+                current_model=conversation.current_model,
+                created_at=conversation.created_at,
+                updated_at=conversation.updated_at,
+                message_count=stats['message_count'],
+                last_message_at=stats['last_message_at'],
+                last_message_preview=stats['last_message_preview']
+            ))
+        
+        # Sort by last message activity
+        result_conversations.sort(
+            key=lambda c: c.last_message_at or c.updated_at,
+            reverse=True
+        )
+        
+        return result_conversations 

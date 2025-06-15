@@ -97,7 +97,7 @@ class MessageService:
         user_id: UUID,
         query: MessageHistoryQuery
     ) -> MessageListResponse:
-        """Get messages for a conversation with pagination and document metadata"""
+        """OPTIMIZED: Get messages with batch document loading"""
         try:
             messages, total_count, has_more = await self.message_repository.get_conversation_messages(
                 conversation_id=conversation_id,
@@ -119,19 +119,33 @@ class MessageService:
                     status=message.status,
                     created_at=message.created_at
                 )
-                
-                # Add document metadata if document service is available
-                if self.document_service:
-                    try:
-                        docs_result = await self.document_service.get_message_documents(
-                            message.id, user_id
-                        )
-                        message_response.documents = docs_result.documents
-                    except Exception as e:
-                        logger.warning(f"Failed to get documents for message {message.id}: {e}")
-                        message_response.documents = []
-                
                 message_responses.append(message_response)
+            
+            # OPTIMIZED: Batch load documents for all messages at once
+            if self.document_service and message_responses:
+                try:
+                    message_ids = [msg.id for msg in message_responses]
+                    # Get all documents for all messages in a single query
+                    all_documents = await self.document_service.get_documents_for_messages_batch(
+                        message_ids, user_id
+                    )
+                    
+                    # Group documents by message_id
+                    docs_by_message = {}
+                    for doc in all_documents:
+                        if doc.message_id not in docs_by_message:
+                            docs_by_message[doc.message_id] = []
+                        docs_by_message[doc.message_id].append(doc)
+                    
+                    # Assign documents to messages
+                    for message_response in message_responses:
+                        message_response.documents = docs_by_message.get(message_response.id, [])
+                        
+                except Exception as e:
+                    logger.warning(f"Failed to batch load documents: {e}")
+                    # Set empty documents for all messages instead of failing
+                    for message_response in message_responses:
+                        message_response.documents = []
             
             # Calculate next cursor for pagination
             next_cursor = None

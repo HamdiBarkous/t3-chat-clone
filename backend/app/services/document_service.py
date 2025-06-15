@@ -100,6 +100,22 @@ class DocumentService:
             logger.error(f"Error getting document {document_id}: {e}")
             raise ValueError(f"Failed to get document: {str(e)}")
     
+    async def get_documents_for_messages_batch(
+        self, 
+        message_ids: List[UUID], 
+        user_id: UUID
+    ) -> List[DocumentResponse]:
+        """OPTIMIZED: Get documents for multiple messages in a single query"""
+        try:
+            # Create a batch query method in the repository
+            return await self.document_repository.get_documents_for_messages_batch(
+                message_ids, user_id
+            )
+        except Exception as e:
+            logger.error(f"Error in batch document loading: {e}")
+            # Return empty list on error to not break message loading
+            return []
+    
     async def get_message_documents(
         self, 
         message_id: UUID, 
