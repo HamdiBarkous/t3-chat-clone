@@ -1,8 +1,11 @@
 from pydantic import BaseModel, Field
 from uuid import UUID
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from datetime import datetime
 from app.types import MessageRole, MessageStatus
+
+if TYPE_CHECKING:
+    from app.schemas.document import DocumentResponse
 
 
 class MessageBase(BaseModel):
@@ -36,6 +39,8 @@ class MessageResponse(BaseModel):
     model_used: Optional[str] = None
     status: MessageStatus
     created_at: datetime
+    # Optional document metadata (never includes content_text)
+    documents: Optional[List["DocumentResponse"]] = None
 
     class Config:
         from_attributes = True

@@ -4,7 +4,6 @@ import jwt
 import logging
 from typing import Optional, Dict, Any, List
 from postgrest import APIError
-import asyncio
 from functools import wraps
 
 # Set up logging

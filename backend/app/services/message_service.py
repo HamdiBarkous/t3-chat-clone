@@ -1,17 +1,20 @@
-from typing import Optional, List
+from typing import Optional, List, TYPE_CHECKING
 from uuid import UUID
 import logging
 
 from app.types import MessageRole, MessageStatus
 from app.schemas.message import MessageCreate, MessageResponse, MessageListResponse, MessageHistoryQuery
 
+if TYPE_CHECKING:
+    from app.services.document_service import DocumentService
 
 logger = logging.getLogger(__name__)
 
 
 class MessageService:
-    def __init__(self, message_repository):
+    def __init__(self, message_repository, document_service: Optional["DocumentService"] = None):
         self.message_repository = message_repository
+        self.document_service = document_service
 
     async def create_message(
         self, 
@@ -94,7 +97,7 @@ class MessageService:
         user_id: UUID,
         query: MessageHistoryQuery
     ) -> MessageListResponse:
-        """Get messages for a conversation with pagination"""
+        """Get messages for a conversation with pagination and document metadata"""
         try:
             messages, total_count, has_more = await self.message_repository.get_conversation_messages(
                 conversation_id=conversation_id,
@@ -107,7 +110,7 @@ class MessageService:
             # Convert to response models
             message_responses = []
             for message in messages:
-                message_responses.append(MessageResponse(
+                message_response = MessageResponse(
                     id=message.id,
                     conversation_id=message.conversation_id,
                     role=message.role,
@@ -115,7 +118,20 @@ class MessageService:
                     model_used=message.model_used,
                     status=message.status,
                     created_at=message.created_at
-                ))
+                )
+                
+                # Add document metadata if document service is available
+                if self.document_service:
+                    try:
+                        docs_result = await self.document_service.get_message_documents(
+                            message.id, user_id
+                        )
+                        message_response.documents = docs_result.documents
+                    except Exception as e:
+                        logger.warning(f"Failed to get documents for message {message.id}: {e}")
+                        message_response.documents = []
+                
+                message_responses.append(message_response)
             
             # Calculate next cursor for pagination
             next_cursor = None
@@ -138,14 +154,14 @@ class MessageService:
         message_id: UUID, 
         user_id: UUID
     ) -> Optional[MessageResponse]:
-        """Get a specific message by ID"""
+        """Get a specific message by ID with document metadata"""
         try:
             message = await self.message_repository.get_message_by_id(message_id, user_id)
             
             if not message:
                 return None
                 
-            return MessageResponse(
+            message_response = MessageResponse(
                 id=message.id,
                 conversation_id=message.conversation_id,
                 role=message.role,
@@ -154,6 +170,19 @@ class MessageService:
                 status=message.status,
                 created_at=message.created_at
             )
+            
+            # Add document metadata if document service is available
+            if self.document_service:
+                try:
+                    docs_result = await self.document_service.get_message_documents(
+                        message.id, user_id
+                    )
+                    message_response.documents = docs_result.documents
+                except Exception as e:
+                    logger.warning(f"Failed to get documents for message {message.id}: {e}")
+                    message_response.documents = []
+            
+            return message_response
             
         except Exception as e:
             logger.error(f"Error getting message {message_id}: {e}")
@@ -202,14 +231,64 @@ class MessageService:
     async def get_conversation_context_for_ai(
         self, 
         conversation_id: UUID, 
-        user_id: UUID
+        user_id: UUID,
+        include_documents: bool = True
     ) -> List[MessageResponse]:
-        """Get all messages for AI context (simplified)"""
-        messages = await self.message_repository.get_conversation_context(
-            conversation_id=conversation_id,
-            user_id=user_id
-        )
-        return [MessageResponse.model_validate(msg) for msg in messages]
+        """Get all messages for AI context with document content appended"""
+        try:
+            # Get all messages
+            messages = await self.message_repository.get_conversation_context(
+                conversation_id=conversation_id,
+                user_id=user_id
+            )
+            
+            message_responses = [MessageResponse.model_validate(msg) for msg in messages]
+            
+            # If document service is available and we want to include documents
+            if include_documents and self.document_service:
+                # Get all documents for this conversation
+                documents = await self.document_service.get_conversation_documents_for_ai(
+                    conversation_id, user_id
+                )
+                
+                if documents:
+                    # Group documents by message_id for efficient processing
+                    docs_by_message = {}
+                    for doc in documents:
+                        if doc.message_id not in docs_by_message:
+                            docs_by_message[doc.message_id] = []
+                        docs_by_message[doc.message_id].append(doc)
+                    
+                    # Append document content to respective messages
+                    for message in message_responses:
+                        if message.id in docs_by_message:
+                            message_docs = docs_by_message[message.id]
+                            doc_content_parts = []
+                            
+                            for doc in message_docs:
+                                # Format document content for AI
+                                doc_content_parts.append(
+                                    f"[Document: {doc.filename}]\n{doc.content_text}\n[End Document]"
+                                )
+                            
+                            if doc_content_parts:
+                                # Append document content to message content
+                                enhanced_content = message.content + "\n\n" + "\n\n".join(doc_content_parts)
+                                
+                                # Create a new MessageResponse with enhanced content
+                                # Note: This is only for AI processing, not stored in DB
+                                message.content = enhanced_content
+            
+            return message_responses
+            
+        except Exception as e:
+            logger.error(f"Error getting conversation context for AI: {e}")
+            # Fallback to messages without documents to avoid breaking AI
+            messages = await self.message_repository.get_conversation_context(
+                conversation_id=conversation_id,
+                user_id=user_id
+            )
+            return [MessageResponse.model_validate(msg) for msg in messages]
 
     async def get_first_message(
         self, 

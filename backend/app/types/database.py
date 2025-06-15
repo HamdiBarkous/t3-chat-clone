@@ -1,5 +1,5 @@
-from pydantic import BaseModel, Field
-from typing import Optional, Literal, Dict, Any
+from pydantic import BaseModel
+from typing import Optional, Dict, Any
 from datetime import datetime
 from uuid import UUID
 import enum
@@ -55,6 +55,7 @@ class MessageRow(SupabaseModel):
     """Represents a message row from Supabase"""
     id: UUID
     conversation_id: UUID
+    user_id: UUID
     role: MessageRole
     content: str
     model_used: Optional[str] = None
@@ -91,6 +92,7 @@ class ConversationRowUpdate(SupabaseModel):
 class MessageRowCreate(SupabaseModel):
     """Model for creating new messages in Supabase"""
     conversation_id: UUID
+    user_id: UUID
     role: MessageRole
     content: str
     model_used: Optional[str] = None

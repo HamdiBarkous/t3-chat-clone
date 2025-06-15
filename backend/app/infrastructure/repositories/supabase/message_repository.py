@@ -29,6 +29,7 @@ class SupabaseMessageRepository:
         try:
             create_data = MessageRowCreate(
                 conversation_id=conversation_id,
+                user_id=user_id,
                 role=role,
                 content=content,
                 model_used=model_used,
@@ -59,6 +60,7 @@ class SupabaseMessageRepository:
             for conversation_id, user_id, role, content, model_used in messages_data:
                 create_data = MessageRowCreate(
                     conversation_id=conversation_id,
+                    user_id=user_id,
                     role=role,
                     content=content,
                     model_used=model_used,
@@ -98,23 +100,16 @@ class SupabaseMessageRepository:
         message_id: UUID, 
         user_id: UUID
     ) -> Optional[MessageRow]:
-        """Get message by ID with conversation ownership check"""
+        """Get message by ID with user ownership check"""
         try:
-            # Use join to verify ownership
-            response = self.client.table(self.table_name).select(
-                "*, conversations!inner(user_id)"
-            ).eq(
+            response = self.client.table(self.table_name).select("*").eq(
                 "id", str(message_id)
             ).eq(
-                "conversations.user_id", str(user_id)
+                "user_id", str(user_id)
             ).execute()
             
             if response.data and len(response.data) > 0:
-                # Extract just the message data (conversations data is nested)
-                message_data = response.data[0]
-                # Remove the conversations field from message data
-                message_data.pop('conversations', None)
-                return MessageRow(**message_data)
+                return MessageRow(**response.data[0])
             return None
             
         except Exception as e:
@@ -152,19 +147,11 @@ class SupabaseMessageRepository:
     ) -> Tuple[List[MessageRow], int, bool]:
         """Get messages for a conversation with pagination"""
         try:
-            # Verify conversation ownership first
-            conv_response = self.client.table("conversations").select("id").eq(
-                "id", str(conversation_id)
-            ).eq(
-                "user_id", str(user_id)
-            ).execute()
-            
-            if not conv_response.data:
-                return [], 0, False
-
-            # Build query for messages
+            # Build query for messages with user_id filter
             query = self.client.table(self.table_name).select("*").eq(
                 "conversation_id", str(conversation_id)
+            ).eq(
+                "user_id", str(user_id)
             )
 
             # Add timestamp-based pagination
@@ -200,14 +187,8 @@ class SupabaseMessageRepository:
             if before_timestamp is not None or after_timestamp is None:
                 messages.reverse()
 
-            # Get total count (separate query)
-            count_response = self.client.table(self.table_name).select(
-                "id", count="exact"
-            ).eq(
-                "conversation_id", str(conversation_id)
-            ).execute()
-            
-            total_count = count_response.count or 0
+            # Get total count (approximate)
+            total_count = len(messages)
 
             return messages, total_count, has_more
             
@@ -220,27 +201,20 @@ class SupabaseMessageRepository:
         conversation_id: UUID, 
         user_id: UUID
     ) -> List[MessageRow]:
-        """Get conversation context for AI - all completed messages"""
+        """Get all messages for conversation context (for AI)"""
         try:
-            # Verify ownership and get messages
-            response = self.client.table(self.table_name).select(
-                "*, conversations!inner(user_id)"
-            ).eq(
+            response = self.client.table(self.table_name).select("*").eq(
                 "conversation_id", str(conversation_id)
             ).eq(
-                "status", MessageStatus.COMPLETED.value
-            ).eq(
-                "conversations.user_id", str(user_id)
-            ).order("created_at", desc=False).execute()
+                "user_id", str(user_id)
+            ).order(
+                "created_at", desc=False
+            ).execute()
             
-            if response.data:
-                # Clean up the conversation data from each message
-                messages = []
-                for msg_data in response.data:
-                    msg_data.pop('conversations', None)
-                    messages.append(MessageRow(**msg_data))
-                return messages
-            return []
+            if not response.data:
+                return []
+            
+            return [MessageRow(**msg) for msg in response.data]
             
         except Exception as e:
             logger.error(f"Error getting conversation context: {e}")
@@ -254,7 +228,9 @@ class SupabaseMessageRepository:
         try:
             response = self.client.table(self.table_name).select("*").eq(
                 "conversation_id", str(conversation_id)
-            ).order("created_at", desc=False).limit(1).execute()
+            ).order(
+                "created_at", desc=False
+            ).limit(1).execute()
             
             if response.data and len(response.data) > 0:
                 return MessageRow(**response.data[0])

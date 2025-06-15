@@ -5,11 +5,12 @@ from uuid import UUID
 from pydantic import BaseModel
 
 from app.dependencies.auth import get_current_user
-from app.dependencies.repositories import get_conversation_repository, get_message_repository, ConversationRepositoryType, MessageRepositoryType
+from app.dependencies.repositories import get_conversation_repository, get_message_repository, get_document_repository, ConversationRepositoryType, MessageRepositoryType, DocumentRepositoryType
 from app.services.conversation_service import ConversationService
 from app.services.message_service import MessageService
 from app.services.openrouter_service import OpenRouterService
 from app.services.streaming_service import StreamingService
+from app.services.document_service import DocumentService
 from app.schemas.conversation import ConversationCreate, ConversationUpdate, ConversationResponse, ConversationListItem
 
 
@@ -32,10 +33,17 @@ async def get_conversation_service(
     return ConversationService(conversation_repo)
 
 
+async def get_document_service(
+    document_repo: DocumentRepositoryType = Depends(get_document_repository)
+) -> DocumentService:
+    return DocumentService(document_repo)
+
+
 async def get_message_service(
-    message_repo: MessageRepositoryType = Depends(get_message_repository)
+    message_repo: MessageRepositoryType = Depends(get_message_repository),
+    document_service: DocumentService = Depends(get_document_service)
 ) -> MessageService:
-    return MessageService(message_repo)
+    return MessageService(message_repo, document_service)
 
 
 async def get_openrouter_service(

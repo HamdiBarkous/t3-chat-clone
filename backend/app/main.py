@@ -4,6 +4,9 @@ from app.core.config import settings
 from app.api.health import router as health_router
 from app.api import api_router
 
+# Import to resolve schema forward references
+import app.schemas
+
 
 def create_app() -> FastAPI:
     app = FastAPI(

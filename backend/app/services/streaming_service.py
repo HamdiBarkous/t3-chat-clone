@@ -35,7 +35,8 @@ class StreamingService:
         conversation_id: str,
         user_message: str,
         user_id: str,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        existing_user_message_id: Optional[str] = None
     ) -> AsyncGenerator[str, None]:
         """Ultra-fast streaming with minimal DB overhead and proper SSE format"""
         
@@ -55,35 +56,63 @@ class StreamingService:
             # Use provided model or conversation default
             selected_model = model or conversation.current_model
             
-            # Create user message FIRST - add it to the conversation before streaming
+            # Handle user message - either use existing or create new
             user_message_obj = None
-            try:
-                message_create = MessageCreate(
-                    conversation_id=conversation_uuid,
-                    role=MessageRole.USER,
-                    content=user_message,
-                    model_used=selected_model
-                )
-                
-                user_message_obj = await self.message_service.create_message(
-                    message_create=message_create,
-                    user_id=user_uuid
-                )
-                
-                # Send user message confirmation with proper format
-                yield self._format_sse_event('user_message', {
-                    'id': str(user_message_obj.id),
-                    'conversation_id': str(conversation_uuid),
-                    'role': 'user',
-                    'content': user_message,
-                    'created_at': user_message_obj.created_at.isoformat(),
-                    'model_used': selected_model
-                })
-                
-            except Exception as e:
-                logger.error(f"Failed to create user message: {e}")
-                yield self._format_sse_event('error', {'message': 'Failed to save user message'})
-                return
+            
+            if existing_user_message_id:
+                # Use existing user message (for document upload flow)
+                try:
+                    user_message_obj = await self.message_service.get_message_by_id(
+                        UUID(existing_user_message_id), user_uuid
+                    )
+                    
+                    if not user_message_obj:
+                        yield self._format_sse_event('error', {'message': 'Existing user message not found'})
+                        return
+                    
+                    # Send user message confirmation with proper format
+                    yield self._format_sse_event('user_message', {
+                        'id': str(user_message_obj.id),
+                        'conversation_id': str(conversation_uuid),
+                        'role': 'user',
+                        'content': user_message_obj.content,
+                        'created_at': user_message_obj.created_at.isoformat(),
+                        'model_used': user_message_obj.model_used or selected_model
+                    })
+                    
+                except Exception as e:
+                    logger.error(f"Failed to get existing user message: {e}")
+                    yield self._format_sse_event('error', {'message': 'Failed to get existing user message'})
+                    return
+            else:
+                # Create new user message (original flow)
+                try:
+                    message_create = MessageCreate(
+                        conversation_id=conversation_uuid,
+                        role=MessageRole.USER,
+                        content=user_message,
+                        model_used=selected_model
+                    )
+                    
+                    user_message_obj = await self.message_service.create_message(
+                        message_create=message_create,
+                        user_id=user_uuid
+                    )
+                    
+                    # Send user message confirmation with proper format
+                    yield self._format_sse_event('user_message', {
+                        'id': str(user_message_obj.id),
+                        'conversation_id': str(conversation_uuid),
+                        'role': 'user',
+                        'content': user_message,
+                        'created_at': user_message_obj.created_at.isoformat(),
+                        'model_used': selected_model
+                    })
+                    
+                except Exception as e:
+                    logger.error(f"Failed to create user message: {e}")
+                    yield self._format_sse_event('error', {'message': 'Failed to save user message'})
+                    return
             
             # Send assistant message start event
             yield self._format_sse_event('assistant_message_start', {

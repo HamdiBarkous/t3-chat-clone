@@ -8,13 +8,16 @@ from app.dependencies.auth import get_current_user
 from app.dependencies.repositories import (
     get_message_repository, 
     get_conversation_repository,
+    get_document_repository,
     MessageRepositoryType,
-    ConversationRepositoryType
+    ConversationRepositoryType,
+    DocumentRepositoryType
 )
 from app.services.message_service import MessageService
 from app.services.conversation_service import ConversationService
 from app.services.openrouter_service import OpenRouterService
 from app.services.streaming_service import StreamingService
+from app.services.document_service import DocumentService
 from app.schemas.message import MessageCreate, MessageResponse, MessageListResponse, MessageHistoryQuery
 from app.types import MessageRole
 
@@ -23,6 +26,7 @@ from app.types import MessageRole
 class StreamChatRequest(BaseModel):
     message_content: str
     model: Optional[str] = None
+    existing_user_message_id: Optional[str] = None
 
 
 class EnhancedMessageCreate(BaseModel):
@@ -33,10 +37,16 @@ class EnhancedMessageCreate(BaseModel):
 router = APIRouter()
 
 
+async def get_document_service(
+    document_repo: DocumentRepositoryType = Depends(get_document_repository)
+) -> DocumentService:
+    return DocumentService(document_repo)
+
 async def get_message_service(
-    message_repo: MessageRepositoryType = Depends(get_message_repository)
+    message_repo: MessageRepositoryType = Depends(get_message_repository),
+    document_service: DocumentService = Depends(get_document_service)
 ) -> MessageService:
-    return MessageService(message_repo)
+    return MessageService(message_repo, document_service)
 
 async def get_conversation_service(
     conversation_repo: ConversationRepositoryType = Depends(get_conversation_repository)
@@ -146,7 +156,8 @@ async def stream_chat_response(
                 conversation_id=str(conversation_id),
                 user_message=request.message_content,
                 user_id=current_user["id"],
-                model=request.model
+                model=request.model,
+                existing_user_message_id=request.existing_user_message_id
             ),
             media_type="text/event-stream",
             headers={
