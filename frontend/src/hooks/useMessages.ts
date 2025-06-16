@@ -32,6 +32,7 @@ interface UseMessagesReturn {
   loading: boolean
   error: string | null
   sendMessage: (content: string, model?: string, files?: File[]) => Promise<void>
+  generateAIResponse: (model?: string) => Promise<void>
   loadMessages: () => Promise<void>
   isStreaming: boolean
   streamingMessageId: string | null
@@ -80,8 +81,6 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setLoading(false)
     }
   }, [conversationId])
-
-
 
   const sendMessage = useCallback(async (content: string, model?: string, files?: File[]) => {
     if (!conversationId || isStreaming) return
@@ -290,6 +289,140 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     }
   }, [conversationId, isStreaming, updateConversationTitle])
 
+  // Generate AI response for existing conversation (used for retry functionality)
+  const generateAIResponse = useCallback(async (model?: string) => {
+    if (!conversationId || isStreaming) return
+
+    try {
+      setError(null)
+      setIsStreaming(true)
+
+      // Get the last user message to use as context
+      const lastUserMessage = messages.filter(msg => msg.role === 'user').slice(-1)[0]
+      if (!lastUserMessage) {
+        setError('No user message found to generate response for')
+        setIsStreaming(false)
+        return
+      }
+
+      const streamCallbacks: StreamingCallbacks = {
+        onUserMessage: async () => {
+          // Skip - we don't need to create a new user message
+        },
+
+        onAssistantMessageStart: () => {
+          // Create temporary streaming message
+          setStreamingMessageId('streaming-temp')
+          setMessages(prev => {
+            const now = Date.now()
+            const lastMessageTime = prev.length > 0 ? Math.max(...prev.map(m => m.timestamp)) : now
+            const timestamp = Math.max(now, lastMessageTime + 1)
+            
+            const assistantMessage: Message = {
+              id: 'streaming-temp',
+              conversation_id: conversationId!,
+              role: 'assistant',
+              content: '',
+              status: MessageStatus.COMPLETED,
+              created_at: new Date(timestamp).toISOString(),
+              model_used: undefined,
+              timestamp: timestamp
+            }
+            
+            return [...prev, assistantMessage]
+          })
+        },
+
+        onContentChunk: (data: unknown) => {
+          const chunkData = data as ContentChunkData
+          
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === 'streaming-temp'
+                ? { ...msg, content: msg.content + chunkData.chunk }
+                : msg
+            )
+          )
+        },
+
+        onAssistantMessageComplete: (data: unknown) => {
+          const completeData = data as AssistantMessageCompleteData
+          
+          setMessages(prev => 
+            prev.map(msg => 
+              msg.id === 'streaming-temp'
+                ? {
+                    ...msg,
+                    id: completeData.id,
+                    content: completeData.content,
+                    status: MessageStatus.COMPLETED,
+                    created_at: completeData.created_at,
+                    model_used: completeData.model_used,
+                    timestamp: new Date(completeData.created_at).getTime()
+                  }
+                : msg
+            )
+          )
+          
+          setIsStreaming(false)
+          setStreamingMessageId(null)
+        },
+
+        onError: (data: unknown) => {
+          const errorData = data as ErrorData
+          setError(errorData.message || 'An error occurred while generating the response')
+          
+          setMessages(prev => prev.filter(msg => msg.id !== 'streaming-temp'))
+          
+          setIsStreaming(false)
+          setStreamingMessageId(null)
+        },
+
+        onConnectionError: (error) => {
+          setError('Connection error: ' + error.message)
+          setIsStreaming(false)
+          setStreamingMessageId(null)
+          
+          setMessages(prev => prev.filter(msg => msg.id !== 'streaming-temp'))
+        },
+
+        onConnectionClose: () => {
+          setIsStreaming(false)
+          setStreamingMessageId(null)
+        },
+
+        onTitleGenerationStarted: () => {
+          console.log('Title generation started for conversation:', conversationId)
+        },
+
+        onTitleComplete: (data: unknown) => {
+          const titleData = data as { conversation_id: string; title: string }
+          console.log('Title generated:', titleData.title)
+          
+          if (conversationId) {
+            updateConversationTitle(conversationId, titleData.title)
+          }
+        }
+      }
+
+      // Start streaming for AI response using the last user message
+      await streamingService.startStreamWithExistingMessage(
+        conversationId, 
+        lastUserMessage.content, 
+        model, 
+        lastUserMessage.id, 
+        streamCallbacks
+      )
+
+    } catch (err) {
+      const errorMessage = err instanceof ApiError ? err.message : 'Failed to generate AI response'
+      setError(errorMessage)
+      setIsStreaming(false)
+      setStreamingMessageId(null)
+      console.error('Error generating AI response:', err)
+    }
+  }, [conversationId, isStreaming, messages, updateConversationTitle])
+
   // Load messages when conversation changes
   useEffect(() => {
     loadMessages()
@@ -300,6 +433,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     loading,
     error,
     sendMessage,
+    generateAIResponse,
     loadMessages,
     isStreaming,
     streamingMessageId

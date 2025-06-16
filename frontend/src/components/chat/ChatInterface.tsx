@@ -5,7 +5,8 @@
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
 import { useMessages } from '@/hooks/useMessages';
@@ -19,18 +20,35 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ conversationId, conversation }: ChatInterfaceProps) {
   const [currentModel, setCurrentModel] = useState(conversation?.current_model || 'openai/gpt-4o');
+  const searchParams = useSearchParams();
   
   // Use real-time hooks
   const { 
     messages, 
     loading, 
     error, 
-    sendMessage, 
+    sendMessage,
+    generateAIResponse,
     isStreaming,
     streamingMessageId 
   } = useMessages(conversationId);
   
   const { updateConversation } = useConversations();
+
+  // Auto-generate AI response if requested (for retry functionality)
+  useEffect(() => {
+    const shouldAutoGenerate = searchParams.get('autoGenerateResponse') === 'true';
+    if (shouldAutoGenerate && !loading && messages.length > 0 && !isStreaming) {
+      // Find the conversation's current model or use the model from the conversation
+      const modelToUse = conversation?.current_model || currentModel;
+      generateAIResponse(modelToUse);
+      
+      // Clean up the URL parameter
+      const url = new URL(window.location.href);
+      url.searchParams.delete('autoGenerateResponse');
+      window.history.replaceState({}, '', url.toString());
+    }
+  }, [searchParams, loading, messages, isStreaming, generateAIResponse, conversation?.current_model, currentModel]);
 
   // Check if this is a branched conversation
   const isBranchedConversation = conversation?.title?.startsWith('Branch from ');

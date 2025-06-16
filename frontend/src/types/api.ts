@@ -214,4 +214,23 @@ export interface Message {
 }
 
 // Type alias for conversation compatibility
-export type Conversation = ConversationResponse; 
+export type Conversation = ConversationResponse;
+
+// Message editing and retrying types
+export interface MessageEditRequest {
+  new_content: string;
+}
+
+export interface MessageRetryRequest {
+  model?: string;
+}
+
+export interface MessageEditResponse {
+  message: string;
+  new_conversation: ConversationResponse;
+}
+
+export interface MessageRetryResponse {
+  message: string;
+  new_conversation: ConversationResponse;
+} 

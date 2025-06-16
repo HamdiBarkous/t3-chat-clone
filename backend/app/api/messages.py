@@ -34,6 +34,14 @@ class EnhancedMessageCreate(BaseModel):
     model: Optional[str] = None
 
 
+class MessageEditRequest(BaseModel):
+    new_content: str
+
+
+class MessageRetryRequest(BaseModel):
+    model: Optional[str] = None
+
+
 router = APIRouter()
 
 
@@ -170,6 +178,72 @@ async def stream_chat_response(
         raise HTTPException(status_code=404, detail=str(e))
     except Exception:
         raise HTTPException(status_code=500, detail="Failed to stream chat response")
+
+
+@router.post("/{conversation_id}/messages/{message_id}/edit", response_model=dict)
+async def edit_message(
+    conversation_id: UUID,
+    message_id: UUID,
+    request: MessageEditRequest,
+    current_user: dict = Depends(get_current_user),
+    conversation_service: ConversationService = Depends(get_conversation_service),
+    message_service: MessageService = Depends(get_message_service),
+    document_service: DocumentService = Depends(get_document_service)
+):
+    """Edit a user message by creating a new conversation branch"""
+    user_id = UUID(current_user["id"])
+    
+    try:
+        new_conversation = await conversation_service.create_message_edit_branch(
+            original_conversation_id=conversation_id,
+            edit_message_id=message_id,
+            new_content=request.new_content,
+            user_id=user_id,
+            message_service=message_service,
+            document_service=document_service
+        )
+        
+        return {
+            "message": "Message edited successfully",
+            "new_conversation": new_conversation
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to edit message: {str(e)}")
+
+
+@router.post("/{conversation_id}/messages/{message_id}/retry", response_model=dict)
+async def retry_message(
+    conversation_id: UUID,
+    message_id: UUID,
+    request: MessageRetryRequest,
+    current_user: dict = Depends(get_current_user),
+    conversation_service: ConversationService = Depends(get_conversation_service),
+    message_service: MessageService = Depends(get_message_service),
+    document_service: DocumentService = Depends(get_document_service)
+):
+    """Retry generating an AI response by creating a new conversation branch"""
+    user_id = UUID(current_user["id"])
+    
+    try:
+        new_conversation = await conversation_service.create_message_retry_branch(
+            original_conversation_id=conversation_id,
+            retry_message_id=message_id,
+            user_id=user_id,
+            new_model=request.model,
+            message_service=message_service,
+            document_service=document_service
+        )
+        
+        return {
+            "message": "Message retry branch created successfully",
+            "new_conversation": new_conversation
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Failed to retry message: {str(e)}")
 
 
  

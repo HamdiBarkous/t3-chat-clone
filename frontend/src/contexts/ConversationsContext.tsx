@@ -7,7 +7,17 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError } from '@/lib/api';
-import type { ConversationListItem, ConversationCreate, ConversationUpdate, ConversationResponse, BranchRequest } from '@/types/api';
+import type { 
+  ConversationListItem, 
+  ConversationCreate, 
+  ConversationUpdate, 
+  ConversationResponse, 
+  BranchRequest,
+  MessageEditRequest,
+  MessageRetryRequest,
+  MessageEditResponse,
+  MessageRetryResponse
+} from '@/types/api';
 
 interface ConversationsContextType {
   conversations: ConversationListItem[]
@@ -17,6 +27,8 @@ interface ConversationsContextType {
   updateConversation: (id: string, data: ConversationUpdate) => Promise<ConversationResponse | null>
   deleteConversation: (id: string) => Promise<boolean>
   branchConversation: (conversationId: string, messageId: string) => Promise<ConversationResponse | null>
+  editMessage: (conversationId: string, messageId: string, newContent: string) => Promise<ConversationResponse | null>
+  retryMessage: (conversationId: string, messageId: string, model?: string) => Promise<ConversationResponse | null>
   refreshConversations: () => Promise<void>
   updateConversationTitle: (id: string, title: string) => void
 }
@@ -144,6 +156,70 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     }
   }, [])
 
+  const editMessage = useCallback(async (
+    conversationId: string, 
+    messageId: string, 
+    newContent: string
+  ): Promise<ConversationResponse | null> => {
+    try {
+      setError(null)
+      
+      const editData: MessageEditRequest = { new_content: newContent }
+      const response = await apiClient.post<MessageEditResponse>(
+        `/conversations/${conversationId}/messages/${messageId}/edit`, 
+        editData
+      )
+      
+      // Convert to ConversationListItem format and add to the beginning of the list
+      const listItem: ConversationListItem = {
+        ...response.new_conversation,
+        message_count: 0,
+        last_message_preview: undefined,
+        last_message_at: undefined
+      }
+      setConversations(prev => [listItem, ...prev])
+      
+      return response.new_conversation
+    } catch (err) {
+      const errorMessage = err instanceof ApiError ? err.message : 'Failed to edit message'
+      setError(errorMessage)
+      console.error('Error editing message:', err)
+      return null
+    }
+  }, [])
+
+  const retryMessage = useCallback(async (
+    conversationId: string, 
+    messageId: string, 
+    model?: string
+  ): Promise<ConversationResponse | null> => {
+    try {
+      setError(null)
+      
+      const retryData: MessageRetryRequest = { model }
+      const response = await apiClient.post<MessageRetryResponse>(
+        `/conversations/${conversationId}/messages/${messageId}/retry`, 
+        retryData
+      )
+      
+      // Convert to ConversationListItem format and add to the beginning of the list
+      const listItem: ConversationListItem = {
+        ...response.new_conversation,
+        message_count: 0,
+        last_message_preview: undefined,
+        last_message_at: undefined
+      }
+      setConversations(prev => [listItem, ...prev])
+      
+      return response.new_conversation
+    } catch (err) {
+      const errorMessage = err instanceof ApiError ? err.message : 'Failed to retry message'
+      setError(errorMessage)
+      console.error('Error retrying message:', err)
+      return null
+    }
+  }, [])
+
   const refreshConversations = useCallback(async () => {
     await fetchConversations()
   }, [fetchConversations])
@@ -172,6 +248,8 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     updateConversation,
     deleteConversation,
     branchConversation,
+    editMessage,
+    retryMessage,
     refreshConversations,
     updateConversationTitle,
   }

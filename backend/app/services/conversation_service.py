@@ -234,4 +234,177 @@ class ConversationService:
                 import logging
                 logging.warning(f"Failed to get documents for message {original_message.id}: {e}")
 
+        return new_conversation
+
+    async def create_message_edit_branch(
+        self,
+        original_conversation_id: UUID,
+        edit_message_id: UUID,
+        new_content: str,
+        user_id: UUID,
+        message_service: "MessageService",
+        document_service: "DocumentService"
+    ) -> ConversationResponse:
+        """Create a new conversation branch with an edited message"""
+        # Get the original conversation
+        original_conversation = await self.get_conversation(original_conversation_id, user_id)
+        if not original_conversation:
+            raise ValueError("Original conversation not found")
+        
+        # Get the message to edit and verify it belongs to the user and conversation
+        edit_message = await message_service.get_message_by_id(edit_message_id, user_id)
+        if not edit_message or edit_message.conversation_id != original_conversation_id:
+            raise ValueError("Message to edit not found or doesn't belong to this conversation")
+        
+        # Only allow editing user messages
+        if edit_message.role != 'user':
+            raise ValueError("Only user messages can be edited")
+        
+        # Get all messages up to (but not including) the message being edited
+        all_messages = await message_service.get_conversation_context(original_conversation_id, user_id)
+        
+        # Find messages before the edit point
+        messages_to_copy = []
+        for message in all_messages:
+            if message.id == edit_message_id:
+                break
+            messages_to_copy.append(message)
+        
+        return await self._create_branch_with_messages(
+            original_conversation=original_conversation,
+            messages_to_copy=messages_to_copy,
+            additional_message_content=new_content,
+            additional_message_role='user',
+            additional_message_model=edit_message.model_used,
+            branch_title=f"Edit: {new_content[:30]}..." if len(new_content) > 30 else f"Edit: {new_content}",
+            user_id=user_id,
+            message_service=message_service,
+            document_service=document_service
+        )
+
+    async def create_message_retry_branch(
+        self,
+        original_conversation_id: UUID,
+        retry_message_id: UUID,
+        user_id: UUID,
+        new_model: Optional[str],
+        message_service: "MessageService",
+        document_service: "DocumentService"
+    ) -> ConversationResponse:
+        """Create a new conversation branch to retry an AI response"""
+        # Get the original conversation
+        original_conversation = await self.get_conversation(original_conversation_id, user_id)
+        if not original_conversation:
+            raise ValueError("Original conversation not found")
+        
+        # Get the message to retry and verify it's an assistant message
+        retry_message = await message_service.get_message_by_id(retry_message_id, user_id)
+        if not retry_message or retry_message.conversation_id != original_conversation_id:
+            raise ValueError("Message to retry not found or doesn't belong to this conversation")
+        
+        # Only allow retrying assistant messages
+        if retry_message.role != 'assistant':
+            raise ValueError("Only assistant messages can be retried")
+        
+        # Get all messages up to (but not including) the message being retried
+        all_messages = await message_service.get_conversation_context(original_conversation_id, user_id)
+        
+        # Find messages before the retry point
+        messages_to_copy = []
+        for message in all_messages:
+            if message.id == retry_message_id:
+                break
+            messages_to_copy.append(message)
+        
+        # Use the new model if provided, otherwise use conversation's current model
+        model_to_use = new_model or original_conversation.current_model
+        
+        return await self._create_branch_with_messages(
+            original_conversation=original_conversation,
+            messages_to_copy=messages_to_copy,
+            additional_message_content=None,  # No additional message for retry
+            additional_message_role=None,
+            additional_message_model=None,
+            branch_title=f"Retry with {model_to_use}",
+            user_id=user_id,
+            message_service=message_service,
+            document_service=document_service,
+            update_model=model_to_use
+        )
+
+    async def _create_branch_with_messages(
+        self,
+        original_conversation: ConversationResponse,
+        messages_to_copy: List,
+        user_id: UUID,
+        message_service: "MessageService",
+        document_service: "DocumentService",
+        additional_message_content: Optional[str] = None,
+        additional_message_role: Optional[str] = None,
+        additional_message_model: Optional[str] = None,
+        branch_title: str = "Branch",
+        update_model: Optional[str] = None
+    ) -> ConversationResponse:
+        """
+        Shared logic for creating branches with messages
+        Reuses the existing branching functionality to avoid code duplication
+        """
+        # Create new conversation with same settings as original (or updated model)
+        new_conversation_data = ConversationCreate(
+            title=branch_title,
+            current_model=update_model or original_conversation.current_model,
+            system_prompt=original_conversation.system_prompt
+        )
+
+        new_conversation = await self.create_conversation(user_id, new_conversation_data)
+
+        # Copy existing messages
+        message_id_mapping = {}  # Map old message ID to new message ID
+        
+        for original_message in messages_to_copy:
+            # Create each message individually to preserve order
+            new_message = await message_service.message_repository.create_message_simple(
+                conversation_id=new_conversation.id,
+                user_id=user_id,
+                role=original_message.role,
+                content=original_message.content,
+                model_used=original_message.model_used
+            )
+            
+            message_id_mapping[original_message.id] = new_message.id
+
+        # Add additional message if provided (for editing)
+        if additional_message_content and additional_message_role:
+            await message_service.message_repository.create_message_simple(
+                conversation_id=new_conversation.id,
+                user_id=user_id,
+                role=additional_message_role,
+                content=additional_message_content,
+                model_used=additional_message_model
+            )
+
+        # Copy documents for the copied messages
+        for original_message in messages_to_copy:
+            new_message_id = message_id_mapping[original_message.id]
+            
+            # Get documents for this specific message
+            try:
+                docs_result = await document_service.get_message_documents(original_message.id, user_id)
+                if docs_result.documents:
+                    for document in docs_result.documents:
+                        try:
+                            await document_service.copy_document_to_message(
+                                document.id,
+                                new_message_id,
+                                user_id
+                            )
+                        except Exception as e:
+                            # Log error but don't fail the branching operation
+                            import logging
+                            logging.warning(f"Failed to copy document {document.id}: {e}")
+            except Exception as e:
+                # Log error but continue processing other messages
+                import logging
+                logging.warning(f"Failed to get documents for message {original_message.id}: {e}")
+
         return new_conversation 
