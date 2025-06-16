@@ -1,7 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends
 from typing import Dict, Any
 from app.services.tool_service import ToolService
-from app.dependencies.auth import require_auth
+from app.dependencies.auth import get_current_user
 
 
 router = APIRouter()
@@ -34,7 +34,7 @@ async def get_available_tools(tool_service: ToolService = Depends(get_tool_servi
 async def test_tool(
     tool_name: str, 
     arguments: Dict[str, Any],
-    _: dict = Depends(require_auth),
+    _: dict = Depends(get_current_user),
     tool_service: ToolService = Depends(get_tool_service)
 ) -> Dict[str, Any]:
     """Test a tool execution"""

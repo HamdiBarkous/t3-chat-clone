@@ -126,19 +126,45 @@ class StreamingService:
             ai_response_content = ""
             content_length = 0
             
-            async for chunk in self.openrouter_service.stream_chat_completion(
+            async for chunk in self.openrouter_service.stream_chat_completion_with_tools(
                 conversation_id=conversation_id,
                 user_id=user_id,
                 model=selected_model
             ):
-                ai_response_content += chunk
-                content_length += len(chunk)
-                
-                # Send content chunk event
-                yield self._format_sse_event('content_chunk', {
-                    'chunk': chunk,
-                    'content_length': content_length
-                })
+                # Handle tool-enabled streaming (returns JSON) vs regular streaming (returns text)
+                try:
+                    # Try to parse as JSON (tool-enabled format)
+                    if chunk.startswith("data: "):
+                        chunk_data = json.loads(chunk[6:])  # Remove "data: " prefix
+                        
+                        if chunk_data.get('type') == 'content':
+                            # Regular content chunk
+                            content = chunk_data.get('data', '')
+                            ai_response_content += content
+                            content_length += len(content)
+                            
+                            yield self._format_sse_event('content_chunk', {
+                                'chunk': content,
+                                'content_length': content_length
+                            })
+                            
+                        elif chunk_data.get('type') == 'tool_call':
+                            # Tool call event - pass through
+                            yield self._format_sse_event('tool_call', chunk_data.get('data', {}))
+                            
+                        elif chunk_data.get('type') == 'tool_result':
+                            # Tool result event - pass through  
+                            yield self._format_sse_event('tool_result', chunk_data.get('data', {}))
+                            
+                except (json.JSONDecodeError, KeyError):
+                    # Fallback: treat as plain text (regular streaming)
+                    ai_response_content += chunk
+                    content_length += len(chunk)
+                    
+                    yield self._format_sse_event('content_chunk', {
+                        'chunk': chunk,
+                        'content_length': content_length
+                    })
             
             # Create AI response message
             ai_message_obj = None

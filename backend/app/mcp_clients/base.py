@@ -1,5 +1,5 @@
 from abc import ABC, abstractmethod
-from typing import List, Dict, Any, Optional, AsyncGenerator
+from typing import List, Dict, Any, Optional
 from contextlib import AsyncExitStack
 import asyncio
 
@@ -58,7 +58,7 @@ class BaseMCPClient(ABC):
                 await asyncio.sleep(0.1)
                 self.session = None
             await self.exit_stack.aclose()
-        except Exception as e:
+        except Exception:
             # Suppress cleanup errors - they're not critical
             pass
 

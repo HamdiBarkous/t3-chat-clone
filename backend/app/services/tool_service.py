@@ -1,4 +1,4 @@
-from typing import List, Dict, Any, Optional
+from typing import List, Dict, Any
 from app.mcp_clients import SupabaseMCPClient
 from app.core.config import settings
 
