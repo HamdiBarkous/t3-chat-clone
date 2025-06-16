@@ -86,9 +86,9 @@ class OpenRouterService:
         user_uuid = UUID(user_id)
         
         try:
-            # Get first two messages (user + AI)
+            # Get first two messages WITHOUT documents (to avoid token limit issues)
             context_messages = await self.message_service.get_conversation_context_for_ai(
-                conversation_uuid, user_uuid
+                conversation_uuid, user_uuid, include_documents=False
             )
             
             if len(context_messages) < 2:
@@ -97,13 +97,32 @@ class OpenRouterService:
             user_msg = context_messages[0]
             ai_msg = context_messages[1]
 
-            # Create title generation prompt
+            # Extract just text content for title generation
+            user_content = user_msg.content
+            ai_content = ai_msg.content
+            
+            # If content is a list (vision message), extract only the text part
+            if isinstance(user_content, list):
+                user_content = " ".join([
+                    part.get("text", "") for part in user_content 
+                    if isinstance(part, dict) and part.get("type") == "text"
+                ])
+            if isinstance(ai_content, list):
+                ai_content = " ".join([
+                    part.get("text", "") for part in ai_content 
+                    if isinstance(part, dict) and part.get("type") == "text"
+                ])
+
+            # Create title generation prompt with text-only content
             title_prompt = f"""Generate a short, descriptive title (max 50 characters) for this conversation:
 
-User: {user_msg.content}
-Assistant: {ai_msg.content}
+User: {user_content}
+Assistant: {ai_content}
 
 Return only the title, nothing else."""
+
+            # Log the prompt length for debugging
+            print(f"Title generation prompt length: {len(title_prompt)} characters")
 
             title_messages = openrouter_client.format_messages_for_openrouter([
                 {"role": "user", "content": title_prompt}
@@ -112,7 +131,8 @@ Return only the title, nothing else."""
             response = await openrouter_client.chat_completion(
                 messages=title_messages,
                 model=settings.title_generation_model,
-                max_tokens=50
+                max_tokens=50,
+                use_transforms=False  # Don't use transforms for title generation (already optimized)
             )
 
             title = response["choices"][0]["message"]["content"].strip()

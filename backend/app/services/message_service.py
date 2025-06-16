@@ -277,21 +277,49 @@ class MessageService:
                     for message in message_responses:
                         if message.id in docs_by_message:
                             message_docs = docs_by_message[message.id]
-                            doc_content_parts = []
                             
-                            for doc in message_docs:
-                                # Format document content for AI
-                                doc_content_parts.append(
-                                    f"[Document: {doc.filename}]\n{doc.content_text}\n[End Document]"
-                                )
+                            # Separate images from text documents
+                            images = [doc for doc in message_docs if doc.is_image]
+                            text_docs = [doc for doc in message_docs if not doc.is_image]
                             
-                            if doc_content_parts:
-                                # Append document content to message content
-                                enhanced_content = message.content + "\n\n" + "\n\n".join(doc_content_parts)
+                            if images or text_docs:
+                                # Handle vision messages (images + text)
+                                if images:
+                                    # Format as vision-compatible content array
+                                    content_parts = [{"type": "text", "text": message.content}]
+                                    
+                                    # Add images to content
+                                    for img in images:
+                                        content_parts.append({
+                                            "type": "image_url",
+                                            "image_url": {"url": f"data:image/{img.file_type};base64,{img.image_base64}"}
+                                        })
+                                    
+                                    # Add text documents if any
+                                    if text_docs:
+                                        doc_content_parts = []
+                                        for doc in text_docs:
+                                            doc_content_parts.append(
+                                                f"[Document: {doc.filename}]\n{doc.content_text}\n[End Document]"
+                                            )
+                                        # Append to the text part
+                                        content_parts[0]["text"] += "\n\n" + "\n\n".join(doc_content_parts)
+                                    
+                                    # Set content as array for vision processing
+                                    message.content = content_parts
                                 
-                                # Create a new MessageResponse with enhanced content
-                                # Note: This is only for AI processing, not stored in DB
-                                message.content = enhanced_content
+                                elif text_docs:
+                                    # Text-only documents (existing behavior)
+                                    doc_content_parts = []
+                                    for doc in text_docs:
+                                        doc_content_parts.append(
+                                            f"[Document: {doc.filename}]\n{doc.content_text}\n[End Document]"
+                                        )
+                                    
+                                    if doc_content_parts:
+                                        # Append document content to message content
+                                        enhanced_content = message.content + "\n\n" + "\n\n".join(doc_content_parts)
+                                        message.content = enhanced_content
             
             return message_responses
             

@@ -214,10 +214,14 @@ class TextExtractor:
     def is_supported_file_type(file_type: str) -> bool:
         """Check if file type is supported"""
         supported_types = {
+            # Text/Document files
             'pdf', 'txt', 'md', 'csv', 'json', 'xml', 'yaml', 'yml',
+            # Code files
             'py', 'js', 'ts', 'jsx', 'tsx', 'java', 'cpp', 'c', 'h', 'hpp',
             'go', 'rs', 'php', 'rb', 'swift', 'kt', 'scala', 'sh', 'sql',
-            'css', 'html'
+            'css', 'html',
+            # Image files
+            'jpg', 'jpeg', 'png', 'gif', 'webp'
         }
         return file_type.lower() in supported_types
     

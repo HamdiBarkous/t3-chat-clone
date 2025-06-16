@@ -1,6 +1,7 @@
 from typing import List, Optional
 from uuid import UUID
 import logging
+import base64
 from fastapi import UploadFile
 
 from app.infrastructure.repositories.supabase.document_repository import DocumentRepository
@@ -46,36 +47,59 @@ class DocumentService:
             if file_info['file_size'] == 0:
                 raise ValueError("File is empty")
             
-            # Extract text content
-            logger.info(f"Extracting text from {file.filename} ({file_info['file_type']})")
+            # Check if file is an image
+            is_image = file_info['file_type'] in {'jpg', 'jpeg', 'png', 'gif', 'webp'}
             
-            try:
-                extracted_text = self.text_extractor.extract_text(
-                    file_content, 
-                    file_info['filename'], 
-                    file_info['file_type']
+            if is_image:
+                # Handle image files
+                logger.info(f"Processing image {file.filename} ({file_info['file_type']})")
+                
+                # Encode image as base64 for AI
+                image_base64 = base64.b64encode(file_content).decode('utf-8')
+                
+                # Create document record for image
+                document_create = DocumentCreate(
+                    message_id=message_id,
+                    filename=file_info['filename'],
+                    file_type=file_info['file_type'],
+                    file_size=file_info['file_size'],
+                    is_image=True,
+                    image_base64=image_base64,
+                    content_text=None
                 )
-            except TextExtractionError as e:
-                logger.error(f"Text extraction failed for {file.filename}: {e}")
-                raise ValueError(f"Could not extract text from file: {str(e)}")
-            
-            if not extracted_text.strip():
-                raise ValueError("No text content could be extracted from the file")
-            
-            # Create document record
-            document_create = DocumentCreate(
-                message_id=message_id,
-                filename=file_info['filename'],
-                file_type=file_info['file_type'],
-                file_size=file_info['file_size'],
-                content_text=extracted_text
-            )
+            else:
+                # Handle text/code files (existing logic)
+                logger.info(f"Extracting text from {file.filename} ({file_info['file_type']})")
+                
+                try:
+                    extracted_text = self.text_extractor.extract_text(
+                        file_content, 
+                        file_info['filename'], 
+                        file_info['file_type']
+                    )
+                except TextExtractionError as e:
+                    logger.error(f"Text extraction failed for {file.filename}: {e}")
+                    raise ValueError(f"Could not extract text from file: {str(e)}")
+                
+                if not extracted_text.strip():
+                    raise ValueError("No text content could be extracted from the file")
+                
+                # Create document record for text file
+                document_create = DocumentCreate(
+                    message_id=message_id,
+                    filename=file_info['filename'],
+                    file_type=file_info['file_type'],
+                    file_size=file_info['file_size'],
+                    is_image=False,
+                    content_text=extracted_text,
+                    image_base64=None
+                )
             
             document = await self.document_repository.create_document(
                 document_create, user_id
             )
             
-            logger.info(f"Successfully uploaded document {document.id} for message {message_id}")
+            logger.info(f"Successfully uploaded {'image' if is_image else 'document'} {document.id} for message {message_id}")
             return document
             
         except ValueError as e:
@@ -221,6 +245,18 @@ class DocumentService:
             logger.error(f"Error copying document {source_document_id}: {e}")
             raise ValueError(f"Failed to copy document: {str(e)}")
     
+    def _get_all_supported_types(self) -> set:
+        """Get all supported file extensions"""
+        return {
+            # Text/Code files
+            'pdf', 'txt', 'md', 'csv', 'json', 'xml', 'yaml', 'yml',
+            'py', 'js', 'ts', 'jsx', 'tsx', 'java', 'cpp', 'c', 'h', 'hpp',
+            'go', 'rs', 'php', 'rb', 'swift', 'kt', 'scala', 'sh', 'sql',
+            'css', 'html',
+            # Images
+            'jpg', 'jpeg', 'png', 'gif', 'webp'
+        }
+    
     async def get_supported_file_types(self) -> dict:
         """Get list of supported file types with descriptions"""
         return {
@@ -259,20 +295,18 @@ class DocumentService:
                 "css": "CSS files",
                 "html": "HTML files"
             },
+            "images": {
+                "jpg": "JPEG images",
+                "jpeg": "JPEG images",
+                "png": "PNG images",
+                "gif": "GIF images",
+                "webp": "WebP images"
+            },
             "limits": {
                 "max_file_size": "10MB",
                 "max_content_length": "50,000 characters",
                 "supported_count": len(self._get_all_supported_types())
             }
-        }
-    
-    def _get_all_supported_types(self) -> set:
-        """Get all supported file extensions"""
-        return {
-            'pdf', 'txt', 'md', 'csv', 'json', 'xml', 'yaml', 'yml',
-            'py', 'js', 'ts', 'jsx', 'tsx', 'java', 'cpp', 'c', 'h', 'hpp',
-            'go', 'rs', 'php', 'rb', 'swift', 'kt', 'scala', 'sh', 'sql',
-            'css', 'html'
         }
     
     async def validate_file_for_upload(self, file: UploadFile) -> dict:

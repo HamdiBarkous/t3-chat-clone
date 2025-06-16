@@ -10,6 +10,7 @@ import { Button } from '@/components/ui/Button';
 import { Dropdown } from '@/components/ui/Dropdown';
 import { FileUpload, useFileUpload } from '@/components/ui/FileUpload';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
+import { ImagePreview } from '@/components/ui/ImagePreview';
 import { useModels } from '@/hooks/useModels';
 import { clsx } from 'clsx';
 
@@ -111,28 +112,71 @@ export function MessageInput({
         {/* Uploaded Files Display */}
         {uploadedFiles.length > 0 && (
           <div className="mb-3 p-3 bg-[#2d2d2d] border border-[#3f3f46] rounded-lg">
-            <div className="text-sm text-zinc-400 mb-2">
-              Attached files ({uploadedFiles.length}):
-            </div>
-            <div className="flex flex-wrap gap-2">
-              {uploadedFiles.map((file, index) => (
-                <div key={index} className="relative">
-                  <DocumentBadge
-                    document={{
-                      id: `temp-${index}`,
-                      message_id: 'temp-message-id',
-                      filename: file.name,
-                      file_type: file.name.split('.').pop() || 'unknown',
-                      file_size: file.size,
-                      created_at: new Date().toISOString()
-                    }}
-                    onDelete={() => removeFile(index)}
-                    showActions={true}
-                    size="sm"
-                  />
-                </div>
-              ))}
-            </div>
+            {(() => {
+              // Helper function to check if file is an image
+              const isImageFile = (filename: string): boolean => {
+                const extension = '.' + filename.split('.').pop()?.toLowerCase();
+                return ['.jpg', '.jpeg', '.png', '.gif', '.webp'].includes(extension);
+              };
+
+              const imageFiles = uploadedFiles.filter(file => isImageFile(file.name));
+              const documentFiles = uploadedFiles.filter(file => !isImageFile(file.name));
+
+              return (
+                <>
+                  {/* Display image previews */}
+                  {imageFiles.length > 0 && (
+                    <div className="mb-3">
+                      <div className="text-sm text-zinc-400 mb-2">
+                        Image{imageFiles.length > 1 ? 's' : ''} ({imageFiles.length}):
+                      </div>
+                      <div className="grid grid-cols-3 gap-2">
+                        {imageFiles.map((file, index) => (
+                          <ImagePreview
+                            key={index}
+                            file={file}
+                            onRemove={() => removeFile(uploadedFiles.indexOf(file))}
+                            className="w-24"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Display document badges */}
+                  {documentFiles.length > 0 && (
+                    <div>
+                      <div className="text-sm text-zinc-400 mb-2">
+                        Attached file{documentFiles.length > 1 ? 's' : ''} ({documentFiles.length}):
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {documentFiles.map((file, index) => {
+                          const originalIndex = uploadedFiles.indexOf(file);
+                          return (
+                            <div key={index} className="relative">
+                              <DocumentBadge
+                                document={{
+                                  id: `temp-${originalIndex}`,
+                                  message_id: 'temp-message-id',
+                                  filename: file.name,
+                                  file_type: file.name.split('.').pop() || 'unknown',
+                                  file_size: file.size,
+                                  is_image: false,
+                                  created_at: new Date().toISOString()
+                                }}
+                                onDelete={() => removeFile(originalIndex)}
+                                showActions={true}
+                                size="sm"
+                              />
+                            </div>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 

@@ -12,6 +12,7 @@ import type { Message } from '@/types/api';
 import { MessageStatus } from '@/types/api';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
+import { ImageDisplay } from '@/components/ui/ImageDisplay';
 import { useConversations } from '@/contexts/ConversationsContext';
 
 interface MessageBubbleProps {
@@ -108,18 +109,51 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
         {/* Document Attachments (for user messages) */}
         {isUser && message.documents && message.documents.length > 0 && (
           <div className="mb-2 max-w-full">
-            <div className="text-xs text-zinc-500 mb-1">
-              Attached files ({message.documents.length}):
-            </div>
-            <div className="flex flex-wrap gap-1">
-              {message.documents.map((doc) => (
-                <DocumentBadge
-                  key={doc.id}
-                  document={doc}
-                  size="sm"
-                />
-              ))}
-            </div>
+            {/* Separate images from regular documents */}
+            {(() => {
+              const images = message.documents.filter(doc => doc.is_image);
+              const regularDocs = message.documents.filter(doc => !doc.is_image);
+              
+              return (
+                <>
+                  {/* Display images */}
+                  {images.length > 0 && (
+                    <div className="mb-2">
+                      <div className="text-xs text-zinc-500 mb-1">
+                        Image{images.length > 1 ? 's' : ''} ({images.length}):
+                      </div>
+                      <div className="grid grid-cols-2 gap-2 max-w-sm">
+                        {images.map((doc) => (
+                          <ImageDisplay
+                            key={doc.id}
+                            document={doc}
+                            size="sm"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Display regular documents */}
+                  {regularDocs.length > 0 && (
+                    <div>
+                      <div className="text-xs text-zinc-500 mb-1">
+                        Attached file{regularDocs.length > 1 ? 's' : ''} ({regularDocs.length}):
+                      </div>
+                      <div className="flex flex-wrap gap-1">
+                        {regularDocs.map((doc) => (
+                          <DocumentBadge
+                            key={doc.id}
+                            document={doc}
+                            size="sm"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
           </div>
         )}
 

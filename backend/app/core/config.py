@@ -27,6 +27,9 @@ class Settings(BaseSettings):
     # Title Generation
     title_generation_model: str = "openai/gpt-4o-mini"
     
+    # OpenRouter Transforms (Context Management)
+    openrouter_use_transforms: bool = True  # Enable middle-out compression for long contexts
+    
     # CORS Settings
     allowed_origins: list[str] = [
         "http://localhost:3000",  # Next.js dev server

@@ -38,7 +38,9 @@ class DocumentRepository:
                 "filename": document_create.filename,
                 "file_type": document_create.file_type,
                 "file_size": document_create.file_size,
-                "content_text": document_create.content_text
+                "is_image": document_create.is_image,
+                "content_text": document_create.content_text,
+                "image_base64": document_create.image_base64
             }
             
             response = await self.client.table(self.table_name) \
@@ -50,13 +52,14 @@ class DocumentRepository:
             
             document_dict = response.data[0]
             
-            # Return response without content_text
+            # Return response without content_text and image_base64
             return DocumentResponse(
                 id=document_dict["id"],
                 message_id=document_dict["message_id"],
                 filename=document_dict["filename"],
                 file_type=document_dict["file_type"],
                 file_size=document_dict["file_size"],
+                is_image=document_dict["is_image"],
                 created_at=document_dict["created_at"]
             )
             
@@ -94,7 +97,9 @@ class DocumentRepository:
                     filename=result["filename"],
                     file_type=result["file_type"],
                     file_size=result["file_size"],
-                    content_text=result["content_text"],
+                    is_image=result["is_image"],
+                    content_text=result.get("content_text"),
+                    image_base64=result.get("image_base64"),
                     created_at=result["created_at"]
                 )
             else:
@@ -104,6 +109,7 @@ class DocumentRepository:
                     filename=result["filename"],
                     file_type=result["file_type"],
                     file_size=result["file_size"],
+                    is_image=result["is_image"],
                     created_at=result["created_at"]
                 )
                 
@@ -126,7 +132,7 @@ class DocumentRepository:
             
             # Single query to get all documents for all messages
             results = await self.client.table(self.table_name) \
-                .select("id, message_id, filename, file_type, file_size, created_at") \
+                .select("id, message_id, filename, file_type, file_size, is_image, created_at") \
                 .in_("message_id", message_id_strings) \
                 .order("created_at", desc=False) \
                 .execute()
@@ -139,6 +145,7 @@ class DocumentRepository:
                     filename=result["filename"],
                     file_type=result["file_type"],
                     file_size=result["file_size"],
+                    is_image=result["is_image"],
                     created_at=result["created_at"]
                 ))
             
@@ -175,7 +182,9 @@ class DocumentRepository:
                         filename=result["filename"],
                         file_type=result["file_type"],
                         file_size=result["file_size"],
-                        content_text=result["content_text"],
+                        is_image=result["is_image"],
+                        content_text=result.get("content_text"),
+                        image_base64=result.get("image_base64"),
                         created_at=result["created_at"]
                     ))
                 else:
@@ -185,6 +194,7 @@ class DocumentRepository:
                         filename=result["filename"],
                         file_type=result["file_type"],
                         file_size=result["file_size"],
+                        is_image=result["is_image"],
                         created_at=result["created_at"]
                     ))
             
@@ -232,7 +242,9 @@ class DocumentRepository:
                         filename=result["filename"],
                         file_type=result["file_type"],
                         file_size=result["file_size"],
-                        content_text=result["content_text"],
+                        is_image=result["is_image"],
+                        content_text=result.get("content_text"),
+                        image_base64=result.get("image_base64"),
                         created_at=result["created_at"]
                     ))
                 else:
@@ -242,6 +254,7 @@ class DocumentRepository:
                         filename=result["filename"],
                         file_type=result["file_type"],
                         file_size=result["file_size"],
+                        is_image=result["is_image"],
                         created_at=result["created_at"]
                     ))
             

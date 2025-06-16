@@ -25,8 +25,9 @@ export interface DocumentResponse {
   filename: string;
   file_type: string;
   file_size: number;
+  is_image: boolean;
   created_at: string;
-  // Note: content_text is never included in API responses
+  // Note: content_text and image_base64 are never included in API responses
 }
 
 export interface DocumentListResponse {
@@ -180,6 +181,7 @@ export interface SupportedFileTypes {
   documents: Record<string, string>;
   text_files: Record<string, string>;
   code_files: Record<string, string>;
+  images: Record<string, string>;
   limits: {
     max_file_size: string;
     max_content_length: string;

@@ -27,8 +27,12 @@ const SUPPORTED_TYPES = [
   // Code files
   '.py', '.js', '.ts', '.jsx', '.tsx', '.java', '.cpp', '.c', '.h', '.hpp',
   '.go', '.rs', '.php', '.rb', '.swift', '.kt', '.scala', '.sh', '.sql',
-  '.css', '.html'
+  '.css', '.html',
+  // Images
+  '.jpg', '.jpeg', '.png', '.gif', '.webp'
 ];
+
+const IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
 
 export function FileUpload({
   onFileSelect,

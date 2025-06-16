@@ -36,10 +36,11 @@ class OpenRouterClient:
 
     async def chat_completion(
         self, 
-        messages: List[Dict[str, str]], 
+        messages: List[Dict[str, Any]], 
         model: str,
         max_tokens: Optional[int] = None,
-        temperature: float = 0.7
+        temperature: float = 0.7,
+        use_transforms: bool = True
     ) -> Dict[str, Any]:
         """Send chat completion request to OpenRouter"""
         if not self.api_key:
@@ -50,6 +51,10 @@ class OpenRouterClient:
             "messages": messages,
             "temperature": temperature,
         }
+        
+        # Add transforms for automatic context management
+        if use_transforms and settings.openrouter_use_transforms:
+            payload["transforms"] = ["middle-out"]
         
         if max_tokens:
             payload["max_tokens"] = max_tokens
@@ -71,10 +76,11 @@ class OpenRouterClient:
 
     async def chat_completion_stream(
         self, 
-        messages: List[Dict[str, str]], 
+        messages: List[Dict[str, Any]], 
         model: str,
         max_tokens: Optional[int] = None,
-        temperature: float = 0.7
+        temperature: float = 0.7,
+        use_transforms: bool = True
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Send streaming chat completion request to OpenRouter"""
         if not self.api_key:
@@ -86,6 +92,10 @@ class OpenRouterClient:
             "temperature": temperature,
             "stream": True,
         }
+        
+        # Add transforms for automatic context management
+        if use_transforms and settings.openrouter_use_transforms:
+            payload["transforms"] = ["middle-out"]
         
         if max_tokens:
             payload["max_tokens"] = max_tokens
@@ -117,8 +127,8 @@ class OpenRouterClient:
             except Exception as e:
                 raise ValueError(f"OpenRouter streaming request failed: {str(e)}")
 
-    def format_messages_for_openrouter(self, messages: List[Dict[str, Any]], system_prompt: Optional[str] = None) -> List[Dict[str, str]]:
-        """Format messages for OpenRouter API"""
+    def format_messages_for_openrouter(self, messages: List[Dict[str, Any]], system_prompt: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Format messages for OpenRouter API - handles both text and vision messages"""
         formatted_messages = []
         
         # Add system prompt if provided
@@ -130,10 +140,11 @@ class OpenRouterClient:
         
         # Add conversation messages
         for msg in messages:
-            formatted_messages.append({
+            formatted_message = {
                 "role": msg["role"],
-                "content": msg["content"]
-            })
+                "content": msg["content"]  # Can be string or array for vision
+            }
+            formatted_messages.append(formatted_message)
         
         return formatted_messages
 
