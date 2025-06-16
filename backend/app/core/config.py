@@ -16,6 +16,10 @@ class Settings(BaseSettings):
     supabase_anon_key: str = os.getenv('SUPABASE_ANON_KEY')
     supabase_service_role_key: str = os.getenv('SUPABASE_SERVICE_ROLE_KEY')
     
+    # Supabase MCP Configuration
+    supabase_access_token: Optional[str] = os.getenv("SUPABASE_ACCESS_TOKEN")
+    supabase_project_ref: Optional[str] = os.getenv("SUPABASE_PROJECT_REF")
+    
     # OpenRouter API
     openrouter_api_key: Optional[str] = os.getenv("OPENROUTER_API_KEY")
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
@@ -29,6 +33,10 @@ class Settings(BaseSettings):
     
     # OpenRouter Transforms (Context Management)
     openrouter_use_transforms: bool = True  # Enable middle-out compression for long contexts
+    
+    # MCP Configuration
+    mcp_enabled: bool = os.getenv("MCP_ENABLED", "true").lower() == "true"
+    mcp_supabase_read_only: bool = os.getenv("MCP_SUPABASE_READ_ONLY", "false").lower() == "true"
     
     # CORS Settings
     allowed_origins: list[str] = [

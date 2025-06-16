@@ -15,4 +15,5 @@ dependencies = [
     "supabase>=2.15.3",
     "uvicorn>=0.34.3",
     "pillow>=11.2.1",
+    "mcp>=1.9.4",
 ]
