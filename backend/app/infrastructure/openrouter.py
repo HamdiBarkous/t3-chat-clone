@@ -40,7 +40,8 @@ class OpenRouterClient:
         model: str,
         max_tokens: Optional[int] = None,
         temperature: float = 0.7,
-        use_transforms: bool = True
+        use_transforms: bool = True,
+        tools: Optional[List[Dict[str, Any]]] = None
     ) -> Dict[str, Any]:
         """Send chat completion request to OpenRouter"""
         if not self.api_key:
@@ -58,6 +59,9 @@ class OpenRouterClient:
         
         if max_tokens:
             payload["max_tokens"] = max_tokens
+            
+        if tools:
+            payload["tools"] = tools
 
         async with httpx.AsyncClient() as client:
             try:
@@ -80,7 +84,8 @@ class OpenRouterClient:
         model: str,
         max_tokens: Optional[int] = None,
         temperature: float = 0.7,
-        use_transforms: bool = True
+        use_transforms: bool = True,
+        tools: Optional[List[Dict[str, Any]]] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Send streaming chat completion request to OpenRouter"""
         if not self.api_key:
@@ -99,6 +104,9 @@ class OpenRouterClient:
         
         if max_tokens:
             payload["max_tokens"] = max_tokens
+            
+        if tools:
+            payload["tools"] = tools
 
         async with httpx.AsyncClient() as client:
             try:

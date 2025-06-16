@@ -1,5 +1,6 @@
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from uuid import UUID
+import json
 
 from app.core.config import settings
 from app.infrastructure.openrouter import openrouter_client
@@ -11,6 +12,8 @@ class OpenRouterService:
     def __init__(self, message_service: MessageService, conversation_service: ConversationService):
         self.message_service = message_service
         self.conversation_service = conversation_service
+        # Lazy import to avoid circular dependency
+        self._tool_service = None
 
     async def get_available_models(self) -> List[Dict[str, Any]]:
         """Get available models from OpenRouter"""
@@ -29,6 +32,88 @@ class OpenRouterService:
             })
         
         return formatted_models
+
+    @property
+    def tool_service(self):
+        """Lazy load tool service to avoid circular imports"""
+        if self._tool_service is None:
+            from app.services.tool_service import ToolService
+            self._tool_service = ToolService()
+        return self._tool_service
+
+    async def stream_chat_completion_with_tools(
+        self,
+        conversation_id: str,
+        user_id: str,
+        model: Optional[str] = None
+    ) -> AsyncGenerator[str, None]:
+        """Stream chat completion with tool calling support"""
+        conversation_uuid = UUID(conversation_id)
+        user_uuid = UUID(user_id)
+        
+        # Get conversation to check tool configuration
+        conversation = await self.conversation_service.get_conversation(conversation_uuid, user_uuid)
+        if not conversation:
+            raise ValueError("Conversation not found")
+
+        # If tools not enabled, use regular chat
+        if not conversation.tools_enabled:
+            async for chunk in self.stream_chat_completion(conversation_id, user_id, model):
+                yield chunk
+            return
+
+        # Get tools for this conversation
+        tools = await self.tool_service.get_openai_format_tools(conversation.enabled_tools)
+        
+        # Determine which model to use
+        model_to_use = model or conversation.current_model
+
+        # Get conversation context
+        context_messages = await self.message_service.get_conversation_context_for_ai(
+            conversation_uuid, user_uuid
+        )
+        
+        # Format messages for OpenRouter
+        formatted_messages = []
+        for msg in context_messages:
+            formatted_messages.append({
+                "role": msg.role.value,
+                "content": msg.content
+            })
+
+        # Make OpenRouter API call with tools
+        openrouter_messages = openrouter_client.format_messages_for_openrouter(
+            formatted_messages, 
+            conversation.system_prompt
+        )
+
+        # Stream with tool handling
+        async for chunk in openrouter_client.chat_completion_stream(
+            messages=openrouter_messages,
+            model=model_to_use,
+            tools=tools if tools else None
+        ):
+            if "choices" in chunk and len(chunk["choices"]) > 0:
+                choice = chunk["choices"][0]
+                delta = choice.get("delta", {})
+                
+                # Handle tool calls
+                if "tool_calls" in delta and delta["tool_calls"]:
+                    yield f"data: {json.dumps({'type': 'tool_call', 'data': delta['tool_calls']})}\n\n"
+                    
+                    # Execute tool and continue conversation
+                    for tool_call in delta["tool_calls"]:
+                        if tool_call.get("function"):
+                            tool_name = tool_call["function"]["name"]
+                            tool_args = json.loads(tool_call["function"]["arguments"]) if tool_call["function"]["arguments"] else {}
+                            
+                            # Execute tool
+                            tool_result = await self.tool_service.execute_tool_call(tool_name, tool_args)
+                            yield f"data: {json.dumps({'type': 'tool_result', 'data': {'name': tool_name, 'result': tool_result}})}\n\n"
+                
+                # Handle regular content
+                elif "content" in delta and delta["content"]:
+                    yield f"data: {json.dumps({'type': 'content', 'data': delta['content']})}\n\n"
 
     async def stream_chat_completion(
         self,

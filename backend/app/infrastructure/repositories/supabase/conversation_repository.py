@@ -43,7 +43,9 @@ class SupabaseConversationRepository:
                 user_id=user_id,
                 title=conversation_data.title,
                 current_model=conversation_data.current_model,
-                system_prompt=conversation_data.system_prompt
+                system_prompt=conversation_data.system_prompt,
+                tools_enabled=conversation_data.tools_enabled,
+                enabled_tools=conversation_data.enabled_tools
             )
             
             response = await self.client.table(self.table_name).insert(

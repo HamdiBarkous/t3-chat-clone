@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Dict, Any, Optional, AsyncGenerator
 from contextlib import AsyncExitStack
+import asyncio
 
 from mcp import ClientSession, StdioServerParameters
 from mcp.client.stdio import stdio_client
@@ -47,13 +48,19 @@ class BaseMCPClient(ABC):
 
     async def cleanup(self) -> None:
         """Clean up resources"""
+        if not self._connected:
+            return
+            
         try:
+            self._connected = False
+            if self.session:
+                # Give the session a moment to finish any pending operations
+                await asyncio.sleep(0.1)
+                self.session = None
             await self.exit_stack.aclose()
         except Exception as e:
-            print(f"Error during cleanup: {e}")
-        finally:
-            self._connected = False
-            self.session = None
+            # Suppress cleanup errors - they're not critical
+            pass
 
     async def get_available_tools(self) -> List[Dict[str, Any]]:
         """Get list of available tools from the MCP server"""
