@@ -1,6 +1,6 @@
 /**
  * Conversation List Component
- * Displays the list of user conversations with selection handling
+ * Displays the list of user conversations with selection handling and visual grouping
  */
 
 'use client';
@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { clsx } from 'clsx';
 import { useConversations } from '@/contexts/ConversationsContext';
+import type { ConversationListItem } from '@/types/api';
 
 interface ConversationListProps {
   selectedConversationId?: string;
@@ -198,9 +199,13 @@ function StreamingTitle({ title, isNew = false, isSelected = false, className }:
   const handleMouseEnter = () => {
     setIsHovered(true);
     // Only start scrolling if not already scrolling and text is actually truncated
-    if (checkTruncation() && !isStreaming && !isScrolling && !hasStartedScrolling) {
-      setIsScrolling(true);
-      setHasStartedScrolling(true);
+    if (!hasStartedScrolling && checkTruncation()) {
+      const timeout = setTimeout(() => {
+        setIsScrolling(true);
+        setHasStartedScrolling(true);
+      }, 500); // 500ms delay before starting scroll
+      
+      scrollTimeoutRef.current = timeout;
     }
   };
 
@@ -208,54 +213,40 @@ function StreamingTitle({ title, isNew = false, isSelected = false, className }:
     setIsHovered(false);
     setIsScrolling(false);
     setHasStartedScrolling(false);
+    
     if (scrollTimeoutRef.current) {
       clearTimeout(scrollTimeoutRef.current);
       scrollTimeoutRef.current = null;
     }
   };
 
-  // Reset scrolling state when animation completes
+  // Set CSS custom property for scroll distance
   useEffect(() => {
-    if (isScrolling) {
-      const timeout = setTimeout(() => {
-        setHasStartedScrolling(false);
-      }, 6000); // Match the animation duration
-      
-      scrollTimeoutRef.current = timeout;
-      return () => {
-        if (timeout) clearTimeout(timeout);
-      };
+    if (titleRef.current) {
+      titleRef.current.style.setProperty('--scroll-distance', `${scrollDistance}px`);
     }
-  }, [isScrolling]);
+  }, [scrollDistance]);
 
-  const finalTitle = displayText || 'New Conversation';
+  const finalTitle = displayText || title || 'New Conversation';
 
   return (
-    <div
+    <div 
       ref={titleRef}
       className={clsx(
-        'streaming-title font-medium text-sm transition-all duration-300 w-full overflow-hidden flex-1 mr-3',
-        isSelected 
-          ? 'text-white' 
-          : 'text-zinc-200 group-hover:text-white',
-        isStreaming && 'text-[#8b5cf6]',
+        'flex-1 min-w-0 relative overflow-hidden',
         className
       )}
+      style={{ width: '180px' }}
       onMouseEnter={handleMouseEnter}
       onMouseLeave={handleMouseLeave}
     >
-      <div
+      <div 
         ref={textRef}
         className={clsx(
-          'whitespace-nowrap transition-transform duration-1000 ease-linear relative',
-          isScrolling && 'animate-scroll-text-fast'
+          'whitespace-nowrap transition-transform duration-[6000ms] ease-linear text-sm font-medium',
+          isSelected ? 'text-white' : 'text-zinc-200',
+          isScrolling && hasStartedScrolling && isHovered && 'animate-scroll-text'
         )}
-        style={{
-          transform: isScrolling 
-            ? `translateX(-${scrollDistance}px)` 
-            : 'translateX(0)',
-          '--scroll-distance': `-${scrollDistance}px`
-        } as React.CSSProperties}
       >
         {finalTitle}
         {isStreaming && (
@@ -266,11 +257,65 @@ function StreamingTitle({ title, isNew = false, isSelected = false, className }:
   );
 }
 
+// Group conversations by their root conversation
+function groupConversations(conversations: ConversationListItem[]): ConversationListItem[][] {
+  const groups: Map<string, ConversationListItem[]> = new Map();
+  
+  conversations.forEach(conversation => {
+    const groupKey = conversation.root_conversation_id || conversation.id;
+    
+    if (!groups.has(groupKey)) {
+      groups.set(groupKey, []);
+    }
+    groups.get(groupKey)!.push(conversation);
+  });
+  
+  // Sort each group: original first, then by branch_order
+  for (const group of groups.values()) {
+    group.sort((a, b) => {
+      if (a.branch_type === 'original' && b.branch_type !== 'original') return -1;
+      if (b.branch_type === 'original' && a.branch_type !== 'original') return 1;
+      return (a.branch_order || 0) - (b.branch_order || 0);
+    });
+  }
+  
+  // Convert to array and sort by group_order
+  return Array.from(groups.values()).sort((a, b) => {
+    const aOrder = a[0]?.group_order || 0;
+    const bOrder = b[0]?.group_order || 0;
+    return aOrder - bOrder;
+  });
+}
+
+function getBranchIcon(branchType?: string) {
+  switch (branchType) {
+    case 'edit':
+      return (
+        <svg className="w-3 h-3 text-blue-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+        </svg>
+      );
+    case 'retry':
+      return (
+        <svg className="w-3 h-3 text-green-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
+        </svg>
+      );
+    case 'branch':
+    default:
+      return (
+        <svg className="w-3 h-3 text-[#8b5cf6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+        </svg>
+      );
+  }
+}
+
 export function ConversationList({ 
   selectedConversationId,
   onConversationSelect 
 }: ConversationListProps) {
-  const { conversations, loading, error, deleteConversation } = useConversations();
+  const { conversations, loading, loadingMore, hasMore, error, deleteConversation, loadMoreConversations } = useConversations();
   const [newConversationIds, setNewConversationIds] = useState<Set<string>>(new Set());
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
@@ -382,75 +427,123 @@ export function ConversationList({
     );
   }
 
+  // Group conversations by their relationships
+  const conversationGroups = groupConversations(conversations);
+
   return (
     <>
-      <div className="space-y-1.5 px-1">
-        {conversations.map((conversation, index) => (
-          <div
-            key={conversation.id}
-            className={clsx(
-              'conversation-card relative rounded-xl group cursor-pointer',
-              'transition-all duration-300 ease-out transform-gpu',
-              'hover:shadow-lg hover:shadow-black/10 hover:-translate-y-0.5',
-              selectedConversationId === conversation.id
-                ? 'selected bg-gradient-to-r from-[#8b5cf6]/15 to-[#7c3aed]/10 border border-[#8b5cf6]/30 shadow-lg shadow-[#8b5cf6]/10 translate-y-0'
-                : 'hover:bg-gradient-to-r hover:from-[#262626] hover:to-[#2a2a2a] border border-transparent',
-              newConversationIds.has(conversation.id) && 'animate-slide-in-up-stagger'
-            )}
-            onClick={() => onConversationSelect?.(conversation.id)}
-            style={{
-              animationDelay: newConversationIds.has(conversation.id) ? `${index * 100}ms` : '0ms'
-            }}
-          >
-            {/* Subtle gradient overlay for selected state */}
-            {selectedConversationId === conversation.id && (
-              <div className="absolute inset-0 bg-gradient-to-r from-[#8b5cf6]/5 to-transparent rounded-xl pointer-events-none" />
-            )}
-            
-            <div className="relative p-3.5 flex items-center">
-              {/* Branch indicator with enhanced styling */}
-              {conversation.title?.startsWith('Branch from ') && (
-                <div className="flex items-center mr-3 flex-shrink-0">
-                  <div className="w-5 h-5 bg-[#8b5cf6]/20 rounded-lg flex items-center justify-center border border-[#8b5cf6]/30">
-                    <svg className="w-2.5 h-2.5 text-[#8b5cf6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                    </svg>
+      <div className="space-y-2 px-1">
+        {conversationGroups.map((group, groupIndex) => (
+          <div key={group[0].root_conversation_id || group[0].id} className="space-y-1">
+            {group.map((conversation, index) => {
+              const isOriginal = conversation.branch_type === 'original' || !conversation.branch_type;
+              const isBranch = !isOriginal;
+              
+              return (
+                <div
+                  key={conversation.id}
+                  className={clsx(
+                    'conversation-card relative rounded-xl group cursor-pointer',
+                    'transition-all duration-300 ease-out transform-gpu',
+                    'hover:shadow-lg hover:shadow-black/10 hover:-translate-y-0.5',
+                    selectedConversationId === conversation.id
+                      ? 'selected bg-gradient-to-r from-[#8b5cf6]/15 to-[#7c3aed]/10 border border-[#8b5cf6]/30 shadow-lg shadow-[#8b5cf6]/10 translate-y-0'
+                      : 'hover:bg-gradient-to-r hover:from-[#262626] hover:to-[#2a2a2a] border border-transparent',
+                    newConversationIds.has(conversation.id) && 'animate-slide-in-up-stagger',
+                    isBranch && 'ml-6 relative before:absolute before:left-[-24px] before:top-1/2 before:w-4 before:h-px before:bg-zinc-600 before:transform before:-translate-y-1/2',
+                    isBranch && index > 0 && 'before:content-[""] before:absolute before:left-[-24px] before:top-0 before:w-px before:h-1/2 before:bg-zinc-600'
+                  )}
+                  onClick={() => onConversationSelect?.(conversation.id)}
+                  style={{
+                    animationDelay: newConversationIds.has(conversation.id) ? `${groupIndex * 100 + index * 50}ms` : '0ms'
+                  }}
+                >
+                  {/* Subtle gradient overlay for selected state */}
+                  {selectedConversationId === conversation.id && (
+                    <div className="absolute inset-0 bg-gradient-to-r from-[#8b5cf6]/5 to-transparent rounded-xl pointer-events-none" />
+                  )}
+                  
+                  <div className="relative p-3.5 flex items-center">
+                    {/* Branch indicator with enhanced styling */}
+                    {isBranch && (
+                      <div className="flex items-center mr-3 flex-shrink-0">
+                        <div className="w-5 h-5 bg-zinc-700/50 rounded-lg flex items-center justify-center border border-zinc-600/50">
+                          {getBranchIcon(conversation.branch_type)}
+                        </div>
+                      </div>
+                    )}
+                    
+                    <StreamingTitle
+                      title={conversation.title || 'New Conversation'}
+                      isNew={newConversationIds.has(conversation.id)}
+                      isSelected={selectedConversationId === conversation.id}
+                    />
+                    
+                    {/* Enhanced delete button */}
+                    <button
+                      onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                      className={clsx(
+                        'opacity-0 group-hover:opacity-100 p-2 rounded-lg transition-all duration-200 flex-shrink-0 relative overflow-hidden',
+                        'text-zinc-400 hover:text-red-400 hover:bg-red-400/10 hover:scale-110',
+                        'focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-400/50'
+                      )}
+                      title="Delete conversation"
+                    >
+                      <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-400/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-300" />
+                      <svg className="w-4 h-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                        <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                      </svg>
+                    </button>
                   </div>
-                </div>
-              )}
-              
-              <StreamingTitle
-                title={conversation.title || 'New Conversation'}
-                isNew={newConversationIds.has(conversation.id)}
-                isSelected={selectedConversationId === conversation.id}
-              />
-              
-              {/* Enhanced delete button */}
-              <button
-                onClick={(e) => handleDeleteConversation(conversation.id, e)}
-                className={clsx(
-                  'opacity-0 group-hover:opacity-100 p-2 rounded-lg transition-all duration-200 flex-shrink-0 relative overflow-hidden',
-                  'text-zinc-400 hover:text-red-400 hover:bg-red-400/10 hover:scale-110',
-                  'focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-400/50'
-                )}
-                title="Delete conversation"
-              >
-                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-400/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-300" />
-                <svg className="w-4 h-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
-            </div>
 
-            {/* New conversation indicator */}
-            {newConversationIds.has(conversation.id) && (
-              <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#8b5cf6] rounded-full animate-pulse-gentle">
-                <div className="absolute inset-0 bg-[#8b5cf6] rounded-full animate-ping" />
-              </div>
-            )}
+                  {/* New conversation indicator */}
+                  {newConversationIds.has(conversation.id) && (
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#8b5cf6] rounded-full animate-pulse-gentle">
+                      <div className="absolute inset-0 bg-[#8b5cf6] rounded-full animate-ping" />
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         ))}
       </div>
+
+      {/* Load More Button */}
+      {hasMore && (
+        <div className="px-1 mt-2">
+          <button
+            onClick={loadMoreConversations}
+            disabled={loadingMore}
+            className={clsx(
+              'w-full p-3 rounded-xl border border-dashed border-zinc-600 transition-all duration-200',
+              'text-sm font-medium text-zinc-400 hover:text-zinc-300',
+              'hover:border-zinc-500 hover:bg-zinc-800/50',
+              'focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]/50 focus:border-[#8b5cf6]/50',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              loadingMore && 'bg-zinc-800/30'
+            )}
+          >
+            {loadingMore ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="flex space-x-1">
+                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:0s]" />
+                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:0.4s]" />
+                </div>
+                <span>Loading more...</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center space-x-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Load more conversations</span>
+              </div>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Modern Confirmation Modal */}
       <ConfirmationModal

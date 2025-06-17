@@ -295,3 +295,137 @@ body {
     display: none;
   }
 }
+
+/* Conversation List Animations */
+.animate-scroll-text {
+  transform: translateX(calc(-1 * var(--scroll-distance, 0px)));
+}
+
+/* Branch connection lines */
+.conversation-card.ml-6::before {
+  content: '';
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  width: 16px;
+  height: 1px;
+  background-color: rgb(82 82 91); /* zinc-600 */
+  transform: translateY(-50%);
+}
+
+/* Vertical line connecting branches */
+.conversation-card.ml-6:not(:last-child)::after {
+  content: '';
+  position: absolute;
+  left: -24px;
+  top: 50%;
+  width: 1px;
+  height: calc(100% + 4px); /* 4px for gap between items */
+  background-color: rgb(82 82 91); /* zinc-600 */
+}
+
+/* First branch item - line from top */
+.conversation-card.ml-6:first-of-type::after {
+  top: 0;
+  height: 50%;
+}
+
+/* Last branch item - line to middle */
+.conversation-card.ml-6:last-of-type::after {
+  height: 50%;
+}
+
+/* Enhanced hover effects for grouped conversations */
+.conversation-card:hover {
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+}
+
+/* Staggered animation delays for grouped conversations */
+.animate-slide-in-up-stagger {
+  animation: slide-in-up 0.6s ease-out forwards;
+}
+
+@keyframes slide-in-up {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Pulse animation for new conversation indicators */
+.animate-pulse-gentle {
+  animation: pulse-gentle 2s ease-in-out infinite;
+}
+
+@keyframes pulse-gentle {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
+}
+
+/* Streaming cursor animation */
+.streaming-cursor {
+  display: inline-block;
+  width: 2px;
+  height: 1em;
+  background-color: currentColor;
+  margin-left: 2px;
+  vertical-align: baseline;
+}
+
+/* Smooth transitions for all interactive elements */
+.conversation-card {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.conversation-card .streaming-title {
+  transition: color 0.2s ease;
+}
+
+/* Focus styles for accessibility */
+.conversation-card:focus-within {
+  outline: 2px solid rgba(139, 92, 246, 0.5);
+  outline-offset: 2px;
+}
+
+/* Group spacing improvements */
+.space-y-2 > * + * {
+  margin-top: 0.5rem;
+}
+
+.space-y-1 > * + * {
+  margin-top: 0.25rem;
+}
+
+/* Branch icon animations */
+.conversation-card .w-5.h-5 svg {
+  transition: transform 0.2s ease;
+}
+
+.conversation-card:hover .w-5.h-5 svg {
+  transform: scale(1.1);
+}
+
+/* Reduced motion for accessibility */
+@media (prefers-reduced-motion: reduce) {
+  .animate-scroll-text,
+  .animate-slide-in-up-stagger,
+  .animate-pulse-gentle {
+    animation: none;
+  }
+  
+  .conversation-card {
+    transition: none;
+  }
+  
+  .conversation-card:hover {
+    transform: none;
+  }
+}

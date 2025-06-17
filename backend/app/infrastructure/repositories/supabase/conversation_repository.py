@@ -62,8 +62,15 @@ class SupabaseConversationRepository:
     async def update(self, conversation_id: UUID, user_id: UUID, conversation_data: ConversationUpdate) -> Optional[ConversationRow]:
         """Update an existing conversation"""
         try:
-            # Build update data excluding None values
-            update_data = {k: v for k, v in conversation_data.model_dump().items() if v is not None}
+            # Build update data excluding None values and convert UUIDs to strings
+            update_data = {}
+            for k, v in conversation_data.model_dump().items():
+                if v is not None:
+                    # Convert UUID objects to strings for Supabase
+                    if isinstance(v, UUID):
+                        update_data[k] = str(v)
+                    else:
+                        update_data[k] = v
             
             if not update_data:
                 return await self.get_by_id(conversation_id, user_id)
@@ -98,9 +105,9 @@ class SupabaseConversationRepository:
             raise SupabaseError(f"Failed to delete conversation: {str(e)}")
 
     async def list_by_user(self, user_id: UUID, limit: int = 20, offset: int = 0) -> List[ConversationListItem]:
-        """OPTIMIZED: List conversations with message stats in single query"""
+        """List conversations with stats using the available function"""
         try:
-            # Use RPC function for complex query
+            # Use the existing RPC function 
             response_data = await self.client.call_rpc('get_conversations_with_stats', {
                 'p_user_id': str(user_id),
                 'p_limit': limit,
@@ -118,11 +125,19 @@ class SupabaseConversationRepository:
                     updated_at=row["updated_at"],
                     message_count=row["message_count"] or 0,
                     last_message_at=row["last_message_at"],
-                    last_message_preview=row["last_message_preview"]
+                    last_message_preview=row["last_message_preview"],
+                    # Now these fields are provided by the updated function
+                    parent_conversation_id=UUID(row["parent_conversation_id"]) if row["parent_conversation_id"] else None,
+                    root_conversation_id=UUID(row["root_conversation_id"]) if row["root_conversation_id"] else None,
+                    branch_type=row["branch_type"],
+                    branch_point_message_id=UUID(row["branch_point_message_id"]) if row["branch_point_message_id"] else None,
+                    # These are still not implemented yet (for future conversation grouping)
+                    group_order=None,
+                    branch_order=None
                 ))
             
             return result_conversations
             
         except Exception as e:
-            logger.error(f"Error in optimized conversation list: {e}")
+            logger.error(f"Error in conversation list: {e}")
             raise SupabaseError(f"Failed to list conversations: {str(e)}")

@@ -55,10 +55,23 @@ class ConversationService:
         async with self._user_locks[user_id]:  # Prevent race conditions
             conversation = await self.conversation_repo.create(user_id, conversation_data)
             
+            # Set default relationship fields for new conversations
+            from app.types.database import BranchType
+            from app.schemas.conversation import ConversationUpdate
+            
+            update_data = ConversationUpdate(
+                branch_type=BranchType.ORIGINAL,
+                root_conversation_id=conversation.id
+            )
+            await self.conversation_repo.update(conversation.id, user_id, update_data)
+            
+            # Get the updated conversation
+            updated_conversation = await self.conversation_repo.get_by_id(conversation.id, user_id)
+            
             # Invalidate cache for this user
             self._invalidate_user_cache(user_id)
             
-            response = ConversationResponse.model_validate(conversation)
+            response = ConversationResponse.model_validate(updated_conversation)
             
             # Cache the new conversation
             cache_key = f"conversation:{conversation.id}:{user_id}"
@@ -195,6 +208,21 @@ class ConversationService:
 
         new_conversation = await self.create_conversation(user_id, new_conversation_data)
 
+        # Update the new conversation with relationship fields
+        from app.types.database import BranchType
+        from app.schemas.conversation import ConversationUpdate
+        
+        update_data = ConversationUpdate(
+            parent_conversation_id=original_conversation_id,
+            root_conversation_id=original_conversation.root_conversation_id or original_conversation.id,
+            branch_type=BranchType.BRANCH,
+            branch_point_message_id=branch_from_message_id
+        )
+        await self.update_conversation(new_conversation.id, user_id, update_data)
+
+        # Refresh the conversation to get updated fields
+        updated_conversation = await self.get_conversation(new_conversation.id, user_id)
+
         # Create messages sequentially to guarantee proper order
         message_id_mapping = {}  # Map old message ID to new message ID
         
@@ -234,7 +262,7 @@ class ConversationService:
                 import logging
                 logging.warning(f"Failed to get documents for message {original_message.id}: {e}")
 
-        return new_conversation
+        return updated_conversation
 
     async def create_message_edit_branch(
         self,
@@ -277,6 +305,8 @@ class ConversationService:
             additional_message_role='user',
             additional_message_model=edit_message.model_used,
             branch_title=f"Edit: {new_content[:30]}..." if len(new_content) > 30 else f"Edit: {new_content}",
+            branch_type='edit',
+            branch_point_message_id=edit_message_id,
             user_id=user_id,
             message_service=message_service,
             document_service=document_service
@@ -326,6 +356,8 @@ class ConversationService:
             additional_message_role=None,
             additional_message_model=None,
             branch_title=f"Retry with {model_to_use}",
+            branch_type='retry',
+            branch_point_message_id=retry_message_id,
             user_id=user_id,
             message_service=message_service,
             document_service=document_service,
@@ -343,6 +375,8 @@ class ConversationService:
         additional_message_role: Optional[str] = None,
         additional_message_model: Optional[str] = None,
         branch_title: str = "Branch",
+        branch_type: str = "branch",
+        branch_point_message_id: Optional[UUID] = None,
         update_model: Optional[str] = None
     ) -> ConversationResponse:
         """
@@ -357,6 +391,22 @@ class ConversationService:
         )
 
         new_conversation = await self.create_conversation(user_id, new_conversation_data)
+
+        # Update the new conversation with relationship fields
+        from app.types.database import BranchType
+        from app.schemas.conversation import ConversationUpdate
+        
+        branch_type_enum = getattr(BranchType, branch_type.upper())
+        update_data = ConversationUpdate(
+            parent_conversation_id=original_conversation.id,
+            root_conversation_id=original_conversation.root_conversation_id or original_conversation.id,
+            branch_type=branch_type_enum,
+            branch_point_message_id=branch_point_message_id
+        )
+        await self.update_conversation(new_conversation.id, user_id, update_data)
+
+        # Refresh the conversation to get updated fields
+        updated_conversation = await self.get_conversation(new_conversation.id, user_id)
 
         # Copy existing messages
         message_id_mapping = {}  # Map old message ID to new message ID
@@ -407,4 +457,4 @@ class ConversationService:
                 import logging
                 logging.warning(f"Failed to get documents for message {original_message.id}: {e}")
 
-        return new_conversation 
+        return updated_conversation 

@@ -5,7 +5,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useRef, useEffect, useCallback } from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { ConversationList } from './ConversationList';
@@ -17,6 +17,8 @@ interface SidebarProps {
   onConversationSelect?: (conversationId: string) => void;
 }
 
+const SCROLL_STORAGE_KEY = 'sidebar-scroll-position';
+
 export function Sidebar({ 
   onClose, 
   onNewChat,
@@ -24,11 +26,73 @@ export function Sidebar({
   onConversationSelect
 }: SidebarProps) {
   const { user, signOut } = useAuth();
+  const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const isRestoringScroll = useRef(false);
 
-  const handleNewChat = () => {
+  // Save scroll position to sessionStorage on scroll
+  const saveScrollPosition = useCallback(() => {
+    if (scrollContainerRef.current && !isRestoringScroll.current) {
+      const scrollTop = scrollContainerRef.current.scrollTop;
+      sessionStorage.setItem(SCROLL_STORAGE_KEY, scrollTop.toString());
+    }
+  }, []);
+
+  // Save scroll position before conversation selection
+  const handleConversationSelect = useCallback((conversationId: string) => {
+    saveScrollPosition();
+    onConversationSelect?.(conversationId);
+  }, [onConversationSelect, saveScrollPosition]);
+
+  // Restore scroll position when component mounts or re-mounts
+  useEffect(() => {
+    const restoreScrollPosition = () => {
+      if (scrollContainerRef.current) {
+        const savedPosition = sessionStorage.getItem(SCROLL_STORAGE_KEY);
+        if (savedPosition) {
+          isRestoringScroll.current = true;
+          scrollContainerRef.current.scrollTop = parseInt(savedPosition, 10);
+          
+          // Reset the flag after a short delay
+          setTimeout(() => {
+            isRestoringScroll.current = false;
+          }, 100);
+        }
+      }
+    };
+
+    // Restore immediately if DOM is ready
+    restoreScrollPosition();
+    
+    // Also restore after a short delay in case conversations are still loading
+    const timeoutId = setTimeout(restoreScrollPosition, 100);
+    
+    return () => clearTimeout(timeoutId);
+  }, []); // Only run on mount
+
+  // Add scroll event listener to continuously save position
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+
+    // Throttle scroll saves to avoid too frequent storage writes
+    let scrollTimeout: NodeJS.Timeout;
+    const throttledSave = () => {
+      clearTimeout(scrollTimeout);
+      scrollTimeout = setTimeout(saveScrollPosition, 150);
+    };
+
+    container.addEventListener('scroll', throttledSave, { passive: true });
+    
+    return () => {
+      container.removeEventListener('scroll', throttledSave);
+      clearTimeout(scrollTimeout);
+    };
+  }, [saveScrollPosition]);
+
+  const handleNewChat = useCallback(() => {
     onNewChat?.();
     onClose?.();
-  };
+  }, [onNewChat, onClose]);
 
   return (
     <div className="h-screen flex flex-col max-h-screen">
@@ -61,7 +125,10 @@ export function Sidebar({
       </div>
 
       {/* Conversation List - Scrollable */}
-      <div className="flex-1 overflow-y-auto min-h-0 max-h-full scrollbar-hide">
+      <div 
+        ref={scrollContainerRef}
+        className="flex-1 overflow-y-auto min-h-0 max-h-full scrollbar-hide"
+      >
         <div className="p-2">
           <h2 className="text-xs font-medium text-zinc-400 uppercase tracking-wider px-3 py-2 mb-2 sticky top-0 bg-[#171717] z-10">
             Recent Conversations
@@ -69,7 +136,7 @@ export function Sidebar({
           <div className="space-y-1">
             <ConversationList 
               selectedConversationId={selectedConversationId}
-              onConversationSelect={onConversationSelect}
+              onConversationSelect={handleConversationSelect}
             />
           </div>
         </div>
