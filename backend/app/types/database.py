@@ -47,8 +47,6 @@ class ConversationRow(SupabaseModel):
     title: Optional[str] = None
     current_model: str
     system_prompt: Optional[str] = None
-    tools_enabled: bool = False
-    enabled_tools: list = []
     created_at: datetime
     updated_at: datetime
 
@@ -82,8 +80,6 @@ class ConversationRowCreate(SupabaseModel):
     title: Optional[str] = None
     current_model: str
     system_prompt: Optional[str] = None
-    tools_enabled: bool = False
-    enabled_tools: list = []
 
 
 class ConversationRowUpdate(SupabaseModel):
@@ -91,8 +87,6 @@ class ConversationRowUpdate(SupabaseModel):
     title: Optional[str] = None
     current_model: Optional[str] = None
     system_prompt: Optional[str] = None
-    tools_enabled: Optional[bool] = None
-    enabled_tools: Optional[list] = None
 
 
 class MessageRowCreate(SupabaseModel):

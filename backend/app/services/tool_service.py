@@ -68,22 +68,19 @@ class ToolService:
             # Convert result to string for LLM consumption
             if isinstance(result, str):
                 return result
-            elif hasattr(result, 'content'):
-                # Handle MCP result objects with content attribute
-                content = result.content
-                if hasattr(content, '__iter__') and not isinstance(content, str):
-                    # If content is a list of objects, extract text
-                    text_parts = []
-                    for item in content:
-                        if hasattr(item, 'text'):
-                            text_parts.append(str(item.text))
-                        elif hasattr(item, 'content'):
-                            text_parts.append(str(item.content))
-                        else:
-                            text_parts.append(str(item))
-                    return '\n'.join(text_parts)
-                else:
-                    return str(content)
+            elif hasattr(result, '__iter__') and not isinstance(result, str):
+                # If result is a list of objects, extract text
+                text_parts = []
+                for item in result:
+                    if hasattr(item, 'text'):
+                        text_parts.append(str(item.text))
+                    elif hasattr(item, 'content'):
+                        text_parts.append(str(item.content))
+                    elif isinstance(item, dict):
+                        text_parts.append(str(item.get('text', item.get('content', item))))
+                    else:
+                        text_parts.append(str(item))
+                return '\n'.join(text_parts) if text_parts else str(result)
             elif isinstance(result, (list, dict)):
                 import json
                 return json.dumps(result, indent=2, default=str)
