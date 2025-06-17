@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { clsx } from 'clsx';
 import { useConversations } from '@/contexts/ConversationsContext';
 
@@ -24,6 +24,13 @@ interface StreamingTitleProps {
 function StreamingTitle({ title, isNew = false, isSelected = false, className }: StreamingTitleProps) {
   const [displayText, setDisplayText] = useState('');
   const [isStreaming, setIsStreaming] = useState(isNew);
+  const [isHovered, setIsHovered] = useState(false);
+  const [isScrolling, setIsScrolling] = useState(false);
+  const [hasStartedScrolling, setHasStartedScrolling] = useState(false);
+  const [scrollDistance, setScrollDistance] = useState(0);
+  const titleRef = useRef<HTMLDivElement>(null);
+  const textRef = useRef<HTMLDivElement>(null);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
     if (!title) {
@@ -56,19 +63,86 @@ function StreamingTitle({ title, isNew = false, isSelected = false, className }:
     }
   }, [title, isNew]);
 
+  // Calculate precise scroll distance
+  const calculateScrollDistance = () => {
+    if (titleRef.current && textRef.current) {
+      const containerWidth = titleRef.current.clientWidth;
+      const textWidth = textRef.current.scrollWidth;
+      const distance = Math.max(0, textWidth - containerWidth + 10); // +10px for padding
+      setScrollDistance(distance);
+      return distance > 0;
+    }
+    return false;
+  };
+
+  // Check if text is truncated and calculate scroll distance
+  const checkTruncation = () => {
+    return calculateScrollDistance();
+  };
+
+  const handleMouseEnter = () => {
+    setIsHovered(true);
+    // Only start scrolling if not already scrolling and text is truncated
+    if (checkTruncation() && !isStreaming && !isScrolling && !hasStartedScrolling) {
+      setIsScrolling(true);
+      setHasStartedScrolling(true);
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setIsHovered(false);
+    setIsScrolling(false);
+    setHasStartedScrolling(false);
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
+      scrollTimeoutRef.current = null;
+    }
+  };
+
+  // Reset scrolling state when animation completes
+  useEffect(() => {
+    if (isScrolling) {
+      const timeout = setTimeout(() => {
+        setHasStartedScrolling(false);
+      }, 6000); // Match the animation duration
+      
+      scrollTimeoutRef.current = timeout;
+      return () => {
+        if (timeout) clearTimeout(timeout);
+      };
+    }
+  }, [isScrolling]);
+
+  const finalTitle = displayText || 'New Conversation';
+
   return (
-    <h3 className={clsx(
-      'streaming-title font-medium text-sm truncate transition-colors duration-200',
-      isSelected
-        ? 'text-white'
-        : 'text-zinc-200 group-hover:text-white',
-      className
-    )}>
-      {displayText || 'New Conversation'}
-      {isStreaming && (
-        <span className="streaming-cursor" />
+    <div
+      ref={titleRef}
+      className={clsx(
+        'streaming-title font-medium text-sm transition-colors duration-200 w-full overflow-hidden flex-1 mr-2',
+        isSelected ? 'text-white' : 'text-zinc-200 group-hover:text-white',
+        className
       )}
-    </h3>
+      onMouseEnter={handleMouseEnter}
+      onMouseLeave={handleMouseLeave}
+    >
+      <div
+        ref={textRef}
+        className={clsx(
+          'whitespace-nowrap transition-transform duration-1000 ease-linear',
+          isScrolling && 'animate-scroll-text-fast'
+        )}
+        style={{
+          transform: isScrolling 
+            ? `translateX(-${scrollDistance}px)` 
+            : 'translateX(0)',
+          '--scroll-distance': `-${scrollDistance}px`
+        } as React.CSSProperties}
+      >
+        {finalTitle}
+        {isStreaming && <span className="streaming-cursor" />}
+      </div>
+    </div>
   );
 }
 
@@ -173,40 +247,29 @@ export function ConversationList({
           )}
           onClick={() => onConversationSelect?.(conversation.id)}
         >
-          <div className="flex items-start justify-between mb-2">
-            <div className="flex items-center flex-1 mr-2">
-              {conversation.title?.startsWith('Branch from ') && (
-                <svg className="w-3 h-3 text-[#8b5cf6] mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
-              )}
-              <StreamingTitle
-                title={conversation.title || 'New Conversation'}
-                isNew={newConversationIds.has(conversation.id)}
-                isSelected={selectedConversationId === conversation.id}
-              />
-            </div>
-            
-            <span className="text-xs text-zinc-500 flex-shrink-0">
-              {formatTimeAgo(conversation.updated_at)}
-            </span>
-          </div>
-          
-
-
-          {/* Delete button only - Model indicator removed */}
-          <div className="mt-2 flex items-center justify-end">
-            {selectedConversationId === conversation.id && (
-              <button
-                onClick={(e) => handleDeleteConversation(conversation.id, e)}
-                className="opacity-0 group-hover:opacity-100 p-1 text-zinc-400 hover:text-red-400 transition-all z-10"
-                title="Delete conversation"
-              >
-                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-                </svg>
-              </button>
+          <div className="flex items-center">
+            {conversation.title?.startsWith('Branch from ') && (
+              <svg className="w-3 h-3 text-[#8b5cf6] mr-2 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+              </svg>
             )}
+            
+            <StreamingTitle
+              title={conversation.title || 'New Conversation'}
+              isNew={newConversationIds.has(conversation.id)}
+              isSelected={selectedConversationId === conversation.id}
+            />
+            
+            {/* Modern delete button with trash icon */}
+            <button
+              onClick={(e) => handleDeleteConversation(conversation.id, e)}
+              className="opacity-0 group-hover:opacity-100 p-1.5 text-zinc-400 hover:text-red-400 hover:bg-red-400/10 rounded-md transition-all duration-200 flex-shrink-0"
+              title="Delete conversation"
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+              </svg>
+            </button>
           </div>
         </div>
       ))}
