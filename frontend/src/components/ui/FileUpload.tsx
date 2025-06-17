@@ -32,8 +32,6 @@ const SUPPORTED_TYPES = [
   '.jpg', '.jpeg', '.png', '.gif', '.webp'
 ];
 
-const IMAGE_TYPES = ['.jpg', '.jpeg', '.png', '.gif', '.webp'];
-
 export function FileUpload({
   onFileSelect,
   accept = SUPPORTED_TYPES.join(','),

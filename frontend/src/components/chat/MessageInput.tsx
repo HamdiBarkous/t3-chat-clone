@@ -12,10 +12,11 @@ import { FileUpload, useFileUpload } from '@/components/ui/FileUpload';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
 import { ImagePreview } from '@/components/ui/ImagePreview';
 import { useModels } from '@/hooks/useModels';
+import { ToolToggle } from '@/components/chat/ToolToggle';
 import { clsx } from 'clsx';
 
 interface MessageInputProps {
-  onSendMessage: (content: string, files?: File[]) => void;
+  onSendMessage: (content: string, files?: File[], useTools?: boolean, enabledTools?: string[]) => void;
   disabled?: boolean;
   currentModel?: string;
   onModelChange?: (model: string) => void;
@@ -30,6 +31,10 @@ export function MessageInput({
   const [message, setMessage] = useState('');
   const [selectedModel, setSelectedModel] = useState(currentModel);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  
+  // Tool state
+  const [toolsEnabled, setToolsEnabled] = useState(false);
+  const [enabledTools, setEnabledTools] = useState<string[]>([]);
   
   // File upload functionality
   const { uploadedFiles, addFiles, removeFile, clearFiles } = useFileUpload();
@@ -75,7 +80,12 @@ export function MessageInput({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if ((message.trim() || uploadedFiles.length > 0) && !disabled) {
-      onSendMessage(message.trim(), uploadedFiles);
+      onSendMessage(
+        message.trim(), 
+        uploadedFiles, 
+        toolsEnabled, 
+        toolsEnabled ? enabledTools : undefined
+      );
       setMessage('');
       clearFiles();
     }
@@ -93,19 +103,30 @@ export function MessageInput({
     onModelChange?.(model);
   };
 
+  const handleToolToggle = (enabled: boolean, tools: string[]) => {
+    setToolsEnabled(enabled);
+    setEnabledTools(tools);
+  };
+
   const canSend = (message.trim().length > 0 || uploadedFiles.length > 0) && !disabled;
 
   return (
     <div className="border-t border-[#3f3f46] bg-[#1a1a1a] p-4">
       <div className="max-w-4xl mx-auto">
-        {/* Model Selector */}
-        <div className="mb-3">
+        {/* Model Selector and Tool Toggle */}
+        <div className="mb-3 flex items-center gap-3">
           <Dropdown
             options={availableModels}
             value={selectedModel}
             onChange={handleModelChange}
             disabled={disabled}
             className="w-48"
+          />
+          <ToolToggle
+            enabled={toolsEnabled}
+            enabledTools={enabledTools}
+            onToggle={handleToolToggle}
+            disabled={disabled}
           />
         </div>
 

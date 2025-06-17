@@ -149,6 +149,33 @@ export interface PaginatedResponse<T> {
 export interface StreamChatRequest {
   message_content: string;
   model?: string;
+  use_tools?: boolean;
+  enabled_tools?: string[];
+}
+
+// Tool types
+export interface ToolFunction {
+  name: string;
+  description: string;
+  parameters: {
+    type: string;
+    properties: Record<string, unknown>;
+    required: string[];
+  };
+}
+
+export interface Tool {
+  type: 'function';
+  function: ToolFunction;
+}
+
+export interface ToolsResponse {
+  available_clients: string[];
+  tools: Record<string, Tool[]>;
+}
+
+export interface ClientsResponse {
+  clients: string[];
 }
 
 export interface SystemPromptUpdate {
