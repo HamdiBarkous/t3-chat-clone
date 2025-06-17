@@ -270,7 +270,7 @@ export function ConversationList({
   selectedConversationId,
   onConversationSelect 
 }: ConversationListProps) {
-  const { conversations, loading, error, deleteConversation } = useConversations();
+  const { conversations, loading, loadingMore, hasMore, error, deleteConversation, loadMoreConversations } = useConversations();
   const [newConversationIds, setNewConversationIds] = useState<Set<string>>(new Set());
   const [deleteModal, setDeleteModal] = useState<{
     isOpen: boolean;
@@ -451,6 +451,42 @@ export function ConversationList({
           </div>
         ))}
       </div>
+
+      {/* Load More Button */}
+      {hasMore && (
+        <div className="px-1 mt-2">
+          <button
+            onClick={loadMoreConversations}
+            disabled={loadingMore}
+            className={clsx(
+              'w-full p-3 rounded-xl border border-dashed border-zinc-600 transition-all duration-200',
+              'text-sm font-medium text-zinc-400 hover:text-zinc-300',
+              'hover:border-zinc-500 hover:bg-zinc-800/50',
+              'focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]/50 focus:border-[#8b5cf6]/50',
+              'disabled:opacity-50 disabled:cursor-not-allowed',
+              loadingMore && 'bg-zinc-800/30'
+            )}
+          >
+            {loadingMore ? (
+              <div className="flex items-center justify-center space-x-2">
+                <div className="flex space-x-1">
+                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:0s]" />
+                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:0.4s]" />
+                </div>
+                <span>Loading more...</span>
+              </div>
+            ) : (
+              <div className="flex items-center justify-center space-x-2">
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                </svg>
+                <span>Load more conversations</span>
+              </div>
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Modern Confirmation Modal */}
       <ConfirmationModal

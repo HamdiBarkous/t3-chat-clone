@@ -22,6 +22,8 @@ import type {
 interface ConversationsContextType {
   conversations: ConversationListItem[]
   loading: boolean
+  loadingMore: boolean
+  hasMore: boolean
   error: string | null
   createConversation: (data: ConversationCreate) => Promise<ConversationResponse | null>
   updateConversation: (id: string, data: ConversationUpdate) => Promise<ConversationResponse | null>
@@ -30,33 +32,60 @@ interface ConversationsContextType {
   editMessage: (conversationId: string, messageId: string, newContent: string) => Promise<ConversationResponse | null>
   retryMessage: (conversationId: string, messageId: string, model?: string) => Promise<ConversationResponse | null>
   refreshConversations: () => Promise<void>
+  loadMoreConversations: () => Promise<void>
   updateConversationTitle: (id: string, title: string) => void
 }
 
 const ConversationsContext = createContext<ConversationsContextType | undefined>(undefined);
 
+const CONVERSATIONS_PER_PAGE = 20;
+
 export function ConversationsProvider({ children }: { children: React.ReactNode }) {
   const [conversations, setConversations] = useState<ConversationListItem[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [hasMore, setHasMore] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [initialized, setInitialized] = useState(false)
 
-  const fetchConversations = useCallback(async () => {
+  const fetchConversations = useCallback(async (offset: number = 0, append: boolean = false) => {
     try {
-      setLoading(true)
+      if (offset === 0) {
+        setLoading(true)
+      } else {
+        setLoadingMore(true)
+      }
       setError(null)
       
-      const response = await apiClient.get<ConversationListItem[]>('/conversations/')
-      setConversations(response)
+      const response = await apiClient.get<ConversationListItem[]>(
+        `/conversations/?limit=${CONVERSATIONS_PER_PAGE}&offset=${offset}`
+      )
+      
+      if (append) {
+        setConversations(prev => [...prev, ...response])
+      } else {
+        setConversations(response)
+      }
+      
+      // Check if we have more conversations to load
+      setHasMore(response.length === CONVERSATIONS_PER_PAGE)
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : 'Failed to fetch conversations'
       setError(errorMessage)
       console.error('Error fetching conversations:', err)
     } finally {
       setLoading(false)
+      setLoadingMore(false)
       setInitialized(true)
     }
   }, [])
+
+  const loadMoreConversations = useCallback(async () => {
+    if (loadingMore || !hasMore) return
+    
+    const currentOffset = conversations.length
+    await fetchConversations(currentOffset, true)
+  }, [loadingMore, hasMore, conversations.length, fetchConversations])
 
   const createConversation = useCallback(async (data: ConversationCreate): Promise<ConversationResponse | null> => {
     try {
@@ -221,7 +250,8 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
   }, [])
 
   const refreshConversations = useCallback(async () => {
-    await fetchConversations()
+    setHasMore(true)
+    await fetchConversations(0, false)
   }, [fetchConversations])
 
   // Helper function to update conversation title (for real-time updates)
@@ -236,13 +266,15 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
   // Load conversations on mount (only once)
   useEffect(() => {
     if (!initialized) {
-      fetchConversations()
+      fetchConversations(0, false)
     }
   }, [fetchConversations, initialized])
 
   const value: ConversationsContextType = {
     conversations,
     loading,
+    loadingMore,
+    hasMore,
     error,
     createConversation,
     updateConversation,
@@ -251,6 +283,7 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     editMessage,
     retryMessage,
     refreshConversations,
+    loadMoreConversations,
     updateConversationTitle,
   }
 
