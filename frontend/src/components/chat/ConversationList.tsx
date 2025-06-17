@@ -5,7 +5,7 @@
 
 'use client';
 
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 import { useConversations } from '@/contexts/ConversationsContext';
 
@@ -14,11 +14,94 @@ interface ConversationListProps {
   onConversationSelect?: (conversationId: string) => void;
 }
 
+interface StreamingTitleProps {
+  title: string;
+  isNew?: boolean;
+  isSelected?: boolean;
+  className?: string;
+}
+
+function StreamingTitle({ title, isNew = false, isSelected = false, className }: StreamingTitleProps) {
+  const [displayText, setDisplayText] = useState('');
+  const [isStreaming, setIsStreaming] = useState(isNew);
+
+  useEffect(() => {
+    if (!title) {
+      setDisplayText('New Conversation');
+      setIsStreaming(false);
+      return;
+    }
+
+    if (isNew) {
+      // Streaming animation for new titles
+      setDisplayText('');
+      setIsStreaming(true);
+      
+      let currentIndex = 0;
+      const streamInterval = setInterval(() => {
+        if (currentIndex <= title.length) {
+          setDisplayText(title.slice(0, currentIndex));
+          currentIndex++;
+        } else {
+          clearInterval(streamInterval);
+          setIsStreaming(false);
+        }
+      }, 50); // 50ms per character for smooth streaming
+
+      return () => clearInterval(streamInterval);
+    } else {
+      // No animation for existing titles
+      setDisplayText(title);
+      setIsStreaming(false);
+    }
+  }, [title, isNew]);
+
+  return (
+    <h3 className={clsx(
+      'streaming-title font-medium text-sm truncate transition-colors duration-200',
+      isSelected
+        ? 'text-white'
+        : 'text-zinc-200 group-hover:text-white',
+      className
+    )}>
+      {displayText || 'New Conversation'}
+      {isStreaming && (
+        <span className="streaming-cursor" />
+      )}
+    </h3>
+  );
+}
+
 export function ConversationList({ 
   selectedConversationId,
   onConversationSelect 
 }: ConversationListProps) {
   const { conversations, loading, error, deleteConversation } = useConversations();
+  const [newConversationIds, setNewConversationIds] = useState<Set<string>>(new Set());
+
+  // Track new conversations for streaming animation
+  useEffect(() => {
+    const newIds = new Set<string>();
+    conversations.forEach(conv => {
+      if (conv.created_at) {
+        const createdTime = new Date(conv.created_at).getTime();
+        const now = Date.now();
+        // Consider conversations created in the last 5 seconds as "new"
+        if (now - createdTime < 5000) {
+          newIds.add(conv.id);
+        }
+      }
+    });
+    setNewConversationIds(newIds);
+
+    // Clear the "new" status after animation completes
+    if (newIds.size > 0) {
+      const timeout = setTimeout(() => {
+        setNewConversationIds(new Set());
+      }, 3000); // Clear after 3 seconds
+      return () => clearTimeout(timeout);
+    }
+  }, [conversations]);
 
   // Note: Auto-selection is now handled by routing in the main pages
 
@@ -83,28 +166,25 @@ export function ConversationList({
         <div
           key={conversation.id}
           className={clsx(
-            'relative p-3 rounded-lg transition-colors group cursor-pointer',
+            'conversation-card relative p-3 rounded-lg group cursor-pointer animate-slide-in-up',
             selectedConversationId === conversation.id
-              ? 'bg-[#2d2d2d] border border-[#8b5cf6]/30'
+              ? 'selected bg-[#2d2d2d] border border-[#8b5cf6]/30'
               : 'hover:bg-[#262626] border border-transparent'
           )}
           onClick={() => onConversationSelect?.(conversation.id)}
         >
-          <div className="flex items-start justify-between mb-1">
+          <div className="flex items-start justify-between mb-2">
             <div className="flex items-center flex-1 mr-2">
               {conversation.title?.startsWith('Branch from ') && (
                 <svg className="w-3 h-3 text-[#8b5cf6] mr-1 flex-shrink-0" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
                 </svg>
               )}
-              <h3 className={clsx(
-                'font-medium text-sm truncate',
-                selectedConversationId === conversation.id
-                  ? 'text-white'
-                  : 'text-zinc-200 group-hover:text-white'
-              )}>
-                {conversation.title || 'New Conversation'}
-              </h3>
+              <StreamingTitle
+                title={conversation.title || 'New Conversation'}
+                isNew={newConversationIds.has(conversation.id)}
+                isSelected={selectedConversationId === conversation.id}
+              />
             </div>
             
             <span className="text-xs text-zinc-500 flex-shrink-0">
@@ -112,27 +192,10 @@ export function ConversationList({
             </span>
           </div>
           
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-zinc-400 truncate flex-1 mr-2">
-              {conversation.last_message_preview || 'No messages yet'}
-            </p>
-            
-            <div className="flex items-center space-x-1 flex-shrink-0">
-              <span className="text-xs text-zinc-500">
-                {conversation.message_count}
-              </span>
-              <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-              </svg>
-            </div>
-          </div>
 
-          {/* Model indicator and delete button */}
-          <div className="mt-2 flex items-center justify-between">
-            <span className="text-xs text-zinc-500 bg-[#3f3f46] px-2 py-1 rounded">
-              {conversation.current_model}
-            </span>
-            
+
+          {/* Delete button only - Model indicator removed */}
+          <div className="mt-2 flex items-center justify-end">
             {selectedConversationId === conversation.id && (
               <button
                 onClick={(e) => handleDeleteConversation(conversation.id, e)}

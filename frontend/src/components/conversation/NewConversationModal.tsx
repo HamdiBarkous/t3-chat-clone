@@ -1,6 +1,6 @@
 /**
  * New Conversation Modal
- * Allows users to create a new conversation with model and system prompt selection
+ * Allows users to create a new conversation with model selection
  */
 
 'use client';
@@ -31,22 +31,12 @@ const availableModels = [
   { id: 'anthropic/claude-3-haiku-20240307', name: 'Claude 3 Haiku', description: 'Fast responses' },
 ];
 
-const systemPromptTemplates = [
-  { name: 'Default', prompt: 'You are a helpful assistant. You are able to answer questions and help with tasks.' },
-  { name: 'Creative Writer', prompt: 'You are a creative writer who helps with storytelling, poetry, and imaginative content. Be expressive and inspiring.' },
-  { name: 'Code Assistant', prompt: 'You are a helpful programming assistant. Provide clear, well-commented code examples and explain programming concepts thoroughly.' },
-  { name: 'Teacher', prompt: 'You are a patient and knowledgeable teacher. Break down complex topics into easy-to-understand explanations with examples.' },
-  { name: 'Analyst', prompt: 'You are a analytical thinker who provides detailed analysis, considers multiple perspectives, and supports conclusions with evidence.' },
-];
-
 export function NewConversationModal({
   isOpen,
   onClose,
   onCreateConversation,
 }: NewConversationModalProps) {
   const [selectedModel, setSelectedModel] = useState(availableModels[0].id);
-  const [selectedTemplate, setSelectedTemplate] = useState(0);
-  const [customPrompt, setCustomPrompt] = useState(false);
 
   const {
     register,
@@ -58,19 +48,13 @@ export function NewConversationModal({
   const handleClose = () => {
     reset();
     setSelectedModel(availableModels[0].id);
-    setSelectedTemplate(0);
-    setCustomPrompt(false);
     onClose();
   };
 
   const onSubmit = (data: ConversationFormData) => {
-    const systemPrompt = customPrompt 
-      ? data.systemPrompt 
-      : systemPromptTemplates[selectedTemplate].prompt;
-
     onCreateConversation({
       model: selectedModel,
-      systemPrompt: systemPrompt || undefined,
+      systemPrompt: data.systemPrompt || undefined,
       title: data.title || undefined,
     });
 
@@ -109,60 +93,19 @@ export function NewConversationModal({
           </div>
         </div>
 
-        {/* System Prompt */}
+        {/* Optional Custom System Prompt */}
         <div>
           <label className="block text-sm font-medium text-white mb-3">
             System Prompt (Optional)
           </label>
-          
-          {!customPrompt ? (
-            <div className="space-y-3">
-              <div className="grid grid-cols-1 gap-2">
-                {systemPromptTemplates.map((template, index) => (
-                  <button
-                    key={index}
-                    type="button"
-                    onClick={() => setSelectedTemplate(index)}
-                    className={`p-3 rounded-lg border text-left transition-colors ${
-                      selectedTemplate === index
-                        ? 'border-[#8b5cf6] bg-[#8b5cf6]/10'
-                        : 'border-[#3f3f46] hover:border-[#52525b]'
-                    }`}
-                  >
-                    <div className="font-medium text-white text-sm">{template.name}</div>
-                    {template.prompt && (
-                      <div className="text-zinc-400 text-xs mt-1 line-clamp-2">
-                        {template.prompt}
-                      </div>
-                    )}
-                  </button>
-                ))}
-              </div>
-              
-              <button
-                type="button"
-                onClick={() => setCustomPrompt(true)}
-                className="text-[#8b5cf6] hover:text-[#a78bfa] text-sm transition-colors"
-              >
-                + Write custom prompt
-              </button>
-            </div>
-          ) : (
-            <div className="space-y-3">
-              <textarea
-                {...register('systemPrompt')}
-                placeholder="Enter your custom system prompt..."
-                className="w-full h-24 px-3 py-2 bg-[#2d2d2d] border border-[#3f3f46] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent resize-none"
-              />
-              <button
-                type="button"
-                onClick={() => setCustomPrompt(false)}
-                className="text-[#8b5cf6] hover:text-[#a78bfa] text-sm transition-colors"
-              >
-                ← Back to templates
-              </button>
-            </div>
-          )}
+          <textarea
+            {...register('systemPrompt')}
+            placeholder="Enter a custom system prompt to guide the AI's behavior..."
+            className="w-full h-20 px-3 py-2 bg-[#2d2d2d] border border-[#3f3f46] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent resize-none"
+          />
+          <p className="text-xs text-zinc-500 mt-1">
+            Leave empty to use the default AI behavior
+          </p>
         </div>
 
         {/* Optional Title */}
