@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from app.mcp_clients import SupabaseMCPClient, FirecrawlMCPClient, TavilyMCPClient
+from app.mcp_clients import SupabaseMCPClient, FirecrawlMCPClient, TavilyMCPClient, SequentialThinkingMCPClient
 
 
 class ToolService:
@@ -23,6 +23,11 @@ class ToolService:
             self.mcp_clients["tavily"] = TavilyMCPClient()
         except Exception as e:
             print(f"Failed to initialize Tavily MCP client: {e}")
+            
+        try:
+            self.mcp_clients["sequential-thinking"] = SequentialThinkingMCPClient()
+        except Exception as e:
+            print(f"Failed to initialize Sequential Thinking MCP client: {e}")
 
     async def get_openai_format_tools(self, enabled_tools: List[str]) -> List[Dict[str, Any]]:
         """Convert MCP tools to OpenAI/OpenRouter format"""

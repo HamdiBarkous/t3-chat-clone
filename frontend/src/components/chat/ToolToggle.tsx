@@ -141,6 +141,8 @@ export function ToolToggle({ enabled, enabledTools, onToggle, disabled = false }
                         <div className="text-xs text-zinc-400">
                           {client === 'supabase' ? 'Database operations' : 
                            client === 'firecrawl' ? 'Web scraping & search' : 
+                           client === 'tavily' ? 'AI-powered web search' : 
+                           client === 'sequential-thinking' ? 'Step-by-step reasoning' : 
                            `${client} tools`}
                         </div>
                       </div>
