@@ -7,6 +7,7 @@
 
 import React, { useEffect, useRef } from 'react';
 import { MessageBubble } from './MessageBubble';
+import { ToolExecution, type ToolCall } from './ToolExecution';
 import type { Message } from '@/types/api';
 
 interface MessageListProps {
@@ -14,13 +15,15 @@ interface MessageListProps {
   streamingMessageId?: string;
   isLoading?: boolean;
   isLoadingConversation?: boolean;
+  toolExecutions?: ToolCall[];
 }
 
 export function MessageList({ 
   messages, 
   streamingMessageId,
   isLoading = false,
-  isLoadingConversation = false
+  isLoadingConversation = false,
+  toolExecutions
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -113,7 +116,10 @@ export function MessageList({
           />
         ))}
 
-
+        {/* Tool Executions - Show during/after tool calls */}
+        {toolExecutions && toolExecutions.length > 0 && (
+          <ToolExecution tools={toolExecutions} />
+        )}
 
         {/* Scroll anchor */}
         <div ref={messagesEndRef} />

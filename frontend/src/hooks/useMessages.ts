@@ -4,6 +4,7 @@ import { streamingService, StreamingCallbacks } from '@/lib/streaming'
 import type { Message, MessageListResponse, MessageResponse } from '@/types/api'
 import { MessageStatus } from '@/types/api'
 import { useConversations } from '@/contexts/ConversationsContext'
+import type { ToolCall } from '@/components/chat/ToolExecution'
 
 // Updated streaming event data interfaces for optimized backend
 
@@ -36,6 +37,7 @@ interface UseMessagesReturn {
   loadMessages: () => Promise<void>
   isStreaming: boolean
   streamingMessageId: string | null
+  toolExecutions: ToolCall[]
 }
 
 // Helper function to convert MessageResponse to Message with timestamp
@@ -53,6 +55,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
   const [error, setError] = useState<string | null>(null)
   const [isStreaming, setIsStreaming] = useState(false)
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
+  const [toolExecutions, setToolExecutions] = useState<ToolCall[]>([])
   
   // Get conversation hook for title updates
   const { updateConversationTitle } = useConversations()
@@ -88,6 +91,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     try {
       setError(null)
       setIsStreaming(true)
+      setToolExecutions([]) // Clear previous tool executions
 
       // Step 1: Create user message first (non-streaming endpoint)
       let userMessageId: string | null = null
@@ -277,11 +281,36 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         },
 
         onToolCall: (data: unknown) => {
-          // Could add UI feedback for tool execution here
+          const toolData = data as { name: string; arguments: Record<string, any>; status: string }
+          
+          // Add new tool execution
+          const newTool: ToolCall = {
+            id: `${toolData.name}-${Date.now()}`,
+            name: toolData.name,
+            arguments: toolData.arguments,
+            status: 'executing',
+            startTime: Date.now()
+          }
+          
+          setToolExecutions(prev => [...prev, newTool])
         },
 
         onToolResult: (data: unknown) => {
-          // Could add UI feedback for tool results here
+          const resultData = data as { name: string; result: string; status: string }
+          
+          // Update the corresponding tool with result
+          setToolExecutions(prev => 
+            prev.map(tool => 
+              tool.name === resultData.name && tool.status === 'executing'
+                ? {
+                    ...tool,
+                    status: 'completed' as const,
+                    result: resultData.result,
+                    endTime: Date.now()
+                  }
+                : tool
+            )
+          )
         }
       }
 
@@ -413,11 +442,36 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         },
 
         onToolCall: (data: unknown) => {
-          // Could add UI feedback for tool execution here
+          const toolData = data as { name: string; arguments: Record<string, any>; status: string }
+          
+          // Add new tool execution
+          const newTool: ToolCall = {
+            id: `${toolData.name}-${Date.now()}`,
+            name: toolData.name,
+            arguments: toolData.arguments,
+            status: 'executing',
+            startTime: Date.now()
+          }
+          
+          setToolExecutions(prev => [...prev, newTool])
         },
 
         onToolResult: (data: unknown) => {
-          // Could add UI feedback for tool results here
+          const resultData = data as { name: string; result: string; status: string }
+          
+          // Update the corresponding tool with result
+          setToolExecutions(prev => 
+            prev.map(tool => 
+              tool.name === resultData.name && tool.status === 'executing'
+                ? {
+                    ...tool,
+                    status: 'completed' as const,
+                    result: resultData.result,
+                    endTime: Date.now()
+                  }
+                : tool
+            )
+          )
         }
       }
 
@@ -452,6 +506,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     generateAIResponse,
     loadMessages,
     isStreaming,
-    streamingMessageId
+    streamingMessageId,
+    toolExecutions
   }
 } 

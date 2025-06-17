@@ -30,7 +30,8 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
     sendMessage,
     generateAIResponse,
     isStreaming,
-    streamingMessageId 
+    streamingMessageId,
+    toolExecutions
   } = useMessages(conversationId);
   
   const { updateConversation } = useConversations();
@@ -107,6 +108,7 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
         streamingMessageId={streamingMessageId || undefined}
         isLoading={isStreaming}
         isLoadingConversation={loading && messages.length === 0}
+        toolExecutions={toolExecutions}
       />
 
       {/* Message Input */}
