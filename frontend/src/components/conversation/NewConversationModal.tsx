@@ -71,7 +71,7 @@ export function NewConversationModal({
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
         {/* Model Selection */}
         <div>
-          <label className="block text-sm font-medium text-white mb-3">
+          <label className="block text-sm font-medium text-text-primary mb-3">
             Choose AI Model
           </label>
           <div className="grid grid-cols-2 gap-3">
@@ -82,12 +82,12 @@ export function NewConversationModal({
                 onClick={() => setSelectedModel(model.id)}
                 className={`p-3 rounded-lg border text-left transition-colors ${
                   selectedModel === model.id
-                    ? 'border-[#8b5cf6] bg-[#8b5cf6]/10'
-                    : 'border-[#3f3f46] hover:border-[#52525b]'
+                    ? 'border-primary bg-primary/10'
+                    : 'border-border hover:border-border/80'
                 }`}
               >
-                <div className="font-medium text-white text-sm">{model.name}</div>
-                <div className="text-zinc-400 text-xs mt-1">{model.description}</div>
+                <div className="font-medium text-text-primary text-sm">{model.name}</div>
+                <div className="text-text-muted text-xs mt-1">{model.description}</div>
               </button>
             ))}
           </div>
@@ -95,15 +95,15 @@ export function NewConversationModal({
 
         {/* Optional Custom System Prompt */}
         <div>
-          <label className="block text-sm font-medium text-white mb-3">
+          <label className="block text-sm font-medium text-text-primary mb-3">
             System Prompt (Optional)
           </label>
           <textarea
             {...register('systemPrompt')}
             placeholder="Enter a custom system prompt to guide the AI's behavior..."
-            className="w-full h-20 px-3 py-2 bg-[#2d2d2d] border border-[#3f3f46] rounded-lg text-white placeholder-zinc-500 focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent resize-none"
+            className="w-full h-20 px-3 py-2 bg-input border border-border rounded-lg text-text-primary placeholder-text-muted focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent resize-none"
           />
-          <p className="text-xs text-zinc-500 mt-1">
+          <p className="text-xs text-text-muted mt-1">
             Leave empty to use the default AI behavior
           </p>
         </div>

@@ -111,11 +111,14 @@ export function FileUpload({
     e.target.value = '';
   }, [handleFiles]);
 
+  // Generate unique ID for this instance
+  const inputId = `file-upload-input-${Math.random().toString(36).substr(2, 9)}`;
+
   const handleClick = useCallback(() => {
     if (disabled) return;
-    const input = document.getElementById('file-upload-input') as HTMLInputElement;
+    const input = document.getElementById(inputId) as HTMLInputElement;
     input?.click();
-  }, [disabled]);
+  }, [disabled, inputId]);
 
   return (
     <div className={className}>
@@ -133,7 +136,7 @@ export function FileUpload({
         {children}
         
         <input
-          id="file-upload-input"
+          id={inputId}
           type="file"
           accept={accept}
           multiple={multiple}

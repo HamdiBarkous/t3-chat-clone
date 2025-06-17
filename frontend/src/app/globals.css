@@ -2,44 +2,60 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  /* Base colors from the chat interface */
-  --background: #1a1a1a;
-  --foreground: #ffffff;
-  --card: #1e1e1e;
-  --card-foreground: #ffffff;
-  --popover: #1e1e1e;
-  --popover-foreground: #ffffff;
-  --primary: #8b5cf6;
-  --primary-foreground: #ffffff;
-  --secondary: #2d2d2d;
-  --secondary-foreground: #d4d4d8;
-  --muted: #2d2d2d;
-  --muted-foreground: #71717a;
-  --accent: #7c3aed;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #3f3f46;
-  --input: #2d2d2d;
-  --ring: #8b5cf6;
-  --radius: 0.5rem;
+  /* Nebula Dream Theme */
+  --background-start: #100c24; /* Cosmic navy */
+  --background-end: #1b0e30; /* Deep cosmos */
+  --foreground: #f4f4f7; /* Soft white */
   
-  /* Custom chat interface colors */
-  --sidebar-bg: #171717;
-  --sidebar-item-hover: #262626;
-  --chat-bg: #1a1a1a;
-  --message-bg: #2d2d2d;
-  --purple-accent: #8b5cf6;
-  --purple-light: #a78bfa;
-  --purple-dark: #7c3aed;
-  --text-primary: #ffffff;
-  --text-secondary: #d4d4d8;
-  --text-muted: #71717a;
+  --card: #211833; /* Dark cosmic card */
+  --card-foreground: #f4f4f7;
+  
+  --popover: #211833;
+  --popover-foreground: #f4f4f7;
+  
+  --primary: #ff3ca6; /* Neon pink */
+  --primary-foreground: #ffffff;
+  
+  --secondary: #2a1a3f; /* Deep purple */
+  --secondary-foreground: #e2e8f0;
+
+  --muted: #3c2a44; /* Muted dark */
+  --muted-foreground: #7a7a85;
+  
+  --accent: #00ffc2; /* Aqua glow */
+  --accent-foreground: #100c24;
+  
+  --destructive: #ff6f61; /* Coral red */
+  --destructive-foreground: #ffffff;
+  
+  --border: rgba(255, 60, 166, 0.12); /* Neon pink border */
+  --input: #2a1a3f;
+  --ring: rgba(255, 60, 166, 0.4);
+  --radius: 0.75rem;
+
+  /* Custom Properties */
+  --sidebar-bg: #100c24;
+  --sidebar-item-hover: #211833;
+  --chat-bg: transparent;
+  --message-bg: #2a1a3f;
+  
+  --purple-accent: #ff3ca6;
+  --purple-light: #ff6fd6;
+  --purple-dark: #d6007a;
+
+  --text-primary: #f4f4f7;
+  --text-secondary: #b3b3bd;
+  --text-muted: #7a7a85;
+
+  /* FX */
+  --purple-glow: 0 8px 32px rgba(255, 60, 166,0.15);
+  --code-bg: #1a1027; /* Cosmic code background */
+  --green-accent: #00ffc2; /* Aqua accent */
 }
 
 @theme inline {
   /* Base theme colors */
-  --color-background: var(--background);
+  --color-background: var(--background-start);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -81,14 +97,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background-start: #1e1a2c;
+    --background-end: #161320;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: linear-gradient(180deg, var(--background-start) 0%, var(--background-end) 100%);
+  background-attachment: fixed;
+  color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -97,9 +114,23 @@ body {
 .chat-bg { background-color: var(--chat-bg); }
 .message-bg { background-color: var(--message-bg); }
 .purple-accent { background-color: var(--purple-accent); }
+.bg-purple-dark { background-color: var(--purple-dark); }
 .text-primary { color: var(--text-primary); }
 .text-secondary { color: var(--text-secondary); }
 .text-muted { color: var(--text-muted); }
+
+/* Additional utility classes for the chat interface */
+.bg-input { background-color: var(--input); }
+.bg-secondary { background-color: var(--secondary); }
+.bg-muted { background-color: var(--muted); }
+.border-border { border-color: var(--border); }
+.ring-ring { --tw-ring-color: var(--ring); }
+.placeholder-text-muted::placeholder { color: var(--text-muted); }
+
+/* Hover states */
+.hover\:bg-purple-dark:hover { background-color: var(--purple-dark); }
+.hover\:bg-muted:hover { background-color: var(--muted); }
+.hover\:text-green-400:hover { color: var(--green-accent); }
 
 /* Line clamp utility */
 .line-clamp-2 {
@@ -209,7 +240,7 @@ body {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(139, 92, 246, 0.05),
+    rgba(255, 60, 166, 0.05),
     transparent
   );
   transition: left 0.6s ease;
@@ -227,8 +258,8 @@ body {
 .conversation-card.selected {
   transform: translateY(-1px) scale(1.005);
   box-shadow: 
-    0 10px 30px rgba(139, 92, 246, 0.15),
-    0 4px 12px rgba(139, 92, 246, 0.1),
+    0 10px 30px rgba(255, 60, 166, 0.15),
+    0 4px 12px rgba(255, 60, 166, 0.1),
     inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }
 
@@ -249,7 +280,7 @@ body {
   );
   margin-left: 2px;
   border-radius: 1px;
-  box-shadow: 0 0 8px rgba(139, 92, 246, 0.6);
+  box-shadow: 0 0 8px rgba(255, 60, 166, 0.6);
 }
 
 /* Responsive enhancements */
@@ -391,7 +422,7 @@ body {
 
 /* Focus styles for accessibility */
 .conversation-card:focus-within {
-  outline: 2px solid rgba(139, 92, 246, 0.5);
+  outline: 2px solid rgba(255, 60, 166, 0.5);
   outline-offset: 2px;
 }
 

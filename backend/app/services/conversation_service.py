@@ -199,9 +199,20 @@ class ConversationService:
         if not branch_message_found:
             raise ValueError("Branch message not found in conversation history")
 
+        # Get the root conversation ID for counting branches
+        root_conversation_id = original_conversation.root_conversation_id or original_conversation_id
+        
+        # Count existing branches of this type to generate the next number
+        existing_branch_count = await self.conversation_repo.count_branches_by_type(
+            parent_conversation_id=root_conversation_id,
+            branch_type='branch',
+            user_id=user_id
+        )
+        branch_number = existing_branch_count + 1
+        
         # Create new conversation with same settings as original
         new_conversation_data = ConversationCreate(
-            title=f"Branch from {original_conversation.title or 'Conversation'}",
+            title=f"Branch {branch_number}",
             current_model=original_conversation.current_model,
             system_prompt=original_conversation.system_prompt
         )
@@ -298,13 +309,24 @@ class ConversationService:
                 break
             messages_to_copy.append(message)
         
+        # Get the root conversation ID for counting branches
+        root_conversation_id = original_conversation.root_conversation_id or original_conversation_id
+        
+        # Count existing edit branches to generate the next number
+        existing_edit_count = await self.conversation_repo.count_branches_by_type(
+            parent_conversation_id=root_conversation_id,
+            branch_type='edit',
+            user_id=user_id
+        )
+        edit_number = existing_edit_count + 1
+        
         return await self._create_branch_with_messages(
             original_conversation=original_conversation,
             messages_to_copy=messages_to_copy,
             additional_message_content=new_content,
             additional_message_role='user',
             additional_message_model=edit_message.model_used,
-            branch_title=f"Edit: {new_content[:30]}..." if len(new_content) > 30 else f"Edit: {new_content}",
+            branch_title=f"Edit {edit_number}",
             branch_type='edit',
             branch_point_message_id=edit_message_id,
             user_id=user_id,
@@ -349,13 +371,24 @@ class ConversationService:
         # Use the new model if provided, otherwise use conversation's current model
         model_to_use = new_model or original_conversation.current_model
         
+        # Get the root conversation ID for counting branches
+        root_conversation_id = original_conversation.root_conversation_id or original_conversation_id
+        
+        # Count existing retry branches to generate the next number
+        existing_retry_count = await self.conversation_repo.count_branches_by_type(
+            parent_conversation_id=root_conversation_id,
+            branch_type='retry',
+            user_id=user_id
+        )
+        retry_number = existing_retry_count + 1
+        
         return await self._create_branch_with_messages(
             original_conversation=original_conversation,
             messages_to_copy=messages_to_copy,
             additional_message_content=None,  # No additional message for retry
             additional_message_role=None,
             additional_message_model=None,
-            branch_title=f"Retry with {model_to_use}",
+            branch_title=f"Retry {retry_number}",
             branch_type='retry',
             branch_point_message_id=retry_message_id,
             user_id=user_id,

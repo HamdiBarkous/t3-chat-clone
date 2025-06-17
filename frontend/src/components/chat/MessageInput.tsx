@@ -29,7 +29,7 @@ export function MessageInput({
   onModelChange,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
-  const [selectedModel, setSelectedModel] = useState(currentModel);
+  const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
   // Tool state
@@ -66,7 +66,9 @@ export function MessageInput({
     const textarea = textareaRef.current;
     if (textarea) {
       textarea.style.height = 'auto';
-      textarea.style.height = `${Math.min(textarea.scrollHeight, 200)}px`;
+      // Set a max-height to prevent infinite growth
+      const maxHeight = 200;
+      textarea.style.height = `${Math.min(textarea.scrollHeight, maxHeight)}px`;
     }
   }, [message]);
 
@@ -99,7 +101,6 @@ export function MessageInput({
   };
 
   const handleModelChange = (model: string) => {
-    setSelectedModel(model);
     onModelChange?.(model);
   };
 
@@ -111,13 +112,13 @@ export function MessageInput({
   const canSend = (message.trim().length > 0 || uploadedFiles.length > 0) && !disabled;
 
   return (
-    <div className="border-t border-[#3f3f46] bg-[#1a1a1a] p-4">
+    <div className="border-t border-border bg-transparent p-4">
       <div className="max-w-4xl mx-auto">
         {/* Model Selector and Tool Toggle */}
         <div className="mb-3 flex items-center gap-3">
           <Dropdown
             options={availableModels}
-            value={selectedModel}
+            value={currentModel}
             onChange={handleModelChange}
             disabled={disabled}
             className="w-48"
@@ -132,7 +133,7 @@ export function MessageInput({
 
         {/* Uploaded Files Display */}
         {uploadedFiles.length > 0 && (
-          <div className="mb-3 p-3 bg-[#2d2d2d] border border-[#3f3f46] rounded-lg">
+          <div className="mb-3 p-3 bg-secondary border border-border rounded-lg">
             {(() => {
               // Helper function to check if file is an image
               const isImageFile = (filename: string): boolean => {
@@ -148,7 +149,7 @@ export function MessageInput({
                   {/* Display image previews */}
                   {imageFiles.length > 0 && (
                     <div className="mb-3">
-                      <div className="text-sm text-zinc-400 mb-2">
+                      <div className="text-sm text-text-muted mb-2">
                         Image{imageFiles.length > 1 ? 's' : ''} ({imageFiles.length}):
                       </div>
                       <div className="grid grid-cols-3 gap-2">
@@ -167,7 +168,7 @@ export function MessageInput({
                   {/* Display document badges */}
                   {documentFiles.length > 0 && (
                     <div>
-                      <div className="text-sm text-zinc-400 mb-2">
+                      <div className="text-sm text-text-muted mb-2">
                         Attached file{documentFiles.length > 1 ? 's' : ''} ({documentFiles.length}):
                       </div>
                       <div className="flex flex-wrap gap-2">
@@ -203,48 +204,98 @@ export function MessageInput({
 
         {/* Message Input Form */}
         <form onSubmit={handleSubmit} className="relative">
-          <div className="relative">
+          <div 
+            className={clsx(
+              "relative transition-all duration-300 rounded-lg",
+              isFocused 
+                ? "ring-2 ring-primary border-transparent" 
+                : "border border-border",
+              "bg-input"
+            )}
+          >
             {/* Textarea */}
             <textarea
               ref={textareaRef}
               value={message}
               onChange={(e) => setMessage(e.target.value)}
               onKeyDown={handleKeyDown}
-              placeholder="Type your message here... (Enter to send, Shift+Enter for new line)"
+              onFocus={() => setIsFocused(true)}
+              onBlur={() => setIsFocused(false)}
+              placeholder="Type your message here..."
               disabled={disabled}
               className={clsx(
-                'w-full px-4 py-3 pr-24 bg-[#2d2d2d] border border-[#3f3f46] rounded-lg text-white placeholder-zinc-500 resize-none',
-                'focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent',
-                'transition-colors min-h-[52px] max-h-[200px]',
+                'w-full pl-4 pr-36 py-3 bg-transparent rounded-lg text-text-primary placeholder-text-muted resize-none',
+                'focus:outline-none',
+                'transition-colors min-h-[52px] max-h-[200px] overflow-y-auto',
+                // Hide scrollbar completely
+                'scrollbar-none [-ms-overflow-style:none] [scrollbar-width:none]',
+                '[&::-webkit-scrollbar]:hidden',
                 disabled && 'opacity-50 cursor-not-allowed'
               )}
               rows={1}
             />
 
-            {/* File Upload and Send Buttons */}
-            <div className="absolute right-2 bottom-2 flex items-center gap-1">
-              {/* File Upload Button */}
-              <FileUpload
-                onFileSelect={addFiles}
-                multiple={true}
-                disabled={disabled}
-                className="flex-shrink-0"
-              >
-                <Button
-                  type="button"
-                  size="sm"
+            {/* Floating Action Button Group */}
+            <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center">
+              {/* File Upload Group - Compact pill design */}
+              <div className="flex items-center bg-secondary rounded-full border border-border shadow-md backdrop-blur-sm px-1 py-1">
+                {/* Document Upload Button */}
+                <FileUpload
+                  onFileSelect={addFiles}
+                  multiple={true}
                   disabled={disabled}
-                  className={clsx(
-                    'p-2 min-w-0 bg-[#3f3f46] hover:bg-[#4f4f56] text-zinc-400 hover:text-white',
-                    disabled && 'opacity-50 cursor-not-allowed'
-                  )}
-                  title="Attach files"
+                  accept=".pdf,.txt,.md,.csv,.json,.xml,.yaml,.yml,.py,.js,.ts,.jsx,.tsx,.java,.cpp,.c,.h,.hpp,.go,.rs,.php,.rb,.swift,.kt,.scala,.sh,.sql,.css,.html"
+                  className="flex-shrink-0"
                 >
-                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15.172 7l-6.586 6.586a2 2 0 102.828 2.828l6.414-6.586a4 4 0 00-5.656-5.656l-6.415 6.585a6 6 0 108.486 8.486L20.5 13" />
-                  </svg>
-                </Button>
-              </FileUpload>
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    className={clsx(
+                      'relative p-1.5 min-w-0 rounded-full transition-all duration-200 ease-in-out transform',
+                      'bg-transparent text-text-muted hover:bg-muted hover:text-primary',
+                      'hover:scale-110 active:scale-95 active:bg-input',
+                      'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-0',
+                      disabled && 'opacity-50 cursor-not-allowed hover:scale-100'
+                    )}
+                    title="Attach documents"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                  </button>
+                </FileUpload>
+
+                {/* Enhanced Separator */}
+                <div className="flex items-center px-0.5">
+                  <div className="w-px h-5 bg-border" />
+                </div>
+
+                {/* Image Upload Button */}
+                <FileUpload
+                  onFileSelect={addFiles}
+                  multiple={true}
+                  disabled={disabled}
+                  accept="image/*"
+                  className="flex-shrink-0"
+                >
+                  <button
+                    type="button"
+                    disabled={disabled}
+                    className={clsx(
+                      'relative p-1.5 min-w-0 rounded-full transition-all duration-200 ease-in-out transform',
+                      'bg-transparent text-text-muted hover:bg-muted hover:text-green-400',
+                      'hover:scale-110 active:scale-95 active:bg-input',
+                      'focus:outline-none focus:ring-2 focus:ring-green-accent/50 focus:ring-offset-0',
+                      disabled && 'opacity-50 cursor-not-allowed hover:scale-100'
+                    )}
+                    title="Attach images"
+                  >
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                  </button>
+                </FileUpload>
+              </div>
 
               {/* Send Button */}
               <Button
@@ -252,35 +303,30 @@ export function MessageInput({
                 size="sm"
                 disabled={!canSend}
                 className={clsx(
-                  'p-2 min-w-0',
+                  'relative p-2.5 min-w-0 rounded-full transition-all duration-200 ease-out ml-2',
+                  'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background',
+                  'shadow-lg backdrop-blur-sm flex-shrink-0',
                   canSend 
-                    ? 'bg-[#8b5cf6] hover:bg-[#7c3aed] text-white' 
-                    : 'bg-[#3f3f46] text-zinc-500 cursor-not-allowed'
+                    ? 'bg-primary text-primary-foreground focus:ring-primary'
+                    : 'bg-secondary text-text-muted cursor-not-allowed'
                 )}
+                title={canSend ? "Send message" : "Type a message to send"}
               >
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                <svg 
+                  className="w-4 h-4" 
+                  fill="none" 
+                  stroke="currentColor" 
+                  viewBox="0 0 24 24"
+                >
+                  <path 
+                    strokeLinecap="round" 
+                    strokeLinejoin="round" 
+                    strokeWidth={2.5} 
+                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
+                  />
                 </svg>
               </Button>
             </div>
-          </div>
-
-          {/* Helper Text */}
-          <div className="flex items-center justify-between mt-2 text-xs text-zinc-500">
-            <div className="flex items-center gap-4">
-              <span>Enter to send • Shift+Enter for new line</span>
-              {message.length > 0 && (
-                <span className={clsx(
-                  message.length > 4000 ? 'text-red-400' : 'text-zinc-500'
-                )}>
-                  {message.length}/4000
-                </span>
-              )}
-            </div>
-            
-            {disabled && (
-              <span className="text-zinc-400">Sending...</span>
-            )}
           </div>
         </form>
       </div>

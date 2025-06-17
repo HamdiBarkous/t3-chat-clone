@@ -237,7 +237,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
   const processedContent = preprocessMathContent(content);
   
   return (
-    <div className={`prose prose-invert max-w-none ${className}`}>
+    <div className={`max-w-none ${className}`}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[
@@ -292,9 +292,9 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
               };
               
               return (
-                <div className="relative my-6 rounded-xl overflow-hidden border border-purple-500/20 bg-gradient-to-br from-purple-950/20 to-purple-900/10 shadow-lg">
+                <div className="relative my-6 rounded-xl overflow-hidden border border-border bg-card shadow-lg">
                   {/* Header with language icon and action buttons */}
-                  <div className="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-purple-600/10 to-purple-500/5 border-b border-purple-500/20">
+                  <div className="flex items-center justify-between px-4 py-3 bg-secondary border-b border-border">
                     {/* Language icon */}
                     <div className="flex items-center">
                       <LanguageIcon language={language} />
@@ -305,7 +305,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
                       {/* Copy button */}
                       <button
                         onClick={handleCopy}
-                        className="p-2 text-purple-300 hover:text-white hover:bg-purple-600/20 transition-all duration-200 rounded-lg group"
+                        className="p-2 text-text-muted hover:text-text-primary hover:bg-muted transition-all duration-200 rounded-lg group"
                         title="Copy code"
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -316,7 +316,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
                       {/* Download button */}
                       <button
                         onClick={handleDownload}
-                        className="p-2 text-purple-300 hover:text-white hover:bg-purple-600/20 transition-all duration-200 rounded-lg group"
+                        className="p-2 text-text-muted hover:text-text-primary hover:bg-muted transition-all duration-200 rounded-lg group"
                         title={`Download as .${fileExtension}`}
                       >
                         <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -327,7 +327,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
                   </div>
                   
                   {/* Code content */}
-                  <div className="relative bg-[#0d1117] rounded-b-xl">
+                  <div className="relative rounded-b-xl" style={{ backgroundColor: 'var(--code-bg)' }}>
                     <SyntaxHighlighter
                       // eslint-disable-next-line @typescript-eslint/no-explicit-any
                       style={oneDark as any}
@@ -336,7 +336,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
                       customStyle={{
                         margin: 0,
                         borderRadius: 0,
-                        background: '#0d1117',
+                        background: 'var(--code-bg)',
                         border: 'none',
                         fontSize: '0.875rem',
                         lineHeight: '1.6',
@@ -361,7 +361,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             // Inline code
             return (
               <code 
-                className="px-2 py-1 text-sm font-mono bg-purple-500/10 text-purple-300 rounded-md border border-purple-500/20" 
+                className="font-mono text-text-secondary bg-muted/30 px-1.5 py-0.5 rounded-md" 
                 {...props}
               >
                 {children}
@@ -371,46 +371,46 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // Headers
           h1: ({ children }) => (
-            <h1 className="text-2xl font-bold text-white mb-4 mt-6 first:mt-0 border-b border-purple-500/30 pb-2">
+            <h1 className="text-2xl font-bold text-primary mb-4 mt-6 first:mt-0 border-b border-border pb-2">
               {children}
             </h1>
           ),
           h2: ({ children }) => (
-            <h2 className="text-xl font-semibold text-white mb-3 mt-5 first:mt-0">
+            <h2 className="text-xl font-semibold text-primary mb-3 mt-5 first:mt-0">
               {children}
             </h2>
           ),
           h3: ({ children }) => (
-            <h3 className="text-lg font-semibold text-white mb-2 mt-4 first:mt-0">
+            <h3 className="text-lg font-semibold text-primary mb-2 mt-4 first:mt-0">
               {children}
             </h3>
           ),
           h4: ({ children }) => (
-            <h4 className="text-base font-semibold text-white mb-2 mt-3 first:mt-0">
+            <h4 className="text-base font-semibold text-primary mb-2 mt-3 first:mt-0">
               {children}
             </h4>
           ),
           
           // Paragraphs
           p: ({ children }) => (
-            <p className="text-zinc-200 mb-4 leading-relaxed">
+            <p className="text-primary mb-4 leading-relaxed">
               {children}
             </p>
           ),
           
           // Lists
           ul: ({ children }) => (
-            <ul className="list-disc list-inside text-zinc-200 mb-4 space-y-1">
+            <ul className="list-disc list-inside text-primary mb-4 space-y-1">
               {children}
             </ul>
           ),
           ol: ({ children }) => (
-            <ol className="list-decimal list-inside text-zinc-200 mb-4 space-y-1">
+            <ol className="list-decimal list-inside text-primary mb-4 space-y-1">
               {children}
             </ol>
           ),
           li: ({ children }) => (
-            <li className="text-zinc-200">
+            <li className="text-primary">
               {children}
             </li>
           ),
@@ -421,7 +421,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
               href={href} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 underline transition-colors"
+              className="text-primary hover:text-accent underline transition-colors"
             >
               {children}
             </a>
@@ -429,7 +429,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // Blockquotes
           blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-purple-500 pl-4 py-2 my-4 bg-purple-500/5 text-zinc-300 italic">
+            <blockquote className="border-l-4 border-primary pl-4 py-2 my-4 bg-primary/5 text-primary italic">
               {children}
             </blockquote>
           ),
@@ -437,23 +437,23 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           // Tables
           table: ({ children }) => (
             <div className="overflow-x-auto mb-4">
-              <table className="min-w-full border border-purple-500/20 rounded-lg">
+              <table className="min-w-full border border-border rounded-lg">
                 {children}
               </table>
             </div>
           ),
           thead: ({ children }) => (
-            <thead className="bg-purple-600/10">
+            <thead className="bg-muted/20">
               {children}
             </thead>
           ),
           th: ({ children }) => (
-            <th className="px-4 py-2 text-left text-white font-semibold border-b border-purple-500/20">
+            <th className="px-4 py-2 text-left text-primary font-semibold border-b border-border">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="px-4 py-2 text-zinc-200 border-b border-purple-500/20">
+            <td className="px-4 py-2 text-primary border-b border-border">
               {children}
             </td>
           ),
@@ -465,14 +465,14 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // Strong/Bold
           strong: ({ children }) => (
-            <strong className="font-semibold text-white">
+            <strong className="font-semibold text-primary">
               {children}
             </strong>
           ),
           
           // Emphasis/Italic
           em: ({ children }) => (
-            <em className="italic text-zinc-300">
+            <em className="italic text-primary">
               {children}
             </em>
           ),

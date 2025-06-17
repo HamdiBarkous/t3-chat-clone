@@ -31,24 +31,24 @@ export function ToolExecution({ tools, className }: ToolExecutionProps) {
 
   return (
     <div className={clsx(
-      'my-3 border border-[#3f3f46] rounded-lg bg-[#1e1e1e] overflow-hidden',
+      'my-3 border border-border rounded-lg bg-card overflow-hidden',
       className
     )}>
       {/* Header */}
-      <div className="px-4 py-3 border-b border-[#3f3f46] bg-[#252525]">
+      <div className="px-4 py-3 border-b border-border bg-secondary">
         <div className="flex items-center gap-2 text-sm">
           <div className="flex items-center gap-2">
-            <span className="text-[#8b5cf6]">🔧</span>
-            <span className="font-medium text-zinc-200">Tool Execution</span>
+            <span className="text-primary">🔧</span>
+            <span className="font-medium text-text-primary">Tool Execution</span>
           </div>
-          <div className="text-zinc-500">
+          <div className="text-text-muted">
             {tools.length} tool{tools.length > 1 ? 's' : ''}
           </div>
         </div>
       </div>
 
       {/* Tool Cards */}
-      <div className="divide-y divide-[#3f3f46]">
+      <div className="divide-y divide-border">
         {tools.map((tool) => (
           <ToolCard key={tool.id} tool={tool} />
         ))}
@@ -67,13 +67,13 @@ function ToolCard({ tool }: ToolCardProps) {
   const getStatusIcon = () => {
     switch (tool.status) {
       case 'executing':
-        return <div className="w-4 h-4 border-2 border-[#8b5cf6] border-t-transparent rounded-full animate-spin" />;
+        return <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />;
       case 'completed':
-        return <span className="text-green-400">✅</span>;
+        return <span className="text-green-accent">✅</span>;
       case 'failed':
         return <span className="text-red-400">❌</span>;
       default:
-        return <span className="text-zinc-500">⏳</span>;
+        return <span className="text-text-muted">⏳</span>;
     }
   };
 
@@ -122,25 +122,25 @@ function ToolCard({ tool }: ToolCardProps) {
           <span className="text-lg">{getToolIcon(tool.name)}</span>
           <div className="flex-1">
             <div className="flex items-center gap-2">
-              <h4 className="font-medium text-zinc-200">
+              <h4 className="font-medium text-text-primary">
                 {formatToolName(tool.name)}
               </h4>
               {getStatusIcon()}
               {getDuration() && (
-                <span className="text-xs text-zinc-500">({getDuration()})</span>
+                <span className="text-xs text-text-muted">({getDuration()})</span>
               )}
             </div>
-            <p className="text-sm text-zinc-400 mt-1">
+            <p className="text-sm text-text-muted mt-1">
               {generateSummary()}
             </p>
           </div>
         </div>
         
         {/* Expand/Collapse Button */}
-        <button className="p-1 rounded hover:bg-[#3f3f46] transition-colors">
+        <button className="p-1 rounded hover:bg-muted transition-colors">
           <svg 
             className={clsx(
-              'w-4 h-4 text-zinc-400 transition-transform',
+              'w-4 h-4 text-text-muted transition-transform',
               isExpanded && 'rotate-180'
             )}
             fill="none" 
@@ -154,15 +154,15 @@ function ToolCard({ tool }: ToolCardProps) {
 
       {/* Expandable Details */}
       {isExpanded && (
-        <div className="mt-4 space-y-4 border-t border-[#3f3f46] pt-4">
+        <div className="mt-4 space-y-4 border-t border-border pt-4">
           {/* Input Parameters */}
           {Object.keys(tool.arguments).length > 0 && (
             <div>
-              <h5 className="text-sm font-medium text-zinc-300 mb-2 flex items-center gap-2">
+              <h5 className="text-sm font-medium text-text-secondary mb-2 flex items-center gap-2">
                 📥 Input Parameters
               </h5>
-              <div className="bg-[#2d2d2d] border border-[#3f3f46] rounded p-3">
-                <pre className="text-sm text-zinc-300 whitespace-pre-wrap overflow-x-auto">
+              <div className="bg-code-bg border border-border rounded p-3">
+                <pre className="text-sm text-text-secondary whitespace-pre-wrap overflow-x-auto">
                   {JSON.stringify(tool.arguments, null, 2)}
                 </pre>
               </div>
@@ -172,13 +172,13 @@ function ToolCard({ tool }: ToolCardProps) {
           {/* Result/Error */}
           {(tool.result || tool.error) && (
             <div>
-              <h5 className="text-sm font-medium text-zinc-300 mb-2 flex items-center gap-2">
+              <h5 className="text-sm font-medium text-text-secondary mb-2 flex items-center gap-2">
                 {tool.error ? '❌ Error' : '📤 Output'}
               </h5>
-              <div className="bg-[#2d2d2d] border border-[#3f3f46] rounded p-3 max-h-60 overflow-y-auto">
+              <div className="bg-code-bg border border-border rounded p-3 max-h-60 overflow-y-auto">
                 <pre className={clsx(
                   'text-sm whitespace-pre-wrap overflow-x-auto',
-                  tool.error ? 'text-red-300' : 'text-zinc-300'
+                  tool.error ? 'text-red-300' : 'text-text-secondary'
                 )}>
                   {tool.error || tool.result}
                 </pre>
@@ -194,7 +194,7 @@ function ToolCard({ tool }: ToolCardProps) {
                   e.stopPropagation();
                   navigator.clipboard.writeText(JSON.stringify(tool.arguments, null, 2));
                 }}
-                className="px-3 py-1 text-xs bg-[#3f3f46] hover:bg-[#4f4f56] text-zinc-300 rounded transition-colors"
+                className="px-3 py-1 text-xs bg-muted hover:bg-muted/80 text-text-secondary rounded transition-colors"
               >
                 Copy Input
               </button>
@@ -205,7 +205,7 @@ function ToolCard({ tool }: ToolCardProps) {
                   e.stopPropagation();
                   navigator.clipboard.writeText(tool.error || tool.result || '');
                 }}
-                className="px-3 py-1 text-xs bg-[#3f3f46] hover:bg-[#4f4f56] text-zinc-300 rounded transition-colors"
+                className="px-3 py-1 text-xs bg-muted hover:bg-muted/80 text-text-secondary rounded transition-colors"
               >
                 Copy Output
               </button>

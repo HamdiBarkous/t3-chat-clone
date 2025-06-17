@@ -104,6 +104,25 @@ class SupabaseConversationRepository:
             logger.error(f"Error deleting conversation {conversation_id}: {e}")
             raise SupabaseError(f"Failed to delete conversation: {str(e)}")
 
+    async def count_branches_by_type(self, parent_conversation_id: UUID, branch_type: str, user_id: UUID) -> int:
+        """Count existing branches of a specific type for a conversation"""
+        try:
+            response = await self.client.table(self.table_name).select(
+                "id", count="exact"
+            ).eq(
+                "parent_conversation_id", str(parent_conversation_id)
+            ).eq(
+                "branch_type", branch_type
+            ).eq(
+                "user_id", str(user_id)
+            ).execute()
+            
+            return response.count or 0
+            
+        except Exception as e:
+            logger.error(f"Error counting branches for conversation {parent_conversation_id}: {e}")
+            raise SupabaseError(f"Failed to count branches: {str(e)}")
+
     async def list_by_user(self, user_id: UUID, limit: int = 20, offset: int = 0) -> List[ConversationListItem]:
         """List conversations with stats using the available function"""
         try:

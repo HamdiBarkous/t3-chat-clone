@@ -64,7 +64,7 @@ function ConfirmationModal({
       />
       
       {/* Modal */}
-      <div className="relative bg-[#1e1e1e] border border-zinc-700 rounded-2xl shadow-2xl shadow-black/50 p-6 w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+      <div className="relative bg-card border border-border rounded-2xl shadow-2xl shadow-black/50 p-6 w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
         {/* Icon */}
         <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-500/10 rounded-full border border-red-500/20">
           <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -74,10 +74,10 @@ function ConfirmationModal({
 
         {/* Content */}
         <div className="text-center mb-6">
-          <h3 className="text-lg font-semibold text-zinc-100 mb-2">
+          <h3 className="text-lg font-semibold text-text-primary mb-2">
             {title}
           </h3>
-          <p className="text-sm text-zinc-400 leading-relaxed">
+          <p className="text-sm text-text-muted leading-relaxed">
             {message}
           </p>
         </div>
@@ -86,7 +86,7 @@ function ConfirmationModal({
         <div className="flex gap-3">
           <button
             onClick={onClose}
-            className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-[#1e1e1e]"
+            className="flex-1 px-4 py-2.5 text-sm font-medium text-text-muted bg-muted hover:bg-muted/80 border border-border rounded-lg transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-primary/50 focus:ring-offset-2 focus:ring-offset-card"
           >
             {cancelText}
           </button>
@@ -96,10 +96,10 @@ function ConfirmationModal({
               onClose();
             }}
             className={clsx(
-              'flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#1e1e1e]',
+              'flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-card',
               isDestructive
                 ? 'text-white bg-red-500 hover:bg-red-600 focus:ring-red-500 shadow-lg shadow-red-500/20'
-                : 'text-white bg-[#8b5cf6] hover:bg-[#7c3aed] focus:ring-[#8b5cf6] shadow-lg shadow-[#8b5cf6]/20'
+                : 'text-primary-foreground bg-primary hover:bg-primary/90 focus:ring-primary shadow-lg shadow-primary/20'
             )}
           >
             {confirmText}
@@ -380,11 +380,11 @@ export function ConversationList({
     return (
       <div className="p-4 text-center">
         <div className="flex items-center justify-center space-x-2 mb-3">
-          <div className="w-2 h-2 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-          <div className="w-2 h-2 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-          <div className="w-2 h-2 bg-[#8b5cf6] rounded-full animate-bounce"></div>
+          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+          <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
         </div>
-        <div className="text-zinc-400 text-sm font-medium">Loading conversations...</div>
+        <div className="text-text-muted text-sm font-medium">Loading conversations...</div>
       </div>
     );
   }
@@ -398,7 +398,7 @@ export function ConversationList({
           </svg>
         </div>
         <div className="text-red-400 text-sm font-medium mb-1">Connection Error</div>
-        <div className="text-zinc-500 text-xs">{error}</div>
+        <div className="text-text-muted text-xs">{error}</div>
       </div>
     );
   }
@@ -407,19 +407,19 @@ export function ConversationList({
     return (
       <div className="p-4 text-center">
         <div className="relative mb-4">
-          <div className="w-16 h-16 bg-gradient-to-br from-[#8b5cf6]/20 to-[#7c3aed]/20 rounded-2xl mx-auto mb-4 flex items-center justify-center border border-[#8b5cf6]/20">
-            <svg className="w-8 h-8 text-[#8b5cf6] opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-16 h-16 bg-gradient-to-br from-primary/20 to-primary/10 rounded-2xl mx-auto mb-4 flex items-center justify-center border border-primary/20">
+            <svg className="w-8 h-8 text-primary opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
-            <div className="absolute -top-1 -right-1 w-4 h-4 bg-[#8b5cf6] rounded-full flex items-center justify-center">
-              <svg className="w-2 h-2 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="absolute -top-1 -right-1 w-4 h-4 bg-primary rounded-full flex items-center justify-center">
+              <svg className="w-2 h-2 text-primary-foreground" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={3} d="M12 4v16m8-8H4" />
               </svg>
             </div>
           </div>
         </div>
-        <div className="text-zinc-300 text-sm font-medium mb-1">No conversations yet</div>
-        <div className="text-zinc-500 text-xs leading-relaxed">
+        <div className="text-text-primary text-sm font-medium mb-1">No conversations yet</div>
+        <div className="text-text-muted text-xs leading-relaxed">
           Start your first conversation<br />
           and it will appear here
         </div>
@@ -447,11 +447,11 @@ export function ConversationList({
                     'transition-all duration-300 ease-out transform-gpu',
                     'hover:shadow-lg hover:shadow-black/10 hover:-translate-y-0.5',
                     selectedConversationId === conversation.id
-                      ? 'selected bg-gradient-to-r from-[#8b5cf6]/15 to-[#7c3aed]/10 border border-[#8b5cf6]/30 shadow-lg shadow-[#8b5cf6]/10 translate-y-0'
-                      : 'hover:bg-gradient-to-r hover:from-[#262626] hover:to-[#2a2a2a] border border-transparent',
+                      ? 'selected bg-gradient-to-r from-primary/15 to-primary/10 border border-primary/30 shadow-lg shadow-primary/10 translate-y-0'
+                      : 'hover:bg-gradient-to-r hover:from-muted hover:to-muted/80 border border-transparent',
                     newConversationIds.has(conversation.id) && 'animate-slide-in-up-stagger',
-                    isBranch && 'ml-6 relative before:absolute before:left-[-24px] before:top-1/2 before:w-4 before:h-px before:bg-zinc-600 before:transform before:-translate-y-1/2',
-                    isBranch && index > 0 && 'before:content-[""] before:absolute before:left-[-24px] before:top-0 before:w-px before:h-1/2 before:bg-zinc-600'
+                    isBranch && 'ml-6 relative before:absolute before:left-[-24px] before:top-1/2 before:w-4 before:h-px before:bg-border before:transform before:-translate-y-1/2',
+                    isBranch && index > 0 && 'before:content-[""] before:absolute before:left-[-24px] before:top-0 before:w-px before:h-1/2 before:bg-border'
                   )}
                   onClick={() => onConversationSelect?.(conversation.id)}
                   style={{
@@ -460,14 +460,14 @@ export function ConversationList({
                 >
                   {/* Subtle gradient overlay for selected state */}
                   {selectedConversationId === conversation.id && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-[#8b5cf6]/5 to-transparent rounded-xl pointer-events-none" />
+                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent rounded-xl pointer-events-none" />
                   )}
                   
                   <div className="relative p-3.5 flex items-center">
                     {/* Branch indicator with enhanced styling */}
                     {isBranch && (
                       <div className="flex items-center mr-3 flex-shrink-0">
-                        <div className="w-5 h-5 bg-zinc-700/50 rounded-lg flex items-center justify-center border border-zinc-600/50">
+                        <div className="w-5 h-5 bg-muted/50 rounded-lg flex items-center justify-center border border-border/50">
                           {getBranchIcon(conversation.branch_type)}
                         </div>
                       </div>
@@ -484,7 +484,7 @@ export function ConversationList({
                       onClick={(e) => handleDeleteConversation(conversation.id, e)}
                       className={clsx(
                         'opacity-0 group-hover:opacity-100 p-2 rounded-lg transition-all duration-200 flex-shrink-0 relative overflow-hidden',
-                        'text-zinc-400 hover:text-red-400 hover:bg-red-400/10 hover:scale-110',
+                        'text-text-muted hover:text-red-400 hover:bg-red-400/10 hover:scale-110',
                         'focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-400/50'
                       )}
                       title="Delete conversation"
@@ -498,8 +498,8 @@ export function ConversationList({
 
                   {/* New conversation indicator */}
                   {newConversationIds.has(conversation.id) && (
-                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#8b5cf6] rounded-full animate-pulse-gentle">
-                      <div className="absolute inset-0 bg-[#8b5cf6] rounded-full animate-ping" />
+                    <div className="absolute -top-1 -right-1 w-3 h-3 bg-primary rounded-full animate-pulse-gentle">
+                      <div className="absolute inset-0 bg-primary rounded-full animate-ping" />
                     </div>
                   )}
                 </div>
@@ -516,20 +516,20 @@ export function ConversationList({
             onClick={loadMoreConversations}
             disabled={loadingMore}
             className={clsx(
-              'w-full p-3 rounded-xl border border-dashed border-zinc-600 transition-all duration-200',
-              'text-sm font-medium text-zinc-400 hover:text-zinc-300',
-              'hover:border-zinc-500 hover:bg-zinc-800/50',
-              'focus:outline-none focus:ring-2 focus:ring-[#8b5cf6]/50 focus:border-[#8b5cf6]/50',
+              'w-full p-3 rounded-xl border border-dashed border-border transition-all duration-200',
+              'text-sm font-medium text-text-muted hover:text-text-primary',
+              'hover:border-border/80 hover:bg-muted/50',
+              'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50',
               'disabled:opacity-50 disabled:cursor-not-allowed',
-              loadingMore && 'bg-zinc-800/30'
+              loadingMore && 'bg-muted/30'
             )}
           >
             {loadingMore ? (
               <div className="flex items-center justify-center space-x-2">
                 <div className="flex space-x-1">
-                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:0s]" />
-                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce [animation-delay:0.4s]" />
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0s]" />
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
+                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
                 </div>
                 <span>Loading more...</span>
               </div>
