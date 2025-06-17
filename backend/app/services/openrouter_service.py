@@ -41,30 +41,23 @@ class OpenRouterService:
             self._tool_service = ToolService()
         return self._tool_service
 
-    async def stream_chat_completion_with_tools(
+    async def stream_chat_completion(
         self,
         conversation_id: str,
         user_id: str,
-        model: Optional[str] = None
+        model: Optional[str] = None,
+        use_tools: Optional[bool] = None,
+        enabled_tools: Optional[List[str]] = None
     ) -> AsyncGenerator[str, None]:
-        """Stream chat completion with tool calling support"""
+        """Stream chat completion with optional tool calling support"""
         conversation_uuid = UUID(conversation_id)
         user_uuid = UUID(user_id)
         
-        # Get conversation to check tool configuration
+        # Get conversation for context
         conversation = await self.conversation_service.get_conversation(conversation_uuid, user_uuid)
         if not conversation:
             raise ValueError("Conversation not found")
 
-        # If tools not enabled, use regular chat
-        if not conversation.tools_enabled:
-            async for chunk in self.stream_chat_completion(conversation_id, user_id, model):
-                yield chunk
-            return
-
-        # Get tools for this conversation
-        tools = await self.tool_service.get_openai_format_tools(conversation.enabled_tools)
-        
         # Determine which model to use
         model_to_use = model or conversation.current_model
 
@@ -81,23 +74,28 @@ class OpenRouterService:
                 "content": msg.content
             })
 
-        # Make OpenRouter API call with tools
+        # Make OpenRouter API call
         openrouter_messages = openrouter_client.format_messages_for_openrouter(
             formatted_messages, 
             conversation.system_prompt
         )
 
-        # Stream with tool handling
+        # Get tools if requested
+        tools = None
+        if use_tools and enabled_tools:
+            tools = await self.tool_service.get_openai_format_tools(enabled_tools)
+
+        # Stream with or without tools
         async for chunk in openrouter_client.chat_completion_stream(
             messages=openrouter_messages,
             model=model_to_use,
-            tools=tools if tools else None
+            tools=tools
         ):
             if "choices" in chunk and len(chunk["choices"]) > 0:
                 choice = chunk["choices"][0]
                 delta = choice.get("delta", {})
                 
-                # Handle tool calls
+                # Handle tool calls (if tools enabled)
                 if "tool_calls" in delta and delta["tool_calls"]:
                     yield f"data: {json.dumps({'type': 'tool_call', 'data': delta['tool_calls']})}\n\n"
                     
@@ -111,55 +109,14 @@ class OpenRouterService:
                             tool_result = await self.tool_service.execute_tool_call(tool_name, tool_args)
                             yield f"data: {json.dumps({'type': 'tool_result', 'data': {'name': tool_name, 'result': tool_result}})}\n\n"
                 
-                # Handle regular content
+                # Handle regular content (both tool and non-tool modes)
                 elif "content" in delta and delta["content"]:
-                    yield f"data: {json.dumps({'type': 'content', 'data': delta['content']})}\n\n"
-
-    async def stream_chat_completion(
-        self,
-        conversation_id: str,
-        user_id: str,
-        model: Optional[str] = None
-    ) -> AsyncGenerator[str, None]:
-        """Stream chat completion - optimized for minimal DB queries"""
-        conversation_uuid = UUID(conversation_id)
-        user_uuid = UUID(user_id)
-        
-        # Get conversation to check if it exists and get current model
-        conversation = await self.conversation_service.get_conversation(conversation_uuid, user_uuid)
-        if not conversation:
-            raise ValueError("Conversation not found")
-
-        # Determine which model to use
-        model_to_use = model or conversation.current_model
-
-        # Get conversation context for AI (single DB query)
-        context_messages = await self.message_service.get_conversation_context_for_ai(
-            conversation_uuid, user_uuid
-        )
-        
-        # Format messages for OpenRouter
-        formatted_messages = []
-        for msg in context_messages:
-            formatted_messages.append({
-                "role": msg.role.value,
-                "content": msg.content
-            })
-
-        # Make streaming OpenRouter API call
-        openrouter_messages = openrouter_client.format_messages_for_openrouter(
-            formatted_messages, 
-            conversation.system_prompt
-        )
-
-        async for chunk in openrouter_client.chat_completion_stream(
-            messages=openrouter_messages,
-            model=model_to_use
-        ):
-            if "choices" in chunk and len(chunk["choices"]) > 0:
-                delta = chunk["choices"][0].get("delta", {})
-                if "content" in delta:
-                    yield delta["content"]
+                    if use_tools:
+                        # Tool mode: return structured format
+                        yield f"data: {json.dumps({'type': 'content', 'data': delta['content']})}\n\n"
+                    else:
+                        # Regular mode: return plain text
+                        yield delta["content"]
 
     async def generate_conversation_title(
         self, 

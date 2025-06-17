@@ -1,6 +1,5 @@
 from typing import List, Dict, Any
 from app.mcp_clients import SupabaseMCPClient
-from app.core.config import settings
 
 
 class ToolService:
@@ -9,12 +8,11 @@ class ToolService:
     def __init__(self):
         self.mcp_clients = {}
         
-        # Initialize enabled MCP clients
-        if settings.mcp_enabled:
-            try:
-                self.mcp_clients["supabase"] = SupabaseMCPClient()
-            except Exception as e:
-                print(f"Failed to initialize Supabase MCP client: {e}")
+        # Initialize MCP clients (always available, used per-message)
+        try:
+            self.mcp_clients["supabase"] = SupabaseMCPClient()
+        except Exception as e:
+            print(f"Failed to initialize Supabase MCP client: {e}")
 
     async def get_openai_format_tools(self, enabled_tools: List[str]) -> List[Dict[str, Any]]:
         """Convert MCP tools to OpenAI/OpenRouter format"""

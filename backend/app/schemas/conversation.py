@@ -7,8 +7,6 @@ class ConversationBase(BaseModel):
     title: Optional[str] = None
     current_model: str
     system_prompt: Optional[str] = None
-    tools_enabled: bool = False
-    enabled_tools: List[str] = []
 
 
 class ConversationCreate(ConversationBase):
@@ -19,8 +17,6 @@ class ConversationUpdate(BaseModel):
     title: Optional[str] = None
     current_model: Optional[str] = None
     system_prompt: Optional[str] = None
-    tools_enabled: Optional[bool] = None
-    enabled_tools: Optional[List[str]] = None
 
 
 class ConversationResponse(ConversationBase):

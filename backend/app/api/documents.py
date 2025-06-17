@@ -1,5 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, UploadFile, File, Form
-from typing import List
+from fastapi import APIRouter, Depends, HTTPException, UploadFile, File
 from uuid import UUID
 
 from app.dependencies.auth import get_current_user

@@ -34,8 +34,7 @@ class Settings(BaseSettings):
     # OpenRouter Transforms (Context Management)
     openrouter_use_transforms: bool = True  # Enable middle-out compression for long contexts
     
-    # MCP Configuration
-    mcp_enabled: bool = os.getenv("MCP_ENABLED", "true").lower() == "true"
+    # MCP Configuration  
     mcp_supabase_read_only: bool = os.getenv("MCP_SUPABASE_READ_ONLY", "false").lower() == "true"
     
     # CORS Settings

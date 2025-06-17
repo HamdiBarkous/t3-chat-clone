@@ -1,6 +1,6 @@
 import json
 import logging
-from typing import AsyncGenerator, Optional
+from typing import AsyncGenerator, Optional, List
 from uuid import UUID
 
 from app.services.message_service import MessageService
@@ -36,7 +36,9 @@ class StreamingService:
         user_message: str,
         user_id: str,
         model: Optional[str] = None,
-        existing_user_message_id: Optional[str] = None
+        existing_user_message_id: Optional[str] = None,
+        use_tools: Optional[bool] = None,
+        enabled_tools: Optional[List[str]] = None
     ) -> AsyncGenerator[str, None]:
         """Ultra-fast streaming with minimal DB overhead and proper SSE format"""
         
@@ -126,10 +128,12 @@ class StreamingService:
             ai_response_content = ""
             content_length = 0
             
-            async for chunk in self.openrouter_service.stream_chat_completion_with_tools(
+            async for chunk in self.openrouter_service.stream_chat_completion(
                 conversation_id=conversation_id,
                 user_id=user_id,
-                model=selected_model
+                model=selected_model,
+                use_tools=use_tools,
+                enabled_tools=enabled_tools
             ):
                 # Handle tool-enabled streaming (returns JSON) vs regular streaming (returns text)
                 try:

@@ -19,9 +19,6 @@ class SupabaseMCPClient(BaseMCPClient):
         self.project_ref = project_ref or settings.supabase_project_ref
         self.read_only = read_only if read_only is not None else settings.mcp_supabase_read_only
         
-        if not settings.mcp_enabled:
-            raise ValueError("MCP is disabled globally. Set MCP_ENABLED=true in environment variables.")
-        
         if not self.access_token:
             raise ValueError("Supabase access token is required. Set SUPABASE_ACCESS_TOKEN environment variable.")
         

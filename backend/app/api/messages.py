@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 from fastapi.responses import StreamingResponse
-from typing import Optional
+from typing import Optional, List
 from uuid import UUID
 from pydantic import BaseModel
 
@@ -27,6 +27,8 @@ class StreamChatRequest(BaseModel):
     message_content: str
     model: Optional[str] = None
     existing_user_message_id: Optional[str] = None
+    use_tools: Optional[bool] = None  # Per-message tool toggle
+    enabled_tools: Optional[List[str]] = None  # Override conversation tool settings
 
 
 class EnhancedMessageCreate(BaseModel):
@@ -165,7 +167,9 @@ async def stream_chat_response(
                 user_message=request.message_content,
                 user_id=current_user["id"],
                 model=request.model,
-                existing_user_message_id=request.existing_user_message_id
+                existing_user_message_id=request.existing_user_message_id,
+                use_tools=request.use_tools,
+                enabled_tools=request.enabled_tools
             ),
             media_type="text/event-stream",
             headers={
