@@ -100,6 +100,12 @@ export interface ConversationListItem {
   message_count: number;
   last_message_preview?: string;
   last_message_at?: string;
+  parent_conversation_id?: UUID;
+  root_conversation_id?: UUID;
+  branch_type?: 'original' | 'branch' | 'edit' | 'retry';
+  branch_point_message_id?: UUID;
+  group_order?: number;
+  branch_order?: number;
 }
 
 // Profile types

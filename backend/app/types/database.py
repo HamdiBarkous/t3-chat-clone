@@ -17,6 +17,14 @@ class MessageStatus(str, enum.Enum):
     FAILED = "failed"
 
 
+class BranchType(str, enum.Enum):
+    """Branch type enum for conversation relationships"""
+    ORIGINAL = "original"
+    BRANCH = "branch"
+    EDIT = "edit"
+    RETRY = "retry"
+
+
 class SupabaseModel(BaseModel):
     """Base model with UUID serialization for Supabase"""
     
@@ -49,6 +57,10 @@ class ConversationRow(SupabaseModel):
     system_prompt: Optional[str] = None
     created_at: datetime
     updated_at: datetime
+    parent_conversation_id: Optional[UUID] = None
+    root_conversation_id: Optional[UUID] = None
+    branch_type: Optional[BranchType] = None
+    branch_point_message_id: Optional[UUID] = None
 
 
 class MessageRow(SupabaseModel):
@@ -80,6 +92,10 @@ class ConversationRowCreate(SupabaseModel):
     title: Optional[str] = None
     current_model: str
     system_prompt: Optional[str] = None
+    parent_conversation_id: Optional[UUID] = None
+    root_conversation_id: Optional[UUID] = None
+    branch_type: Optional[BranchType] = None
+    branch_point_message_id: Optional[UUID] = None
 
 
 class ConversationRowUpdate(SupabaseModel):
@@ -87,6 +103,10 @@ class ConversationRowUpdate(SupabaseModel):
     title: Optional[str] = None
     current_model: Optional[str] = None
     system_prompt: Optional[str] = None
+    parent_conversation_id: Optional[UUID] = None
+    root_conversation_id: Optional[UUID] = None
+    branch_type: Optional[BranchType] = None
+    branch_point_message_id: Optional[UUID] = None
 
 
 class MessageRowCreate(SupabaseModel):
@@ -126,6 +146,8 @@ class ConversationWithStats(ConversationRow):
     message_count: int = 0
     last_message_at: Optional[datetime] = None
     last_message_preview: Optional[str] = None
+    group_order: Optional[int] = None
+    branch_order: Optional[int] = None
 
 
 class MessageWithConversation(MessageRow):
