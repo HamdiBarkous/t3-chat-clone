@@ -135,70 +135,108 @@ class OpenRouterService:
                 
                 # When streaming finishes, execute any accumulated tool calls
                 if finish_reason and accumulated_tool_calls:
-                    # Execute all accumulated tool calls
-                    tool_messages = []
-                    for index, tool_call in accumulated_tool_calls.items():
-                        try:
-                            tool_name = tool_call["function"]["name"]
-                            tool_args_str = tool_call["function"]["arguments"]
-                            
-                            # Validate tool call has complete data
-                            if not tool_name or not tool_args_str:
-                                yield f"data: {json.dumps({'type': 'tool_error', 'data': {'error': f'Incomplete tool call at index {index}', 'tool_call': tool_call}})}\n\n"
-                                continue
-                            
-                            # Parse arguments
-                            try:
-                                tool_args = json.loads(tool_args_str) if tool_args_str else {}
-                            except json.JSONDecodeError as e:
-                                yield f"data: {json.dumps({'type': 'tool_error', 'data': {'error': f'Invalid tool arguments JSON: {e}', 'arguments': tool_args_str}})}\n\n"
-                                continue
-                            
-                            # Notify about tool execution start
-                            yield f"data: {json.dumps({'type': 'tool_call', 'data': {'name': tool_name, 'arguments': tool_args, 'status': 'executing'}})}\n\n"
-                            
-                            # Execute tool
-                            tool_result = await self.tool_service.execute_tool_call(tool_name, tool_args)
-                            
-                            # Send tool result
-                            yield f"data: {json.dumps({'type': 'tool_result', 'data': {'name': tool_name, 'result': tool_result, 'status': 'completed'}})}\n\n"
-                            
-                            # Add tool result to conversation for next AI call
-                            tool_messages.append({
-                                "role": "assistant",
-                                "content": None,
-                                "tool_calls": [tool_call]
-                            })
-                            tool_messages.append({
-                                "role": "tool", 
-                                "tool_call_id": tool_call["id"],
-                                "content": str(tool_result)
-                            })
-                            
-                        except Exception as e:
-                            yield f"data: {json.dumps({'type': 'tool_error', 'data': {'error': str(e), 'tool_name': tool_call.get('function', {}).get('name', 'unknown')}})}\n\n"
+                    # Start sequential tool calling loop
+                    current_messages = openrouter_messages.copy()
                     
-                    # Clear accumulated tool calls
-                    accumulated_tool_calls = {}
-                    
-                    # Continue conversation with tool results
-                    if tool_messages:
-                        # Add tool results to the conversation history
-                        updated_messages = openrouter_messages + tool_messages
+                    while accumulated_tool_calls:
+                        # Execute all accumulated tool calls from this round
+                        tool_messages = []
                         
-                        # Make follow-up call to get AI response to tool results
+                        for index, tool_call in accumulated_tool_calls.items():
+                            try:
+                                tool_name = tool_call["function"]["name"]
+                                tool_args_str = tool_call["function"]["arguments"]
+                                
+                                # Validate tool call has complete data
+                                if not tool_name or not tool_args_str:
+                                    yield f"data: {json.dumps({'type': 'tool_error', 'data': {'error': f'Incomplete tool call at index {index}', 'tool_call': tool_call}})}\n\n"
+                                    continue
+                                
+                                # Parse arguments
+                                try:
+                                    tool_args = json.loads(tool_args_str) if tool_args_str else {}
+                                except json.JSONDecodeError as e:
+                                    yield f"data: {json.dumps({'type': 'tool_error', 'data': {'error': f'Invalid tool arguments JSON: {e}', 'arguments': tool_args_str}})}\n\n"
+                                    continue
+                                
+                                # Notify about tool execution start
+                                yield f"data: {json.dumps({'type': 'tool_call', 'data': {'name': tool_name, 'arguments': tool_args, 'status': 'executing'}})}\n\n"
+                                
+                                # Execute tool
+                                tool_result = await self.tool_service.execute_tool_call(tool_name, tool_args)
+                                
+                                # Send tool result
+                                yield f"data: {json.dumps({'type': 'tool_result', 'data': {'name': tool_name, 'result': tool_result, 'status': 'completed'}})}\n\n"
+                                
+                                # Add tool call and result to conversation
+                                tool_messages.append({
+                                    "role": "assistant",
+                                    "content": None,
+                                    "tool_calls": [tool_call]
+                                })
+                                tool_messages.append({
+                                    "role": "tool", 
+                                    "tool_call_id": tool_call["id"],
+                                    "content": str(tool_result)
+                                })
+                                
+                            except Exception as e:
+                                yield f"data: {json.dumps({'type': 'tool_error', 'data': {'error': str(e), 'tool_name': tool_call.get('function', {}).get('name', 'unknown')}})}\n\n"
+                        
+                        # Add tool results to conversation history
+                        current_messages.extend(tool_messages)
+                        
+                        # Clear current tool calls and prepare for next round
+                        accumulated_tool_calls = {}
+                        
+                        # Continue conversation to see if AI wants to call more tools
                         async for follow_up_chunk in openrouter_client.chat_completion_stream(
-                            messages=updated_messages,
+                            messages=current_messages,
                             model=model_to_use,
-                            tools=None  # No more tools needed for this response
+                            tools=tools  # Keep tools available for potential next round
                         ):
                             if "choices" in follow_up_chunk and len(follow_up_chunk["choices"]) > 0:
                                 follow_up_choice = follow_up_chunk["choices"][0]
                                 follow_up_delta = follow_up_choice.get("delta", {})
+                                follow_up_finish_reason = follow_up_choice.get("finish_reason")
                                 
-                                # Handle follow-up content
-                                if "content" in follow_up_delta and follow_up_delta["content"]:
+                                # Handle new tool calls in follow-up
+                                if "tool_calls" in follow_up_delta and follow_up_delta["tool_calls"]:
+                                    for tool_call_delta in follow_up_delta["tool_calls"]:
+                                        index = tool_call_delta.get("index", 0)
+                                        
+                                        # Initialize tool call accumulator if needed
+                                        if index not in accumulated_tool_calls:
+                                            accumulated_tool_calls[index] = {
+                                                "id": "",
+                                                "type": "function",
+                                                "function": {
+                                                    "name": "",
+                                                    "arguments": ""
+                                                }
+                                            }
+                                        
+                                        # Accumulate tool call data
+                                        if tool_call_delta.get("id"):
+                                            accumulated_tool_calls[index]["id"] += tool_call_delta["id"]
+                                        
+                                        if tool_call_delta.get("function"):
+                                            if tool_call_delta["function"].get("name"):
+                                                accumulated_tool_calls[index]["function"]["name"] += tool_call_delta["function"]["name"]
+                                            if tool_call_delta["function"].get("arguments"):
+                                                accumulated_tool_calls[index]["function"]["arguments"] += tool_call_delta["function"]["arguments"]
+                                
+                                # Handle regular content from follow-up
+                                elif "content" in follow_up_delta and follow_up_delta["content"]:
                                     yield f"data: {json.dumps({'type': 'content', 'data': follow_up_delta['content']})}\n\n"
+                                
+                                # If follow-up finishes without tool calls, we're done
+                                if follow_up_finish_reason and not accumulated_tool_calls:
+                                    return  # Exit the tool calling loop
+                                
+                                # If follow-up finishes with tool calls, continue the loop
+                                elif follow_up_finish_reason and accumulated_tool_calls:
+                                    break  # Break inner loop to execute next round of tools
 
     async def generate_conversation_title(
         self, 
