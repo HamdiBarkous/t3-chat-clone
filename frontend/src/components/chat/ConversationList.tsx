@@ -14,6 +14,101 @@ interface ConversationListProps {
   onConversationSelect?: (conversationId: string) => void;
 }
 
+// Modern confirmation modal component
+interface ConfirmationModalProps {
+  isOpen: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmText?: string;
+  cancelText?: string;
+  isDestructive?: boolean;
+}
+
+function ConfirmationModal({
+  isOpen,
+  onClose,
+  onConfirm,
+  title,
+  message,
+  confirmText = 'Delete',
+  cancelText = 'Cancel',
+  isDestructive = false
+}: ConfirmationModalProps) {
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+
+    if (isOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isOpen, onClose]);
+
+  if (!isOpen) return null;
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center">
+      {/* Backdrop */}
+      <div 
+        className="absolute inset-0 bg-black/60 backdrop-blur-sm animate-in fade-in duration-200"
+        onClick={onClose}
+      />
+      
+      {/* Modal */}
+      <div className="relative bg-[#1e1e1e] border border-zinc-700 rounded-2xl shadow-2xl shadow-black/50 p-6 w-full max-w-md mx-4 animate-in zoom-in-95 duration-200">
+        {/* Icon */}
+        <div className="flex items-center justify-center w-12 h-12 mx-auto mb-4 bg-red-500/10 rounded-full border border-red-500/20">
+          <svg className="w-6 h-6 text-red-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+          </svg>
+        </div>
+
+        {/* Content */}
+        <div className="text-center mb-6">
+          <h3 className="text-lg font-semibold text-zinc-100 mb-2">
+            {title}
+          </h3>
+          <p className="text-sm text-zinc-400 leading-relaxed">
+            {message}
+          </p>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-3">
+          <button
+            onClick={onClose}
+            className="flex-1 px-4 py-2.5 text-sm font-medium text-zinc-300 bg-zinc-800 hover:bg-zinc-700 border border-zinc-600 rounded-lg transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-zinc-500 focus:ring-offset-2 focus:ring-offset-[#1e1e1e]"
+          >
+            {cancelText}
+          </button>
+          <button
+            onClick={() => {
+              onConfirm();
+              onClose();
+            }}
+            className={clsx(
+              'flex-1 px-4 py-2.5 text-sm font-medium rounded-lg transition-all duration-200 hover:scale-[1.02] focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-[#1e1e1e]',
+              isDestructive
+                ? 'text-white bg-red-500 hover:bg-red-600 focus:ring-red-500 shadow-lg shadow-red-500/20'
+                : 'text-white bg-[#8b5cf6] hover:bg-[#7c3aed] focus:ring-[#8b5cf6] shadow-lg shadow-[#8b5cf6]/20'
+            )}
+          >
+            {confirmText}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 interface StreamingTitleProps {
   title: string;
   isNew?: boolean;
@@ -177,6 +272,15 @@ export function ConversationList({
 }: ConversationListProps) {
   const { conversations, loading, error, deleteConversation } = useConversations();
   const [newConversationIds, setNewConversationIds] = useState<Set<string>>(new Set());
+  const [deleteModal, setDeleteModal] = useState<{
+    isOpen: boolean;
+    conversationId: string;
+    title: string;
+  }>({
+    isOpen: false,
+    conversationId: '',
+    title: ''
+  });
 
   // Track new conversations for streaming animation
   useEffect(() => {
@@ -205,10 +309,26 @@ export function ConversationList({
   const handleDeleteConversation = async (conversationId: string, e: React.MouseEvent) => {
     e.stopPropagation();
     
-    if (confirm('Are you sure you want to delete this conversation?')) {
-      await deleteConversation(conversationId);
-      // The parent component will handle navigation if needed
+    const conversation = conversations.find(c => c.id === conversationId);
+    setDeleteModal({
+      isOpen: true,
+      conversationId,
+      title: conversation?.title || 'New Conversation'
+    });
+  };
+
+  const confirmDelete = async () => {
+    if (deleteModal.conversationId) {
+      await deleteConversation(deleteModal.conversationId);
     }
+  };
+
+  const closeDeleteModal = () => {
+    setDeleteModal({
+      isOpen: false,
+      conversationId: '',
+      title: ''
+    });
   };
 
   if (loading) {
@@ -263,72 +383,86 @@ export function ConversationList({
   }
 
   return (
-    <div className="space-y-1.5 px-1">
-      {conversations.map((conversation, index) => (
-        <div
-          key={conversation.id}
-          className={clsx(
-            'conversation-card relative rounded-xl group cursor-pointer',
-            'transition-all duration-300 ease-out transform-gpu',
-            'hover:shadow-lg hover:shadow-black/10 hover:-translate-y-0.5',
-            selectedConversationId === conversation.id
-              ? 'selected bg-gradient-to-r from-[#8b5cf6]/15 to-[#7c3aed]/10 border border-[#8b5cf6]/30 shadow-lg shadow-[#8b5cf6]/10 translate-y-0'
-              : 'hover:bg-gradient-to-r hover:from-[#262626] hover:to-[#2a2a2a] border border-transparent',
-            newConversationIds.has(conversation.id) && 'animate-slide-in-up-stagger'
-          )}
-          onClick={() => onConversationSelect?.(conversation.id)}
-          style={{
-            animationDelay: newConversationIds.has(conversation.id) ? `${index * 100}ms` : '0ms'
-          }}
-        >
-          {/* Subtle gradient overlay for selected state */}
-          {selectedConversationId === conversation.id && (
-            <div className="absolute inset-0 bg-gradient-to-r from-[#8b5cf6]/5 to-transparent rounded-xl pointer-events-none" />
-          )}
-          
-          <div className="relative p-3.5 flex items-center">
-            {/* Branch indicator with enhanced styling */}
-            {conversation.title?.startsWith('Branch from ') && (
-              <div className="flex items-center mr-3 flex-shrink-0">
-                <div className="w-5 h-5 bg-[#8b5cf6]/20 rounded-lg flex items-center justify-center border border-[#8b5cf6]/30">
-                  <svg className="w-2.5 h-2.5 text-[#8b5cf6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </div>
-              </div>
+    <>
+      <div className="space-y-1.5 px-1">
+        {conversations.map((conversation, index) => (
+          <div
+            key={conversation.id}
+            className={clsx(
+              'conversation-card relative rounded-xl group cursor-pointer',
+              'transition-all duration-300 ease-out transform-gpu',
+              'hover:shadow-lg hover:shadow-black/10 hover:-translate-y-0.5',
+              selectedConversationId === conversation.id
+                ? 'selected bg-gradient-to-r from-[#8b5cf6]/15 to-[#7c3aed]/10 border border-[#8b5cf6]/30 shadow-lg shadow-[#8b5cf6]/10 translate-y-0'
+                : 'hover:bg-gradient-to-r hover:from-[#262626] hover:to-[#2a2a2a] border border-transparent',
+              newConversationIds.has(conversation.id) && 'animate-slide-in-up-stagger'
+            )}
+            onClick={() => onConversationSelect?.(conversation.id)}
+            style={{
+              animationDelay: newConversationIds.has(conversation.id) ? `${index * 100}ms` : '0ms'
+            }}
+          >
+            {/* Subtle gradient overlay for selected state */}
+            {selectedConversationId === conversation.id && (
+              <div className="absolute inset-0 bg-gradient-to-r from-[#8b5cf6]/5 to-transparent rounded-xl pointer-events-none" />
             )}
             
-            <StreamingTitle
-              title={conversation.title || 'New Conversation'}
-              isNew={newConversationIds.has(conversation.id)}
-              isSelected={selectedConversationId === conversation.id}
-            />
-            
-            {/* Enhanced delete button */}
-            <button
-              onClick={(e) => handleDeleteConversation(conversation.id, e)}
-              className={clsx(
-                'opacity-0 group-hover:opacity-100 p-2 rounded-lg transition-all duration-200 flex-shrink-0 relative overflow-hidden',
-                'text-zinc-400 hover:text-red-400 hover:bg-red-400/10 hover:scale-110',
-                'focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-400/50'
+            <div className="relative p-3.5 flex items-center">
+              {/* Branch indicator with enhanced styling */}
+              {conversation.title?.startsWith('Branch from ') && (
+                <div className="flex items-center mr-3 flex-shrink-0">
+                  <div className="w-5 h-5 bg-[#8b5cf6]/20 rounded-lg flex items-center justify-center border border-[#8b5cf6]/30">
+                    <svg className="w-2.5 h-2.5 text-[#8b5cf6]" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  </div>
+                </div>
               )}
-              title="Delete conversation"
-            >
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-400/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-300" />
-              <svg className="w-4 h-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
-                <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
-              </svg>
-            </button>
-          </div>
-
-          {/* New conversation indicator */}
-          {newConversationIds.has(conversation.id) && (
-            <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#8b5cf6] rounded-full animate-pulse-gentle">
-              <div className="absolute inset-0 bg-[#8b5cf6] rounded-full animate-ping" />
+              
+              <StreamingTitle
+                title={conversation.title || 'New Conversation'}
+                isNew={newConversationIds.has(conversation.id)}
+                isSelected={selectedConversationId === conversation.id}
+              />
+              
+              {/* Enhanced delete button */}
+              <button
+                onClick={(e) => handleDeleteConversation(conversation.id, e)}
+                className={clsx(
+                  'opacity-0 group-hover:opacity-100 p-2 rounded-lg transition-all duration-200 flex-shrink-0 relative overflow-hidden',
+                  'text-zinc-400 hover:text-red-400 hover:bg-red-400/10 hover:scale-110',
+                  'focus:opacity-100 focus:outline-none focus:ring-2 focus:ring-red-400/50'
+                )}
+                title="Delete conversation"
+              >
+                <div className="absolute inset-0 bg-gradient-to-r from-transparent via-red-400/5 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-300" />
+                <svg className="w-4 h-4 relative z-10" fill="none" stroke="currentColor" viewBox="0 0 24 24" strokeWidth={2}>
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                </svg>
+              </button>
             </div>
-          )}
-        </div>
-      ))}
-    </div>
+
+            {/* New conversation indicator */}
+            {newConversationIds.has(conversation.id) && (
+              <div className="absolute -top-1 -right-1 w-3 h-3 bg-[#8b5cf6] rounded-full animate-pulse-gentle">
+                <div className="absolute inset-0 bg-[#8b5cf6] rounded-full animate-ping" />
+              </div>
+            )}
+          </div>
+        ))}
+      </div>
+
+      {/* Modern Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteModal.isOpen}
+        onClose={closeDeleteModal}
+        onConfirm={confirmDelete}
+        title="Delete Conversation"
+        message={`Are you sure you want to delete "${deleteModal.title}"? This action cannot be undone.`}
+        confirmText="Delete"
+        cancelText="Cancel"
+        isDestructive={true}
+      />
+    </>
   );
 } 
