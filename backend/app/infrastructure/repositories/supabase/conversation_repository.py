@@ -105,37 +105,39 @@ class SupabaseConversationRepository:
             raise SupabaseError(f"Failed to delete conversation: {str(e)}")
 
     async def list_by_user(self, user_id: UUID, limit: int = 20, offset: int = 0) -> List[ConversationListItem]:
-        """OPTIMIZED: List conversations with grouping and relationship info"""
+        """List conversations with stats using the available function"""
         try:
-            # Use new RPC function for grouped conversations
-            response_data = await self.client.call_rpc('get_conversation_groups', {
-                'user_id_param': str(user_id),
-                'limit_param': limit,
-                'offset_param': offset
+            # Use the existing RPC function 
+            response_data = await self.client.call_rpc('get_conversations_with_stats', {
+                'p_user_id': str(user_id),
+                'p_limit': limit,
+                'p_offset': offset
             })
             
             # Convert results to ConversationListItem objects
             result_conversations = []
             for row in response_data or []:
                 result_conversations.append(ConversationListItem(
-                    id=UUID(row["conv_id"]),
-                    title=row["conv_title"],
-                    current_model=row["conv_current_model"],
-                    created_at=row["conv_created_at"],
-                    updated_at=row["conv_updated_at"],
-                    message_count=row["conv_message_count"] or 0,
-                    last_message_at=row["conv_last_message_at"],
-                    last_message_preview=row["conv_last_message_preview"],
-                    parent_conversation_id=UUID(row["conv_parent_conversation_id"]) if row["conv_parent_conversation_id"] else None,
-                    root_conversation_id=UUID(row["conv_root_conversation_id"]) if row["conv_root_conversation_id"] else None,
-                    branch_type=row["conv_branch_type"],
-                    branch_point_message_id=UUID(row["conv_branch_point_message_id"]) if row["conv_branch_point_message_id"] else None,
-                    group_order=row["conv_group_order"],
-                    branch_order=row["conv_branch_order"]
+                    id=UUID(row["id"]),
+                    title=row["title"],
+                    current_model=row["current_model"],
+                    created_at=row["created_at"],
+                    updated_at=row["updated_at"],
+                    message_count=row["message_count"] or 0,
+                    last_message_at=row["last_message_at"],
+                    last_message_preview=row["last_message_preview"],
+                    # Now these fields are provided by the updated function
+                    parent_conversation_id=UUID(row["parent_conversation_id"]) if row["parent_conversation_id"] else None,
+                    root_conversation_id=UUID(row["root_conversation_id"]) if row["root_conversation_id"] else None,
+                    branch_type=row["branch_type"],
+                    branch_point_message_id=UUID(row["branch_point_message_id"]) if row["branch_point_message_id"] else None,
+                    # These are still not implemented yet (for future conversation grouping)
+                    group_order=None,
+                    branch_order=None
                 ))
             
             return result_conversations
             
         except Exception as e:
-            logger.error(f"Error in grouped conversation list: {e}")
+            logger.error(f"Error in conversation list: {e}")
             raise SupabaseError(f"Failed to list conversations: {str(e)}")
