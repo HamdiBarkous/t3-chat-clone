@@ -24,6 +24,12 @@ class Settings(BaseSettings):
     openrouter_api_key: Optional[str] = os.getenv("OPENROUTER_API_KEY")
     openrouter_base_url: str = "https://openrouter.ai/api/v1"
     
+    # Firecrawl API
+    firecrawl_api_key: Optional[str] = os.getenv("FIRECRAWL_API_KEY")
+    
+    # Tavily API
+    tavily_api_key: Optional[str] = os.getenv("TAVILY_API_KEY")
+    
     # Security & JWT
     jwt_secret_key: str = "dev-secret-key-change-in-production"
     jwt_algorithm: str = "HS256"

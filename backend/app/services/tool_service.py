@@ -1,5 +1,5 @@
 from typing import List, Dict, Any
-from app.mcp_clients import SupabaseMCPClient
+from app.mcp_clients import SupabaseMCPClient, FirecrawlMCPClient, TavilyMCPClient
 
 
 class ToolService:
@@ -13,6 +13,16 @@ class ToolService:
             self.mcp_clients["supabase"] = SupabaseMCPClient()
         except Exception as e:
             print(f"Failed to initialize Supabase MCP client: {e}")
+            
+        try:
+            self.mcp_clients["firecrawl"] = FirecrawlMCPClient()
+        except Exception as e:
+            print(f"Failed to initialize Firecrawl MCP client: {e}")
+            
+        try:
+            self.mcp_clients["tavily"] = TavilyMCPClient()
+        except Exception as e:
+            print(f"Failed to initialize Tavily MCP client: {e}")
 
     async def get_openai_format_tools(self, enabled_tools: List[str]) -> List[Dict[str, Any]]:
         """Convert MCP tools to OpenAI/OpenRouter format"""
