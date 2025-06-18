@@ -2,55 +2,55 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  /* Nebula Dream Theme */
-  --background-start: #100c24; /* Cosmic navy */
-  --background-end: #1b0e30; /* Deep cosmos */
-  --foreground: #f4f4f7; /* Soft white */
+  /* Violet Storm - Perfect balance of personality and sophistication */
+  --background-start: #0f0d1a; /* Deep violet-black */
+  --background-end: #1a1625; /* Rich violet gradient */
+  --foreground: #f4f1ff; /* Violet-tinted white */
   
-  --card: #211833; /* Dark cosmic card */
-  --card-foreground: #f4f4f7;
+  --card: #1f1b2e; /* Violet-gray card */
+  --card-foreground: #f4f1ff;
   
-  --popover: #211833;
-  --popover-foreground: #f4f4f7;
+  --popover: #1f1b2e;
+  --popover-foreground: #f4f1ff;
   
-  --primary: #ff3ca6; /* Neon pink */
+  --primary: #8b5cf6; /* Core purple */
   --primary-foreground: #ffffff;
   
-  --secondary: #2a1a3f; /* Deep purple */
-  --secondary-foreground: #e2e8f0;
+  --secondary: #2a2438; /* Violet-gray secondary */
+  --secondary-foreground: #d4d4d8;
 
-  --muted: #3c2a44; /* Muted dark */
-  --muted-foreground: #7a7a85;
+  --muted: #3f3852; /* Balanced violet-gray */
+  --muted-foreground: #a1a1aa;
   
-  --accent: #00ffc2; /* Aqua glow */
-  --accent-foreground: #100c24;
+  --accent: #06b6d4; /* Electric cyan */
+  --accent-foreground: #ffffff;
   
-  --destructive: #ff6f61; /* Coral red */
+  --destructive: #ef4444; /* Clean red */
   --destructive-foreground: #ffffff;
   
-  --border: rgba(255, 60, 166, 0.12); /* Neon pink border */
-  --input: #2a1a3f;
-  --ring: rgba(255, 60, 166, 0.4);
+  --border: rgba(139, 92, 246, 0.15); /* Subtle purple border */
+  --input: #2a2438;
+  --ring: rgba(139, 92, 246, 0.5); /* Purple focus ring */
   --radius: 0.75rem;
 
   /* Custom Properties */
-  --sidebar-bg: #100c24;
-  --sidebar-item-hover: #211833;
+  --sidebar-bg: #0f0d1a;
+  --sidebar-item-hover: #1f1b2e;
   --chat-bg: transparent;
-  --message-bg: #2a1a3f;
+  --message-bg: #2a2438; /* Violet user bubble */
   
-  --purple-accent: #ff3ca6;
-  --purple-light: #ff6fd6;
-  --purple-dark: #d6007a;
+  --purple-accent: #8b5cf6;
+  --purple-light: #a78bfa;
+  --purple-dark: #7c3aed;
 
-  --text-primary: #f4f4f7;
-  --text-secondary: #b3b3bd;
-  --text-muted: #7a7a85;
+  --text-primary: #f4f1ff; /* Violet-tinted white */
+  --text-secondary: #d4d4d8; /* Clean gray */
+  --text-muted: #a1a1aa; /* Balanced muted */
 
   /* FX */
-  --purple-glow: 0 8px 32px rgba(255, 60, 166,0.15);
-  --code-bg: #1a1027; /* Cosmic code background */
-  --green-accent: #00ffc2; /* Aqua accent */
+  --purple-glow: 0 6px 24px rgba(139, 92, 246, 0.18);
+  --code-bg: #1a1625; /* Violet code background */
+  --green-accent: #22c55e; /* Fresh green */
 }
 
 @theme inline {
