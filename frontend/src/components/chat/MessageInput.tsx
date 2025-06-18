@@ -18,7 +18,7 @@ import { ReasoningToggle } from '@/components/chat/ReasoningToggle';
 import { clsx } from 'clsx';
 
 interface MessageInputProps {
-  onSendMessage: (content: string, files?: File[], enabledTools?: string[], reasoning?: any) => void;
+  onSendMessage: (content: string, files?: File[], enabledTools?: string[], reasoning?: boolean) => void;
   disabled?: boolean;
   currentModel?: string;
   onModelChange?: (model: string) => void;
@@ -43,7 +43,6 @@ export function MessageInput({
   
   // Reasoning state
   const [reasoningEnabled, setReasoningEnabled] = useState(false);
-  const [reasoningConfig, setReasoningConfig] = useState<any>(null);
   
   // File upload functionality
   const { uploadedFiles, addFiles, removeFile, clearFiles } = useFileUpload();
@@ -106,7 +105,7 @@ export function MessageInput({
         message.trim(), 
         uploadedFiles, 
         allEnabledTools,
-        reasoningEnabled ? reasoningConfig : null
+        reasoningEnabled
       );
       setMessage('');
       clearFiles();
@@ -142,9 +141,8 @@ export function MessageInput({
     setSearchProvider(provider);
   };
 
-  const handleReasoningToggle = (enabled: boolean, config?: { effort?: string; max_tokens?: number }) => {
+  const handleReasoningToggle = (enabled: boolean) => {
     setReasoningEnabled(enabled);
-    setReasoningConfig(enabled ? config : null);
   };
 
   const canSend = (message.trim().length > 0 || uploadedFiles.length > 0) && !disabled;

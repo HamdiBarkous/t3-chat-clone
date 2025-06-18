@@ -42,7 +42,7 @@ class OpenRouterClient:
         temperature: float = 0.7,
         use_transforms: bool = True,
         tools: Optional[List[Dict[str, Any]]] = None,
-        reasoning: Optional[Dict[str, Any]] = None
+        reasoning: Optional[bool] = None
     ) -> Dict[str, Any]:
         """Send chat completion request to OpenRouter"""
         if not self.api_key:
@@ -65,7 +65,7 @@ class OpenRouterClient:
             payload["tools"] = tools
             
         if reasoning:
-            payload["reasoning"] = reasoning
+            payload["reasoning"] = {"effort": "high"}
 
         async with httpx.AsyncClient() as client:
             try:
@@ -90,7 +90,7 @@ class OpenRouterClient:
         temperature: float = 0.7,
         use_transforms: bool = True,
         tools: Optional[List[Dict[str, Any]]] = None,
-        reasoning: Optional[Dict[str, Any]] = None
+        reasoning: Optional[bool] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Send streaming chat completion request to OpenRouter"""
         if not self.api_key:
@@ -114,7 +114,7 @@ class OpenRouterClient:
             payload["tools"] = tools
             
         if reasoning:
-            payload["reasoning"] = reasoning
+            payload["reasoning"] = {"effort": "high"}
 
         async with httpx.AsyncClient() as client:
             try:

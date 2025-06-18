@@ -32,7 +32,7 @@ interface UseMessagesReturn {
   messages: Message[]
   loading: boolean
   error: string | null
-  sendMessage: (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[], reasoning?: any) => Promise<void>
+  sendMessage: (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[], reasoning?: boolean) => Promise<void>
   generateAIResponse: (model?: string) => Promise<void>
   loadMessages: () => Promise<void>
   isStreaming: boolean
@@ -110,7 +110,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     }
   }, [conversationId])
 
-  const sendMessage = useCallback(async (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[], reasoning?: any) => {
+  const sendMessage = useCallback(async (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[], reasoning?: boolean) => {
     if (!conversationId || isStreaming) return
 
     try {
