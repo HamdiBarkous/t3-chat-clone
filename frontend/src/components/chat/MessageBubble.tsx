@@ -23,11 +23,13 @@ interface MessageBubbleProps {
 }
 
 // Memoized component to prevent unnecessary re-renders during streaming
-export const MessageBubble = memo(function MessageBubble({ message, isStreaming = false, streamingContent }: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming = false, streamingContent }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
   const router = useRouter();
   const { branchConversation, editMessage, retryMessage } = useConversations();
+  
+
   const [isBranching, setIsBranching] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -299,15 +301,4 @@ export const MessageBubble = memo(function MessageBubble({ message, isStreaming 
       </div>
     </div>
   );
-}, (prevProps, nextProps) => {
-  // Custom comparison function for better memoization
-  // Only re-render if content, streaming status, or key properties change
-  return (
-    prevProps.message.content === nextProps.message.content &&
-    prevProps.message.id === nextProps.message.id &&
-    prevProps.isStreaming === nextProps.isStreaming &&
-    prevProps.streamingContent === nextProps.streamingContent &&
-    prevProps.message.created_at === nextProps.message.created_at &&
-    prevProps.message.model_used === nextProps.message.model_used
-  );
-}); 
+} 

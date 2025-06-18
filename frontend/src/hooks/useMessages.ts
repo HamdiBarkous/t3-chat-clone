@@ -194,7 +194,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
                   }
                 : msg
             )
-            console.log('Updated messages with documents:', updatedMessages.find(m => m.id === userMessageId)?.documents)
+            console.log('Documents attached to message successfully')
             return updatedMessages
           })
         } catch (error) {
