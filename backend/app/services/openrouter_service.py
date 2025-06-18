@@ -17,31 +17,27 @@ class OpenRouterService:
 
     def _determine_reasoning_capability(self, model: Dict[str, Any]) -> tuple[bool, bool]:
         """
-        Determine reasoning capabilities based on OpenRouter API data
+        Determine reasoning capabilities based on actual model capabilities
         Returns: (reasoning_capable, reasoning_by_default)
         """
         model_id = model.get("id", "")
-        supported_params = model.get("supported_parameters", [])
         
-        # Check if model supports reasoning parameters
-        has_reasoning_params = "reasoning" in supported_params or "include_reasoning" in supported_params
-        
-        # Models that reason by default (based on OpenRouter documentation and model behavior)
-        reasons_by_default = (
+        # Models that reason by default (can't disable reasoning)
+        if (
+            "gemini-2.5-pro" in model_id or
             "deepseek-r1" in model_id or 
-            ("o1" in model_id and "openai" in model_id) or 
-            ("o3" in model_id and "openai" in model_id) or 
-            ("o4" in model_id and "openai" in model_id)
-        )
-        
-        # If model has reasoning params, it's capable
-        # If it's a reasoning-by-default model, mark it as such even if API doesn't show params
-        if has_reasoning_params:
-            return True, reasons_by_default
-        elif reasons_by_default:
-            # Some reasoning-by-default models might not expose reasoning params
-            # but still support reasoning (like OpenAI o-series)
+            "o4-mini" in model_id
+        ):
             return True, True
+        
+        # Models that can toggle reasoning on/off
+        elif (
+            "claude-sonnet-4" in model_id or
+            "gemini-2.5-flash" in model_id and "lite" not in model_id  # 2.5 flash but not lite
+        ):
+            return True, False
+        
+        # Models with no reasoning capabilities
         else:
             return False, False
 
