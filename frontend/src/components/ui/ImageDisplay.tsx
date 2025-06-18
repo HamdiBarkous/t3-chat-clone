@@ -103,59 +103,44 @@ export function ImageDisplay({ document, size = 'md', className }: ImageDisplayP
 
   return (
     <>
-      <div className={clsx(
-        'relative group cursor-pointer rounded-lg overflow-hidden border border-border bg-secondary',
-        sizeClasses[size],
-        className
-      )}>
-        {isLoading && (
-          <div className="absolute inset-0 flex items-center justify-center bg-secondary">
-            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
-          </div>
-        )}
-
-        {error || !imageUrl ? (
-          <div className="w-full h-full flex flex-col items-center justify-center text-text-muted p-4 min-h-24">
-            <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
-            </svg>
-            <div className="text-xs text-center">
-              <div className="font-medium">
-                {error ? 'Image unavailable' : 'Loading...'}
-              </div>
-              <div className="text-text-muted/60">{document.filename}</div>
+      <div className="space-y-2">
+        {/* Image container */}
+        <div className={clsx(
+          'relative rounded-lg overflow-hidden border border-border bg-secondary',
+          sizeClasses[size],
+          className
+        )}>
+          {isLoading && (
+            <div className="absolute inset-0 flex items-center justify-center bg-secondary">
+              <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
             </div>
-          </div>
-        ) : (
-          <div className="relative w-full h-full" onClick={openModal}>
-            <img
-              src={imageUrl}
-              alt={document.filename}
-              className="w-full h-full object-cover"
-              onLoad={handleImageLoad}
-              onError={handleImageError}
-            />
-            
-            {/* Hover overlay */}
-            <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <svg className="w-6 h-6 text-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
+          )}
+
+          {error || !imageUrl ? (
+            <div className="w-full h-full flex flex-col items-center justify-center text-text-muted p-4 min-h-24">
+              <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
               </svg>
+              <div className="text-xs text-center">
+                <div className="font-medium">
+                  {error ? 'Image unavailable' : 'Loading...'}
+                </div>
+              </div>
             </div>
+          ) : (
+            <div className="relative w-full h-full" onClick={openModal}>
+              <img
+                src={imageUrl}
+                alt={document.filename}
+                className="w-full h-full object-cover cursor-pointer"
+                onLoad={handleImageLoad}
+                onError={handleImageError}
+              />
+            </div>
+          )}
+        </div>
 
-            {/* Image info overlay */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent text-text-primary text-xs p-2">
-              <div className="truncate font-medium" title={document.filename}>
-                {document.filename}
-              </div>
-              <div className="text-text-muted flex items-center gap-2">
-                <span className="uppercase">{document.file_type}</span>
-                <span>•</span>
-                <span>{formatFileSize(document.file_size)}</span>
-              </div>
-            </div>
-          </div>
-        )}
+
       </div>
 
       {/* Modal for full-size view */}
@@ -181,15 +166,7 @@ export function ImageDisplay({ document, size = 'md', className }: ImageDisplayP
               </svg>
             </button>
 
-            {/* Image info */}
-            <div className="absolute bottom-4 left-4 right-4 bg-background/80 text-text-primary rounded p-3">
-              <div className="font-medium">{document.filename}</div>
-              <div className="text-sm text-text-muted flex items-center gap-2 mt-1">
-                <span className="uppercase">{document.file_type}</span>
-                <span>•</span>
-                <span>{formatFileSize(document.file_size)}</span>
-              </div>
-            </div>
+
           </div>
         </div>
       )}

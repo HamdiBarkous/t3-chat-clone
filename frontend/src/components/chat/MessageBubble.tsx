@@ -187,9 +187,6 @@ export function MessageBubble({ message, isStreaming = false, streamingContent }
                   {/* Display images */}
                   {images.length > 0 && (
                     <div className="mb-3">
-                      <div className="text-xs text-text-muted mb-2 font-medium">
-                        Image{images.length > 1 ? 's' : ''} ({images.length}):
-                      </div>
                       <div className={clsx(
                         "gap-3",
                         images.length === 1 ? "flex justify-start" : "grid grid-cols-2 max-w-md"
