@@ -32,7 +32,9 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
     isStreaming,
     streamingMessageId,
     toolExecutions,
-    streamingContent
+    streamingContent,
+    streamingReasoning,
+    reasoningStartTime
   } = useMessages(conversationId);
   
   const { updateConversation } = useConversations();
@@ -113,6 +115,8 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
         isLoadingConversation={loading && messages.length === 0}
         toolExecutions={toolExecutions}
         streamingContent={streamingContent}
+        streamingReasoning={streamingReasoning}
+        reasoningStartTime={reasoningStartTime}
       />
 
       {/* Message Input */}

@@ -162,6 +162,13 @@ class StreamingService:
                             # Tool result event - pass through  
                             yield self._format_sse_event('tool_result', chunk_data.get('data', {}))
                             
+                        elif chunk_data.get('type') == 'reasoning':
+                            # Reasoning/thinking tokens - pass through
+                            yield self._format_sse_event('reasoning', {
+                                'chunk': chunk_data.get('data', ''),
+                                'content_type': 'reasoning'
+                            })
+                            
                 except (json.JSONDecodeError, KeyError):
                     # Fallback: treat as plain text (regular streaming)
                     ai_response_content += chunk

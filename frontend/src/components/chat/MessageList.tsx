@@ -17,6 +17,8 @@ interface MessageListProps {
   isLoadingConversation?: boolean;
   toolExecutions?: ToolCall[];
   streamingContent?: string;
+  streamingReasoning?: string;
+  reasoningStartTime?: number | null;
 }
 
 export function MessageList({ 
@@ -25,7 +27,9 @@ export function MessageList({
   isLoading = false,
   isLoadingConversation = false,
   toolExecutions,
-  streamingContent
+  streamingContent,
+  streamingReasoning,
+  reasoningStartTime
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -100,6 +104,8 @@ export function MessageList({
             message={message}
             isStreaming={streamingMessageId === message.id}
             streamingContent={streamingMessageId === message.id ? streamingContent : undefined}
+            streamingReasoning={streamingMessageId === message.id ? streamingReasoning : undefined}
+            reasoningStartTime={reasoningStartTime}
           />
         ))}
 

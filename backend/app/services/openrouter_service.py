@@ -208,6 +208,11 @@ class OpenRouterService:
                     # Send progress update for tool calls
                     yield f"data: {json.dumps({'type': 'tool_call_progress', 'data': {'accumulated_calls': len(accumulated_tool_calls)}})}\n\n"
                 
+                # Handle reasoning tokens (thinking)
+                elif "reasoning" in delta and delta["reasoning"]:
+                    # Stream reasoning content as it comes
+                    yield f"data: {json.dumps({'type': 'reasoning', 'data': delta['reasoning']})}\n\n"
+                
                 # Handle regular content (both tool and non-tool modes)
                 elif "content" in delta and delta["content"]:
                     # Always return JSON format for consistency
@@ -306,6 +311,10 @@ class OpenRouterService:
                                                 accumulated_tool_calls[index]["function"]["name"] += tool_call_delta["function"]["name"]
                                             if tool_call_delta["function"].get("arguments"):
                                                 accumulated_tool_calls[index]["function"]["arguments"] += tool_call_delta["function"]["arguments"]
+                                
+                                # Handle reasoning tokens in follow-up
+                                elif "reasoning" in follow_up_delta and follow_up_delta["reasoning"]:
+                                    yield f"data: {json.dumps({'type': 'reasoning', 'data': follow_up_delta['reasoning']})}\n\n"
                                 
                                 # Handle regular content from follow-up
                                 elif "content" in follow_up_delta and follow_up_delta["content"]:
