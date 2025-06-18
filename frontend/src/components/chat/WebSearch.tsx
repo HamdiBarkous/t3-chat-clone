@@ -102,6 +102,7 @@ export function WebSearch({ enabled, provider, onToggle, disabled = false }: Web
             return (
               <button
                 key={providerOption}
+                type="button"
                 onClick={() => handleProviderChange(providerOption)}
                 className={clsx(
                   'w-full flex items-center gap-3 px-4 py-3 text-left transition-all duration-200',
@@ -181,6 +182,7 @@ export function WebSearch({ enabled, provider, onToggle, disabled = false }: Web
       {/* Provider Config - Simple inline toggle */}
       {enabled && (
         <button
+          type="button"
           onClick={() => setIsConfigOpen(!isConfigOpen)}
           className="ml-1 p-1.5 text-text-muted/60 hover:text-text-primary transition-all duration-200 rounded-md hover:bg-white/10 backdrop-blur-sm"
           title="Switch search provider"

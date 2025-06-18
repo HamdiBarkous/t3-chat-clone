@@ -188,6 +188,7 @@ export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = fa
             return (
               <button
                 key={toolId}
+                type="button"
                 onClick={() => handleToolToggle(toolId)}
                 disabled={disabled}
                 className={clsx(

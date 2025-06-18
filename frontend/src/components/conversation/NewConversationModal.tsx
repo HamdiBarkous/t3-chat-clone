@@ -25,10 +25,10 @@ interface ConversationFormData {
 
 // Mock available models - will be replaced with API call
 const availableModels = [
-  { id: 'openai/gpt-4o', name: 'GPT-4o', description: 'Most capable model' },
-  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', description: 'Fast and cost-effective' },
-  { id: 'anthropic/claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', description: 'Excellent reasoning' },
-  { id: 'anthropic/claude-3-haiku-20240307', name: 'Claude 3 Haiku', description: 'Fast responses' },
+  { id: 'openai/gpt-4o', name: 'GPT-4o', contextLength: '128K' },
+  { id: 'openai/gpt-4o-mini', name: 'GPT-4o Mini', contextLength: '128K' },
+  { id: 'anthropic/claude-3-5-sonnet-20241022', name: 'Claude 3.5 Sonnet', contextLength: '200K' },
+  { id: 'anthropic/claude-3-haiku-20240307', name: 'Claude 3 Haiku', contextLength: '200K' },
 ];
 
 export function NewConversationModal({
@@ -87,7 +87,7 @@ export function NewConversationModal({
                 }`}
               >
                 <div className="font-medium text-text-primary text-sm">{model.name}</div>
-                <div className="text-text-muted text-xs mt-1">{model.description}</div>
+                <div className="text-text-muted text-xs mt-1">{model.contextLength} context</div>
               </button>
             ))}
           </div>

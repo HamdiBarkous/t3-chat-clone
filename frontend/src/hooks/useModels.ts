@@ -4,7 +4,6 @@ import { apiClient, ApiError } from '@/lib/api'
 export interface AIModel {
   id: string
   name: string
-  description?: string
   context_length?: number
   pricing?: {
     prompt: number

@@ -19,17 +19,35 @@ class OpenRouterService:
         """Get available models from OpenRouter"""
         models = await openrouter_client.get_available_models()
         
+        # Define allowed models
+        allowed_models = {
+            "google/gemini-2.5-flash-lite-preview-06-17",
+            "google/gemini-2.5-flash",
+            "google/gemini-2.5-pro",
+            "anthropic/claude-sonnet-4",
+            "anthropic/claude-3.5-haiku",
+            "openai/o4-mini",
+            "openai/gpt-4.1",
+            "openai/gpt-4.1-mini",
+            "openai/gpt-4.1-nano",
+            "openai/gpt-4o",
+            "openai/gpt-4o-mini",
+            "deepseek/deepseek-r1-0528",
+            "deepseek/deepseek-chat-v3-0324"
+        }
+        
         # Filter and format models for easier frontend consumption
         formatted_models = []
         for model in models:
-            formatted_models.append({
-                "id": model.get("id"),
-                "name": model.get("name", model.get("id")),
-                "description": model.get("description", ""),
-                "context_length": model.get("context_length", 0),
-                "pricing": model.get("pricing", {}),
-                "top_provider": model.get("top_provider", {}),
-            })
+            model_id = model.get("id")
+            if model_id in allowed_models:
+                formatted_models.append({
+                    "id": model_id,
+                    "name": model.get("name", model_id),
+                    "context_length": model.get("context_length", 0),
+                    "pricing": model.get("pricing", {}),
+                    "top_provider": model.get("top_provider", {}),
+                })
         
         return formatted_models
 

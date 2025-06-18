@@ -51,17 +51,17 @@ export function MessageInput({
     if (modelsLoading || models.length === 0) {
       // Fallback models while loading
       return [
-        { value: 'openai/gpt-4o', label: 'GPT-4o', description: 'Most capable model' },
-        { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', description: 'Fast and cost-effective' },
-        { value: 'anthropic/claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', description: 'Excellent reasoning' },
-        { value: 'anthropic/claude-3-haiku-20240307', label: 'Claude 3 Haiku', description: 'Fast responses' },
+        { value: 'openai/gpt-4o', label: 'GPT-4o', info: '128K context' },
+        { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', info: '128K context' },
+        { value: 'anthropic/claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', info: '200K context' },
+        { value: 'anthropic/claude-3-haiku-20240307', label: 'Claude 3 Haiku', info: '200K context' },
       ];
     }
     
     return models.map(model => ({
       value: model.id,
       label: model.name,
-      description: model.description || 'AI model'
+      info: model.context_length ? `${(model.context_length / 1000).toFixed(0)}K context` : undefined
     }));
   }, [models, modelsLoading]);
 
@@ -333,6 +333,7 @@ export function MessageInput({
                 onChange={handleModelChange}
                 disabled={disabled}
                 className="w-48"
+                direction="up"
               />
               <WebSearch
                 enabled={searchEnabled}
