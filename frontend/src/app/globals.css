@@ -89,6 +89,27 @@
   --ease-in: cubic-bezier(0.4, 0, 1, 1);
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
   --ease-bounce: cubic-bezier(0.68, -0.55, 0.265, 1.55);
+  --ease-elastic: cubic-bezier(0.175, 0.885, 0.32, 1.275);
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  
+  /* Glass morphism effects */
+  --glass-bg: rgba(31, 27, 46, 0.8);
+  --glass-border: rgba(124, 58, 237, 0.2);
+  --glass-blur: 16px;
+  
+  /* Advanced gradients */
+  --gradient-primary: linear-gradient(135deg, var(--purple-accent) 0%, var(--purple-light) 50%, var(--accent) 100%);
+  --gradient-secondary: linear-gradient(45deg, var(--purple-dark), var(--purple-accent));
+  --gradient-mesh: radial-gradient(ellipse at top, rgba(124, 58, 237, 0.1), transparent),
+                   radial-gradient(ellipse at bottom right, rgba(6, 182, 212, 0.05), transparent);
+                   
+  /* Noise texture for premium feel */
+  --noise-texture: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='1' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.02'/%3E%3C/svg%3E");
+  
+  /* Advanced transforms */
+  --transform-hover: translateY(-2px) scale(1.02);
+  --transform-active: translateY(0) scale(0.98);
+  --transform-float: translateY(-4px);
 }
 
 @theme inline {
@@ -140,9 +161,12 @@
   }
 }
 
-/* Enhanced body with better typography */
+/* Ultra-enhanced body with premium feel */
 body {
-  background: linear-gradient(180deg, var(--background-start) 0%, var(--background-end) 100%);
+  background: 
+    var(--noise-texture),
+    var(--gradient-mesh),
+    linear-gradient(180deg, var(--background-start) 0%, var(--background-end) 100%);
   background-attachment: fixed;
   color: var(--text-primary);
   font-family: var(--font-sans), -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
@@ -151,6 +175,8 @@ body {
   text-rendering: optimizeLegibility;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  font-feature-settings: "liga" 1, "kern" 1;
+  font-optical-sizing: auto;
 }
 
 /* Enhanced utility classes */
@@ -397,6 +423,77 @@ body {
   }
 }
 
+@keyframes magnetic-hover {
+  0% { transform: translateY(0) scale(1); }
+  50% { transform: translateY(-1px) scale(1.005); }
+  100% { transform: translateY(-2px) scale(1.01); }
+}
+
+@keyframes breathe {
+  0%, 100% { 
+    transform: scale(1);
+    filter: brightness(1);
+  }
+  50% { 
+    transform: scale(1.02);
+    filter: brightness(1.1);
+  }
+}
+
+@keyframes liquid-morph {
+  0%, 100% { border-radius: var(--radius); }
+  25% { border-radius: calc(var(--radius) * 1.5) calc(var(--radius) * 0.8) calc(var(--radius) * 1.2) calc(var(--radius) * 0.9); }
+  50% { border-radius: calc(var(--radius) * 0.8) calc(var(--radius) * 1.3) calc(var(--radius) * 0.9) calc(var(--radius) * 1.4); }
+  75% { border-radius: calc(var(--radius) * 1.2) calc(var(--radius) * 0.9) calc(var(--radius) * 1.5) calc(var(--radius) * 0.7); }
+}
+
+@keyframes aurora-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+    filter: hue-rotate(0deg);
+  }
+  25% {
+    background-position: 100% 50%;
+    filter: hue-rotate(90deg);
+  }
+  50% {
+    background-position: 100% 100%;
+    filter: hue-rotate(180deg);
+  }
+  75% {
+    background-position: 0% 100%;
+    filter: hue-rotate(270deg);
+  }
+}
+
+@keyframes text-reveal {
+  0% {
+    clip-path: inset(0 100% 0 0);
+  }
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+
+@keyframes particle-float {
+  0%, 100% {
+    transform: translateY(0) translateX(0) rotate(0deg);
+    opacity: 0.3;
+  }
+  25% {
+    transform: translateY(-10px) translateX(5px) rotate(90deg);
+    opacity: 0.7;
+  }
+  50% {
+    transform: translateY(-20px) translateX(0) rotate(180deg);
+    opacity: 1;
+  }
+  75% {
+    transform: translateY(-10px) translateX(-5px) rotate(270deg);
+    opacity: 0.7;
+  }
+}
+
 @keyframes scroll-text-fast {
   0% {
     transform: translateX(0);
@@ -458,15 +555,46 @@ body {
   animation: scroll-text-fast 6s ease-in-out infinite;
 }
 
-/* Enhanced conversation card with sophisticated effects */
+.animate-magnetic-hover {
+  animation: magnetic-hover 0.6s var(--ease-elastic) both;
+}
+
+.animate-breathe {
+  animation: breathe 4s ease-in-out infinite;
+}
+
+.animate-liquid-morph {
+  animation: liquid-morph 8s ease-in-out infinite;
+}
+
+.animate-aurora {
+  background: var(--gradient-primary);
+  background-size: 400% 400%;
+  animation: aurora-shift 6s ease-in-out infinite;
+}
+
+.animate-text-reveal {
+  animation: text-reveal 0.8s var(--ease-out) both;
+}
+
+.animate-particle-float {
+  animation: particle-float 3s ease-in-out infinite;
+}
+
+/* Performance-optimized conversation card */
 .conversation-card {
-  transition: all var(--duration-normal) var(--ease-out);
+  transition: transform var(--duration-normal) var(--ease-out),
+              box-shadow var(--duration-normal) var(--ease-out),
+              border-color var(--duration-normal) var(--ease-out);
   transform-origin: center;
   position: relative;
   overflow: hidden;
   border-radius: var(--radius);
   backdrop-filter: blur(8px);
-  border: 1px solid var(--border);
+  border: 1px solid var(--glass-border);
+  background: var(--glass-bg);
+  box-shadow: var(--shadow-sm);
+  isolation: isolate;
 }
 
 .conversation-card::before {
@@ -482,7 +610,7 @@ body {
     rgba(124, 58, 237, 0.08),
     transparent
   );
-  transition: left 0.8s var(--ease-out);
+  transition: left 0.6s var(--ease-out);
   pointer-events: none;
 }
 
@@ -501,7 +629,7 @@ body {
   mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
   mask-composite: xor;
   opacity: 0;
-  transition: opacity var(--duration-normal) var(--ease-out);
+  transition: opacity var(--duration-fast) var(--ease-out);
   pointer-events: none;
 }
 
@@ -514,9 +642,9 @@ body {
 }
 
 .conversation-card:hover {
-  transform: translateY(-3px) scale(1.01);
+  transform: var(--transform-hover);
   box-shadow: var(--shadow-lg), var(--purple-glow-subtle);
-  border-color: rgba(124, 58, 237, 0.3);
+  border-color: rgba(124, 58, 237, 0.4);
 }
 
 .conversation-card.selected {
@@ -807,17 +935,419 @@ body {
   border-radius: var(--radius);
 }
 
+/* Advanced glass morphism utilities */
+.glass-card {
+  background: var(--glass-bg);
+  backdrop-filter: blur(var(--glass-blur));
+  border: 1px solid var(--glass-border);
+  border-radius: var(--radius);
+  box-shadow: 
+    var(--shadow-md),
+    inset 0 1px 0 rgba(255, 255, 255, 0.1);
+}
+
+.glass-button {
+  background: rgba(124, 58, 237, 0.1);
+  backdrop-filter: blur(8px);
+  border: 1px solid rgba(124, 58, 237, 0.2);
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.glass-button:hover {
+  background: rgba(124, 58, 237, 0.2);
+  border-color: rgba(124, 58, 237, 0.4);
+  transform: var(--transform-hover);
+  box-shadow: var(--purple-glow);
+}
+
+/* Advanced hover effects */
+.hover-lift {
+  transition: all var(--duration-normal) var(--ease-out);
+}
+
+.hover-lift:hover {
+  transform: var(--transform-hover);
+  box-shadow: var(--shadow-lg);
+}
+
+.hover-glow:hover {
+  box-shadow: var(--purple-glow-strong);
+  filter: brightness(1.1);
+}
+
+.hover-scale:hover {
+  transform: scale(1.05);
+}
+
+.hover-float:hover {
+  transform: var(--transform-float);
+  transition: transform var(--duration-slow) var(--ease-elastic);
+}
+
+/* Micro-interaction utilities */
+.micro-bounce {
+  transition: transform var(--duration-fast) var(--ease-bounce);
+}
+
+.micro-bounce:active {
+  transform: var(--transform-active);
+}
+
+.ripple-effect {
+  position: relative;
+  overflow: hidden;
+}
+
+.ripple-effect::before {
+  content: '';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 0;
+  height: 0;
+  border-radius: 50%;
+  background: rgba(124, 58, 237, 0.3);
+  transform: translate(-50%, -50%);
+  transition: width 0.6s, height 0.6s;
+}
+
+.ripple-effect:active::before {
+  width: 300px;
+  height: 300px;
+}
+
+/* Premium text effects */
+.text-premium {
+  background: var(--gradient-primary);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.text-shimmer {
+  background: linear-gradient(
+    110deg,
+    var(--text-primary) 45%,
+    var(--purple-light) 50%,
+    var(--text-primary) 55%
+  );
+  background-size: 200% 100%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: shimmer 2s ease-in-out infinite;
+}
+
+.text-liquid {
+  background: var(--gradient-primary);
+  background-size: 400% 400%;
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: aurora-shift 6s ease-in-out infinite;
+}
+
+/* Advanced layout utilities */
+.grid-premium {
+  display: grid;
+  gap: var(--space-lg);
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+}
+
+.flex-premium {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-md);
+}
+
+.stack-premium {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Sophisticated borders */
+.border-gradient {
+  position: relative;
+  border-radius: var(--radius);
+  background: var(--glass-bg);
+  padding: 2px;
+}
+
+.border-gradient::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  border-radius: inherit;
+  padding: 1px;
+  background: var(--gradient-primary);
+  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
+  mask-composite: xor;
+}
+
+.border-animated {
+  position: relative;
+  overflow: hidden;
+}
+
+.border-animated::before {
+  content: '';
+  position: absolute;
+  inset: -2px;
+  background: conic-gradient(
+    from 0deg,
+    transparent,
+    var(--purple-accent),
+    transparent,
+    var(--accent),
+    transparent
+  );
+  border-radius: inherit;
+  animation: spin 3s linear infinite;
+  opacity: 0.8;
+}
+
+.border-animated::after {
+  content: '';
+  position: absolute;
+  inset: 2px;
+  background: var(--background-start);
+  border-radius: calc(var(--radius) - 2px);
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Premium scrollbars */
+.scrollbar-premium::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+.scrollbar-premium::-webkit-scrollbar-track {
+  background: rgba(124, 58, 237, 0.05);
+  border-radius: 4px;
+}
+
+.scrollbar-premium::-webkit-scrollbar-thumb {
+  background: var(--gradient-secondary);
+  border-radius: 4px;
+  border: 1px solid rgba(124, 58, 237, 0.2);
+}
+
+.scrollbar-premium::-webkit-scrollbar-thumb:hover {
+  background: var(--gradient-primary);
+  box-shadow: var(--purple-glow-subtle);
+}
+
+/* Scroll performance optimizations */
+.scroll-container {
+  scroll-behavior: smooth;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+}
+
+/* Reduce motion during scroll */
+@media (hover: hover) {
+  .conversation-list {
+    scroll-snap-type: y proximity;
+  }
+  
+.conversation-card {
+    scroll-snap-align: start;
+  }
+}
+
+/* Disable expensive effects during scroll */
+.scrolling .conversation-card {
+  transition: none !important;
+  animation: none !important;
+}
+
+.scrolling .conversation-card::before,
+.scrolling .conversation-card::after {
+  transition: none !important;
+  animation: none !important;
+}
+
+.scrolling .animate-float,
+.scrolling .animate-breathe,
+.scrolling .animate-shimmer,
+.scrolling .animate-liquid-morph {
+  animation-play-state: paused !important;
+}
+
+/* Smooth scrolling utilities */
+.smooth-scroll {
+  scroll-behavior: smooth;
+}
+
+/* Optimized animations that don't affect layout */
+.animate-fade-only {
+  animation: fade-in-scale 0.3s var(--ease-out) both;
+}
+
+.animate-transform-only {
+  animation: slide-in-up-stagger 0.4s var(--ease-out) both;
+}
+
+/* Basic viewport optimizations */
+.viewport-optimized {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 60px;
+}
+
+/* Reduced complexity for mobile */
+@media (max-width: 768px) {
+  .conversation-card {
+    backdrop-filter: none;
+    background: var(--card);
+  }
+  
+  .conversation-card::before,
+  .conversation-card::after {
+    display: none;
+  }
+  
+  .animate-float,
+  .animate-breathe,
+  .animate-liquid-morph {
+    animation: none;
+  }
+  }
+  
+/* Performance mode for low-end devices */
+@media (max-width: 480px), (prefers-reduced-motion: reduce) {
+  .conversation-card {
+    transition: transform 0.2s ease;
+    backdrop-filter: none;
+    box-shadow: none;
+  }
+  
+  .conversation-card:hover {
+    transform: translateY(-1px);
+    box-shadow: var(--shadow-sm);
+  }
+  
+  .glass-card,
+  .glass-button {
+    backdrop-filter: none;
+  }
+  
+  .animate-shimmer,
+  .animate-aurora,
+  .border-animated,
+  .text-shimmer,
+  .text-liquid {
+    animation: none;
+    background: var(--purple-accent);
+  }
+}
+
 /* Print styles */
 @media print {
   .conversation-card {
     break-inside: avoid;
     box-shadow: none;
     border: 1px solid #ccc;
+    backdrop-filter: none;
   }
   
   .animate-pulse-gentle,
   .animate-float,
-  .animate-shimmer {
+  .animate-shimmer,
+  .animate-breathe,
+  .animate-liquid-morph,
+  .animate-aurora {
     animation: none;
   }
+  
+  .glass-card,
+  .glass-button {
+    backdrop-filter: none;
+    background: #f5f5f5;
+  }
+}
+
+/* 
+ * SCROLL PERFORMANCE OPTIMIZATION GUIDE
+ * =====================================
+ * 
+ * To implement smooth scrolling in your components:
+ * 
+ * 1. Add these classes to your scroll containers:
+ *    - .scroll-container (basic scroll optimizations)
+ *    - .smooth-scroll (smooth scrolling behavior)
+ * 
+ * 2. Add this JavaScript to detect scrolling:
+ * 
+ *    let scrollTimer;
+ *    const scrollContainer = document.querySelector('.conversation-list');
+ *    
+ *    scrollContainer.addEventListener('scroll', () => {
+ *      document.body.classList.add('scrolling');
+ *      clearTimeout(scrollTimer);
+ *      scrollTimer = setTimeout(() => {
+ *        document.body.classList.remove('scrolling');
+ *      }, 150);
+ *    });
+ * 
+ * 3. Use .conversation-card on conversation items for optimized performance
+ * 
+ * 4. For best performance, implement virtual scrolling for large lists
+ */
+
+/* Additional performance utilities */
+.no-select {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+.pointer-events-none {
+  pointer-events: none;
+}
+
+.isolate {
+  isolation: isolate;
+}
+
+/* Basic performance helpers */
+.performance-optimized {
+  isolation: isolate;
+}
+
+/* Optimized transitions for performance */
+.transition-transform {
+  transition: transform var(--duration-normal) var(--ease-out);
+}
+
+.transition-opacity {
+  transition: opacity var(--duration-fast) var(--ease-out);
+}
+
+.transition-colors {
+  transition: color var(--duration-fast) var(--ease-out),
+              background-color var(--duration-fast) var(--ease-out),
+              border-color var(--duration-fast) var(--ease-out);
+}
+
+/* Reduced motion performance mode */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* Memory optimization for large lists */
+.list-optimized {
+  content-visibility: auto;
+  contain-intrinsic-size: 0 var(--item-height, 60px);
 }
