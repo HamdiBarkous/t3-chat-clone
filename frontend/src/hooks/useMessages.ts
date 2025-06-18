@@ -32,7 +32,7 @@ interface UseMessagesReturn {
   messages: Message[]
   loading: boolean
   error: string | null
-  sendMessage: (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[]) => Promise<void>
+  sendMessage: (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[], reasoning?: any) => Promise<void>
   generateAIResponse: (model?: string) => Promise<void>
   loadMessages: () => Promise<void>
   isStreaming: boolean
@@ -102,7 +102,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     }
   }, [conversationId])
 
-  const sendMessage = useCallback(async (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[]) => {
+  const sendMessage = useCallback(async (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[], reasoning?: any) => {
     if (!conversationId || isStreaming) return
 
     try {
@@ -373,7 +373,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       }
 
       // Start streaming for AI response only (user message already created)
-      await streamingService.startStreamWithExistingMessage(conversationId, content, model, userMessageId || undefined, streamCallbacks, useTools, enabledTools)
+      await streamingService.startStreamWithExistingMessage(conversationId, content, model, userMessageId || undefined, streamCallbacks, useTools, enabledTools, reasoning)
 
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : 'Failed to send message'
