@@ -4,6 +4,7 @@ import React, { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/Button';
 import { clsx } from 'clsx';
 import { ClientsResponse } from '@/types/api';
+import { getApiBaseUrl } from '@/lib/api';
 
 interface ToolToggleProps {
   enabled: boolean;
@@ -22,7 +23,7 @@ export function ToolToggle({ enabled, enabledTools, onToggle, disabled = false }
     const fetchClients = async () => {
       try {
         setLoading(true);
-        const response = await fetch('http://localhost:8000/api/v1/tools/clients');
+        const response = await fetch(`${getApiBaseUrl()}/tools/clients`);
         if (response.ok) {
           const data: ClientsResponse = await response.json();
           setAvailableClients(data.clients);

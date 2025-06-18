@@ -7,7 +7,7 @@
 
 import React, { useCallback, useState } from 'react';
 import { clsx } from 'clsx';
-import { supabase } from '@/lib/api';
+import { supabase, getApiBaseUrlWithoutVersion } from '@/lib/api';
 
 interface FileUploadProps {
   onFileSelect: (files: File[]) => void;
@@ -182,7 +182,7 @@ export function useFileUpload() {
         const formData = new FormData();
         formData.append('file', file);
 
-        const response = await fetch(`http://localhost:8000/api/v1/messages/${messageId}/documents`, {
+        const response = await fetch(`${getApiBaseUrlWithoutVersion()}/api/v1/messages/${messageId}/documents`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,

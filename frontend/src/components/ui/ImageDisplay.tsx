@@ -49,8 +49,11 @@ export function ImageDisplay({ document, size = 'md', className }: ImageDisplayP
           throw new Error('No authentication token');
         }
 
+        // Get API base URL
+        const { getApiBaseUrlWithoutVersion } = await import('@/lib/api');
+        
         const response = await fetch(
-          `http://localhost:8000/api/v1/messages/${document.message_id}/documents/${document.id}/image`,
+          `${getApiBaseUrlWithoutVersion()}/api/v1/messages/${document.message_id}/documents/${document.id}/image`,
           {
             headers: {
               'Authorization': `Bearer ${token}`,
