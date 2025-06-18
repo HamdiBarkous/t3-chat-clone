@@ -5,13 +5,14 @@
 
 'use client';
 
+import React, { useState } from 'react';
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ChatLayout } from '@/components/chat/ChatLayout';
 import { EmptyState } from '@/components/chat/EmptyState';
 import { CustomizationSidebar } from '@/components/chat/CustomizationSidebar';
 import { MessageInput } from '@/components/chat/MessageInput';
 import { useConversations } from '@/contexts/ConversationsContext';
-import { useState } from 'react';
+import { useSupabaseMCP } from '@/hooks/useProfile';
 import { useRouter } from 'next/navigation';
 
 function HomePage() {
@@ -24,10 +25,26 @@ function HomePage() {
   const [topP, setTopP] = useState(1);
   const [isApplying, setIsApplying] = useState(false);
   
+  // Supabase MCP state
+  const { config: supabaseMCPConfig, updateConfig: updateSupabaseMCPConfig } = useSupabaseMCP();
+  const [supabaseAccessToken, setSupabaseAccessToken] = useState('');
+  const [supabaseProjectRef, setSupabaseProjectRef] = useState('');
+  const [supabaseReadOnly, setSupabaseReadOnly] = useState(true);
+  
+  // Update local state when config changes
+  React.useEffect(() => {
+    setSupabaseAccessToken(supabaseMCPConfig.supabase_access_token);
+    setSupabaseProjectRef(supabaseMCPConfig.supabase_project_ref);
+    setSupabaseReadOnly(supabaseMCPConfig.supabase_read_only);
+  }, [supabaseMCPConfig]);
+  
   // For home page, original values are always defaults since there's no existing conversation
   const originalSystemPrompt = '';
   const originalTemperature = 1;
   const originalTopP = 1;
+  const originalSupabaseAccessToken = supabaseMCPConfig.supabase_access_token;
+  const originalSupabaseProjectRef = supabaseMCPConfig.supabase_project_ref;
+  const originalSupabaseReadOnly = supabaseMCPConfig.supabase_read_only;
   
   // Message input state
   const [currentModel, setCurrentModel] = useState('openai/gpt-4o');
@@ -102,9 +119,21 @@ function HomePage() {
   };
 
   // Function to apply customization settings (for new conversations)
-  const handleApplyCustomization = () => {
-    // For the home page, changes are applied when creating a new conversation
-    console.log('Customization settings will be applied to new conversations');
+  const handleApplyCustomization = async () => {
+    setIsApplying(true);
+    try {
+      // Save Supabase MCP configuration
+      await updateSupabaseMCPConfig({
+        supabase_access_token: supabaseAccessToken,
+        supabase_project_ref: supabaseProjectRef,
+        supabase_read_only: supabaseReadOnly
+      });
+      console.log('Customization settings will be applied to new conversations');
+    } catch (error) {
+      console.error('Failed to save customization settings:', error);
+    } finally {
+      setIsApplying(false);
+    }
   };
 
   // Function to reset customization to defaults
@@ -112,6 +141,9 @@ function HomePage() {
     setSystemPrompt('');
     setTemperature(1);
     setTopP(1);
+    setSupabaseAccessToken('');
+    setSupabaseProjectRef('');
+    setSupabaseReadOnly(true);
   };
 
   // Show loading state while conversations are loading
@@ -151,6 +183,7 @@ function HomePage() {
           onSendMessage={handleSendMessage}
           currentModel={currentModel}
           onModelChange={setCurrentModel}
+          onShowCustomization={handleCustomizationToggle}
           disabled={false}
         />
       </div>
@@ -171,6 +204,15 @@ function HomePage() {
         originalTemperature={originalTemperature}
         originalTopP={originalTopP}
         isApplying={isApplying}
+        supabaseAccessToken={supabaseAccessToken}
+        supabaseProjectRef={supabaseProjectRef}
+        supabaseReadOnly={supabaseReadOnly}
+        onSupabaseAccessTokenChange={setSupabaseAccessToken}
+        onSupabaseProjectRefChange={setSupabaseProjectRef}
+        onSupabaseReadOnlyChange={setSupabaseReadOnly}
+        originalSupabaseAccessToken={originalSupabaseAccessToken}
+        originalSupabaseProjectRef={originalSupabaseProjectRef}
+        originalSupabaseReadOnly={originalSupabaseReadOnly}
       />
     </ChatLayout>
   );

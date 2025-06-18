@@ -6,6 +6,10 @@ from datetime import datetime
 class ProfileBase(BaseModel):
     name: Optional[str] = None
     preferred_model: Optional[str] = None
+    # Supabase MCP Configuration
+    supabase_access_token: Optional[str] = None
+    supabase_project_ref: Optional[str] = None
+    supabase_read_only: Optional[bool] = True
 
 
 class ProfileCreate(ProfileBase):

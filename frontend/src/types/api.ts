@@ -118,6 +118,10 @@ export interface ProfileResponse {
   email: string;
   name: string;
   preferred_model?: string;
+  // Supabase MCP Configuration
+  supabase_access_token?: string;
+  supabase_project_ref?: string;
+  supabase_read_only?: boolean;
   created_at: string;
   updated_at: string;
 }
@@ -125,6 +129,10 @@ export interface ProfileResponse {
 export interface ProfileUpdate {
   name?: string;
   preferred_model?: string;
+  // Supabase MCP Configuration
+  supabase_access_token?: string;
+  supabase_project_ref?: string;
+  supabase_read_only?: boolean;
 }
 
 // Model types

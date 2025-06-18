@@ -1,7 +1,7 @@
 'use client';
 
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, Eye, EyeOff, Database, Shield } from 'lucide-react';
 import clsx from 'clsx';
 
 interface CustomizationSidebarProps {
@@ -20,6 +20,16 @@ interface CustomizationSidebarProps {
   originalTemperature: number;
   originalTopP: number;
   isApplying?: boolean;
+  // Supabase MCP props
+  supabaseAccessToken: string;
+  supabaseProjectRef: string;
+  supabaseReadOnly: boolean;
+  onSupabaseAccessTokenChange: (token: string) => void;
+  onSupabaseProjectRefChange: (ref: string) => void;
+  onSupabaseReadOnlyChange: (readOnly: boolean) => void;
+  originalSupabaseAccessToken: string;
+  originalSupabaseProjectRef: string;
+  originalSupabaseReadOnly: boolean;
 }
 
 export const CustomizationSidebar: React.FC<CustomizationSidebarProps> = ({
@@ -37,14 +47,29 @@ export const CustomizationSidebar: React.FC<CustomizationSidebarProps> = ({
   originalTemperature,
   originalTopP,
   isApplying = false,
+  supabaseAccessToken,
+  supabaseProjectRef,
+  supabaseReadOnly,
+  onSupabaseAccessTokenChange,
+  onSupabaseProjectRefChange,
+  onSupabaseReadOnlyChange,
+  originalSupabaseAccessToken,
+  originalSupabaseProjectRef,
+  originalSupabaseReadOnly,
 }) => {
+  const [showToken, setShowToken] = useState(false);
+
   // Check if there are any changes
   const hasChanges = 
     systemPrompt !== originalSystemPrompt ||
     temperature !== originalTemperature ||
-    topP !== originalTopP;
+    topP !== originalTopP ||
+    supabaseAccessToken !== originalSupabaseAccessToken ||
+    supabaseProjectRef !== originalSupabaseProjectRef ||
+    supabaseReadOnly !== originalSupabaseReadOnly;
 
   const isApplyDisabled = !hasChanges || isApplying;
+  
   return (
     <>
       {/* Backdrop */}
@@ -199,6 +224,95 @@ export const CustomizationSidebar: React.FC<CustomizationSidebarProps> = ({
               <p className="text-xs text-text-muted/70">
                 Controls the diversity of word choices. Lower values for more predictable responses.
               </p>
+            </div>
+
+            {/* Supabase MCP Integration */}
+            <div className="space-y-4 border-t border-border/30 pt-6">
+              <div className="flex items-center gap-2">
+                <Database className="w-4 h-4 text-primary" />
+                <label className="text-sm font-medium text-text-primary">Supabase MCP Integration</label>
+              </div>
+              
+              <div className="bg-muted/20 border border-border/30 rounded-lg p-3">
+                <div className="flex items-start gap-2">
+                  <Database className="w-4 h-4 text-blue-400 mt-0.5 flex-shrink-0" />
+                  <div className="flex-1">
+                    <p className="text-xs text-text-muted">
+                      Configure your Supabase credentials to enable database operations through the Model Context Protocol.
+                    </p>
+                  </div>
+                </div>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <label className="block text-xs font-medium text-text-primary mb-2">
+                    Access Token
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showToken ? "text" : "password"}
+                      value={supabaseAccessToken}
+                      onChange={(e) => onSupabaseAccessTokenChange(e.target.value)}
+                      placeholder="sbp_xxxxxxxxxxxxxxxxxx"
+                      className="w-full px-3 py-2 pr-10 bg-input/50 border border-border/50 rounded-lg text-text-primary placeholder-text-muted/60 text-xs focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all duration-200"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowToken(!showToken)}
+                      className="absolute right-2 top-1/2 -translate-y-1/2 text-text-muted hover:text-text-primary transition-colors"
+                    >
+                      {showToken ? <EyeOff size={14} /> : <Eye size={14} />}
+                    </button>
+                  </div>
+                  <p className="text-xs text-text-muted/70 mt-1">
+                    Get from{' '}
+                    <a 
+                      href="https://supabase.com/dashboard/account/tokens" 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="text-primary hover:underline"
+                    >
+                      Supabase Dashboard
+                    </a>
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-medium text-text-primary mb-2">
+                    Project Reference (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={supabaseProjectRef}
+                    onChange={(e) => onSupabaseProjectRefChange(e.target.value)}
+                    placeholder="your-project-ref"
+                    className="w-full px-3 py-2 bg-input/50 border border-border/50 rounded-lg text-text-primary placeholder-text-muted/60 text-xs focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50 transition-all duration-200"
+                  />
+                  <p className="text-xs text-text-muted/70 mt-1">
+                    Leave empty to access all projects
+                  </p>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <input
+                    type="checkbox"
+                    id="supabase-read-only"
+                    checked={supabaseReadOnly}
+                    onChange={(e) => onSupabaseReadOnlyChange(e.target.checked)}
+                    className="rounded border-border text-primary focus:ring-primary/50"
+                  />
+                  <div className="flex items-center gap-2">
+                    <Shield className="w-3 h-3 text-text-muted" />
+                    <label htmlFor="supabase-read-only" className="text-xs font-medium text-text-primary cursor-pointer">
+                      Read-only mode
+                    </label>
+                  </div>
+                </div>
+                <p className="text-xs text-text-muted/70 ml-5">
+                  Restricts operations to read-only queries for safety
+                </p>
+              </div>
             </div>
           </div>
 
