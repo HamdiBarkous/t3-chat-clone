@@ -2,55 +2,55 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  /* Premium Midnight Amethyst Theme */
-  --background-start: #0a0612; /* Deep space black */
-  --background-end: #050308; /* Darker gradient end */
-  --foreground: #f8fafc; /* Crisp white */
+  /* Warm Midnight Theme - Less harsh, more inviting */
+  --background-start: #1a1625; /* Warmer dark purple */
+  --background-end: #0f0e18; /* Softer gradient end */
+  --foreground: #f1f5f9; /* Softer white */
   
-  --card: #1a1425; /* Rich dark purple card */
-  --card-foreground: #f8fafc;
+  --card: #252030; /* Warmer dark card */
+  --card-foreground: #f1f5f9;
   
-  --popover: #1a1425;
-  --popover-foreground: #f8fafc;
+  --popover: #252030;
+  --popover-foreground: #f1f5f9;
   
-  --primary: #9333ea; /* Vibrant amethyst purple */
+  --primary: #8b5cf6; /* Balanced purple */
   --primary-foreground: #ffffff;
   
-  --secondary: #1e1b26; /* Sophisticated dark purple */
+  --secondary: #2a2535; /* Warmer secondary */
   --secondary-foreground: #e2e8f0;
 
-  --muted: #2d2438; /* Muted purple-gray */
-  --muted-foreground: #94a3b8;
+  --muted: #3a3545; /* Warmer muted */
+  --muted-foreground: #a1a1aa;
   
-  --accent: #a855f7; /* Bright accent purple */
+  --accent: #a78bfa; /* Softer accent purple */
   --accent-foreground: #ffffff;
   
-  --destructive: #dc2626; /* Premium red */
+  --destructive: #ef4444; /* Warmer red */
   --destructive-foreground: #ffffff;
   
-  --border: rgba(147, 51, 234, 0.15); /* Subtle purple border */
-  --input: #1e1b26;
-  --ring: rgba(147, 51, 234, 0.6);
+  --border: rgba(139, 92, 246, 0.12); /* Subtle purple border */
+  --input: #2a2535;
+  --ring: rgba(139, 92, 246, 0.5);
   --radius: 0.75rem;
 
   /* Custom Properties */
-  --sidebar-bg: #0a0612;
-  --sidebar-item-hover: #1a1425;
+  --sidebar-bg: #1a1625;
+  --sidebar-item-hover: #252030;
   --chat-bg: transparent; 
-  --message-bg: #1e1b26; /* User message bubble */
+  --message-bg: #2a2535; /* User message bubble */
   
-  --purple-accent: #9333ea;
-  --purple-light: #c084fc;
+  --purple-accent: #8b5cf6;
+  --purple-light: #c4b5fd;
   --purple-dark: #7c3aed;
 
-  --text-primary: #f8fafc; /* Premium white */
+  --text-primary: #f1f5f9; /* Softer white */
   --text-secondary: #e2e8f0; /* Light gray */
-  --text-muted: #94a3b8; /* Sophisticated muted */
+  --text-muted: #a1a1aa; /* Warmer muted */
 
   /* FX */
-  --purple-glow: 0 8px 32px rgba(147, 51, 234, 0.15);
-  --code-bg: #050308; /* Ultra dark for code */
-  --green-accent: #10b981; /* Premium emerald green */
+  --purple-glow: 0 8px 32px rgba(139, 92, 246, 0.12);
+  --code-bg: #1e1b26; /* Less harsh code background */
+  --green-accent: #22c55e; /* Warmer green */
 }
 
 @theme inline {

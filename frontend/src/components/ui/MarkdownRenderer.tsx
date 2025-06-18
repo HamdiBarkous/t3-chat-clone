@@ -361,7 +361,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
             // Inline code
             return (
               <code 
-                className="font-mono text-accent" 
+                className="font-mono text-text-secondary bg-muted/30 px-1.5 py-0.5 rounded-md" 
                 {...props}
               >
                 {children}
@@ -371,7 +371,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // Headers
           h1: ({ children }) => (
-            <h1 className="text-2xl font-bold text-primary mb-4 mt-6 first:mt-0 border-b border-purple-500/30 pb-2">
+            <h1 className="text-2xl font-bold text-primary mb-4 mt-6 first:mt-0 border-b border-border pb-2">
               {children}
             </h1>
           ),
@@ -421,7 +421,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
               href={href} 
               target="_blank" 
               rel="noopener noreferrer"
-              className="text-purple-400 hover:text-purple-300 underline transition-colors"
+              className="text-primary hover:text-accent underline transition-colors"
             >
               {children}
             </a>
@@ -429,7 +429,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // Blockquotes
           blockquote: ({ children }) => (
-            <blockquote className="border-l-4 border-purple-500 pl-4 py-2 my-4 bg-purple-500/5 text-primary italic">
+            <blockquote className="border-l-4 border-primary pl-4 py-2 my-4 bg-primary/5 text-primary italic">
               {children}
             </blockquote>
           ),
@@ -437,23 +437,23 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           // Tables
           table: ({ children }) => (
             <div className="overflow-x-auto mb-4">
-              <table className="min-w-full border border-purple-500/20 rounded-lg">
+              <table className="min-w-full border border-border rounded-lg">
                 {children}
               </table>
             </div>
           ),
           thead: ({ children }) => (
-            <thead className="bg-purple-600/10">
+            <thead className="bg-muted/20">
               {children}
             </thead>
           ),
           th: ({ children }) => (
-            <th className="px-4 py-2 text-left text-primary font-semibold border-b border-purple-500/20">
+            <th className="px-4 py-2 text-left text-primary font-semibold border-b border-border">
               {children}
             </th>
           ),
           td: ({ children }) => (
-            <td className="px-4 py-2 text-primary border-b border-purple-500/20">
+            <td className="px-4 py-2 text-primary border-b border-border">
               {children}
             </td>
           ),
