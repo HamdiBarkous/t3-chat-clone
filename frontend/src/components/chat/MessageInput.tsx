@@ -7,14 +7,14 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
-import { Dropdown } from '@/components/ui/Dropdown';
+import { ModelSelector } from '@/components/ui/ModelSelector';
 import { FileUpload, useFileUpload } from '@/components/ui/FileUpload';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
 import { ImagePreview } from '@/components/ui/ImagePreview';
 import { useModels } from '@/hooks/useModels';
 import { MCPTools } from '@/components/chat/MCPTools';
 import { WebSearch } from '@/components/chat/WebSearch';
-import { ReasoningToggle } from '@/components/chat/ReasoningToggle';
+
 import { clsx } from 'clsx';
 
 interface MessageInputProps {
@@ -41,8 +41,8 @@ export function MessageInput({
   // Web search state (separate from other MCP tools)
   const [searchEnabled, setSearchEnabled] = useState(false);
   
-  // Reasoning state
-  const [reasoningEnabled, setReasoningEnabled] = useState(false);
+  // Reasoning state - track per model
+  const [reasoningByModel, setReasoningByModel] = useState<Record<string, boolean>>({});
   
   // File upload functionality
   const { uploadedFiles, addFiles, removeFile, clearFiles } = useFileUpload();
@@ -55,23 +55,29 @@ export function MessageInput({
     return models.find(model => model.id === currentModel);
   }, [models, currentModel]);
   
-  // Transform models for dropdown
+  // Prepare models for the enhanced selector
   const availableModels = useMemo(() => {
     if (modelsLoading || models.length === 0) {
       // Fallback models while loading
       return [
-        { value: 'openai/gpt-4o', label: 'GPT-4o', info: '128K context' },
-        { value: 'openai/gpt-4o-mini', label: 'GPT-4o Mini', info: '128K context' },
-        { value: 'anthropic/claude-3-5-sonnet-20241022', label: 'Claude 3.5 Sonnet', info: '200K context' },
-        { value: 'anthropic/claude-3-haiku-20240307', label: 'Claude 3 Haiku', info: '200K context' },
+        { 
+          id: 'openai/gpt-4o', 
+          name: 'GPT-4o', 
+          context_length: 128000,
+          reasoning_capable: false,
+          reasoning_by_default: false
+        },
+        { 
+          id: 'openai/gpt-4o-mini', 
+          name: 'GPT-4o Mini', 
+          context_length: 128000,
+          reasoning_capable: false,
+          reasoning_by_default: false
+        },
       ];
     }
     
-    return models.map(model => ({
-      value: model.id,
-      label: model.name,
-      info: model.context_length ? `${(model.context_length / 1000).toFixed(0)}K context` : undefined
-    }));
+    return models;
   }, [models, modelsLoading]);
 
   // Auto-resize textarea
@@ -105,7 +111,7 @@ export function MessageInput({
         message.trim(), 
         uploadedFiles, 
         allEnabledTools,
-        reasoningEnabled
+        reasoningByModel[currentModel] ?? false
       );
       setMessage('');
       clearFiles();
@@ -141,8 +147,8 @@ export function MessageInput({
     setSearchProvider(provider);
   };
 
-  const handleReasoningToggle = (enabled: boolean) => {
-    setReasoningEnabled(enabled);
+  const handleReasoningToggle = (model: string, enabled: boolean) => {
+    setReasoningByModel(prev => ({ ...prev, [model]: enabled }));
   };
 
   const canSend = (message.trim().length > 0 || uploadedFiles.length > 0) && !disabled;
@@ -341,13 +347,14 @@ export function MessageInput({
           {/* Model Selector and Tools - Moved below textarea */}
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-3">
-              <Dropdown
-                options={availableModels}
+              <ModelSelector
+                models={availableModels}
                 value={currentModel}
                 onChange={handleModelChange}
                 disabled={disabled}
-                className="w-48"
-                direction="up"
+                className="w-64"
+                reasoningByModel={reasoningByModel}
+                onReasoningToggle={handleReasoningToggle}
               />
               <WebSearch
                 enabled={searchEnabled}
@@ -360,13 +367,6 @@ export function MessageInput({
                 searchProvider={searchProvider}
                 onToggle={handleToolToggle}
                 disabled={disabled}
-              />
-              <ReasoningToggle
-                enabled={reasoningEnabled}
-                onToggle={handleReasoningToggle}
-                disabled={disabled}
-                modelSupportsReasoning={currentModelInfo?.reasoning_capable || false}
-                modelReasonsByDefault={currentModelInfo?.reasoning_by_default || false}
               />
             </div>
           </div>
