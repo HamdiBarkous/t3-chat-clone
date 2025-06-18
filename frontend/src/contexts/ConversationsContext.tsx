@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
 import type { 
   ConversationListItem, 
   ConversationCreate, 
@@ -305,11 +306,19 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     )
   }, [])
 
-  // Load conversations on mount (only once)
+  // Load conversations on mount (only once) - but wait for auth
   useEffect(() => {
-    if (!initialized) {
-      fetchConversations(0, false)
+    const initializeConversations = async () => {
+      if (!initialized) {
+        // Wait for authentication to be ready
+        const { data: { session } } = await supabase.auth.getSession()
+        if (session) {
+          fetchConversations(0, false)
+        }
+      }
     }
+    
+    initializeConversations()
   }, [fetchConversations, initialized])
 
   const value: ConversationsContextType = {
