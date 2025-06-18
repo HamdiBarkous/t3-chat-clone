@@ -12,7 +12,7 @@ import { clsx } from 'clsx';
 export interface ToolCall {
   id: string;
   name: string;
-  arguments: Record<string, any>;
+  arguments: Record<string, unknown>;
   status: 'executing' | 'completed' | 'failed';
   result?: string;
   error?: string;
@@ -34,8 +34,6 @@ export function ToolExecution({
   isResponseGenerating = false,
   autoCollapse = true 
 }: ToolExecutionProps) {
-  if (tools.length === 0) return null;
-
   const [isCollapsed, setIsCollapsed] = useState(false);
   
   const completedCount = tools.filter(tool => tool.status === 'completed').length;
@@ -53,6 +51,8 @@ export function ToolExecution({
       return () => clearTimeout(timer);
     }
   }, [autoCollapse, allToolsFinished, isResponseGenerating]);
+  
+  if (tools.length === 0) return null;
 
   // Generate compact summary for collapsed view
   const generateCompactSummary = () => {
@@ -274,7 +274,7 @@ interface ToolCardProps {
   isResponseGenerating?: boolean;
 }
 
-function ToolCard({ tool, isLast, delay, isResponseGenerating }: ToolCardProps) {
+function ToolCard({ tool, delay, isResponseGenerating }: ToolCardProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [isVisible, setIsVisible] = useState(false);
   const [typingText, setTypingText] = useState('');

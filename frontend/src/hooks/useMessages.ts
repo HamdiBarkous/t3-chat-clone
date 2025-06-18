@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { apiClient, ApiError, supabase } from '@/lib/api'
+import { apiClient, ApiError, supabase, getApiBaseUrlWithoutVersion } from '@/lib/api'
 import { streamingService, StreamingCallbacks } from '@/lib/streaming'
 import type { Message, MessageListResponse, MessageResponse } from '@/types/api'
 import { MessageStatus } from '@/types/api'
@@ -141,7 +141,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       let userMessageId: string | null = null
       
       try {
-        const response = await fetch(`http://localhost:8000/api/v1/conversations/${conversationId}/messages`, {
+        const response = await fetch(`${getApiBaseUrlWithoutVersion()}/api/v1/conversations/${conversationId}/messages`, {
           method: 'POST',
           headers: {
             'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
@@ -187,7 +187,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
             const formData = new FormData()
             formData.append('file', file)
 
-            const response = await fetch(`http://localhost:8000/api/v1/messages/${userMessageId}/documents`, {
+            const response = await fetch(`${getApiBaseUrlWithoutVersion()}/api/v1/messages/${userMessageId}/documents`, {
               method: 'POST',
               headers: {
                 'Authorization': `Bearer ${(await supabase.auth.getSession()).data.session?.access_token}`,
@@ -390,7 +390,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         },
 
         onToolCall: (data: unknown) => {
-          const toolData = data as { name: string; arguments: Record<string, any>; status: string }
+          const toolData = data as { name: string; arguments: Record<string, unknown>; status: string }
           
           // Add new tool execution
           const newTool: ToolCall = {
@@ -610,7 +610,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         },
 
         onToolCall: (data: unknown) => {
-          const toolData = data as { name: string; arguments: Record<string, any>; status: string }
+          const toolData = data as { name: string; arguments: Record<string, unknown>; status: string }
           
           const newTool: ToolCall = {
             id: `${toolData.name}-${Date.now()}`,

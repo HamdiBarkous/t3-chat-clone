@@ -6,11 +6,10 @@
 
 'use client';
 
-import React, { useState, memo } from 'react';
+import React, { useState } from 'react';
 import { clsx } from 'clsx';
 import { useRouter } from 'next/navigation';
 import type { Message } from '@/types/api';
-import { MessageStatus } from '@/types/api';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
 import { ImageDisplay } from '@/components/ui/ImageDisplay';
@@ -39,10 +38,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
   const [isSaving, setIsSaving] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
 
-  const formatTimestamp = (timestamp: string) => {
-    const date = new Date(timestamp);
-    return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-  };
+
 
   const handleBranchFromHere = async () => {
     if (isBranching) return;

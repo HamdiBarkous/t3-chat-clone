@@ -1,2 +1,0 @@
-email: hamdibarkous10@gmail.com
-password: hamdi123

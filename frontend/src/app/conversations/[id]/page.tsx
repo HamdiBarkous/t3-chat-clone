@@ -101,7 +101,7 @@ function ConversationPage({ params }: ConversationPageProps) {
 
       // Apply conversation-specific settings if there's a conversation
       if (conversationId) {
-        const customizationData: any = {};
+        const customizationData: Record<string, unknown> = {};
         
         // Only include changed values
         if (systemPrompt !== (conversationDetails?.system_prompt || '')) {

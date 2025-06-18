@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { Button } from '@/components/ui/Button';
 import { ModelSelector } from '@/components/ui/ModelSelector';
 import { FileUpload, useFileUpload } from '@/components/ui/FileUpload';
@@ -14,7 +14,6 @@ import { ImagePreview } from '@/components/ui/ImagePreview';
 import { useModels } from '@/hooks/useModels';
 import { MCPTools } from '@/components/chat/MCPTools';
 import { WebSearch } from '@/components/chat/WebSearch';
-import { ToolToggle } from './ToolToggle';
 
 import { clsx } from 'clsx';
 
@@ -39,7 +38,6 @@ export function MessageInput({
   
   // MCP Tools state
   const [enabledTools, setEnabledTools] = useState<string[]>([]);
-  const [searchProvider, setSearchProvider] = useState<'tavily' | 'firecrawl'>('tavily');
   
   // Web search state (separate from other MCP tools)
   const [searchEnabled, setSearchEnabled] = useState(false);
@@ -53,10 +51,7 @@ export function MessageInput({
   // Get models from backend
   const { models, loading: modelsLoading } = useModels();
   
-  // Get current model info for reasoning capabilities
-  const currentModelInfo = useMemo(() => {
-    return models.find(model => model.id === currentModel);
-  }, [models, currentModel]);
+
   
   // Prepare models for the enhanced selector
   const availableModels = useMemo(() => {
@@ -106,7 +101,7 @@ export function MessageInput({
     if ((message.trim() || uploadedFiles.length > 0) && !disabled) {
       // Combine web search and other MCP tools
       const allEnabledTools = [
-        ...(searchEnabled ? [searchProvider] : []),
+        ...(searchEnabled ? ['tavily'] : []),
         ...enabledTools
       ];
       
@@ -132,7 +127,7 @@ export function MessageInput({
     onModelChange?.(model);
   };
 
-  const handleToolToggle = (toolId: string, enabled: boolean, provider?: 'tavily' | 'firecrawl') => {
+  const handleToolToggle = (toolId: string, enabled: boolean) => {
     // Only handle non-search tools (supabase, sequential_thinking)
     if (toolId === 'tavily' || toolId === 'firecrawl') {
       return; // These are handled by WebSearch component
@@ -145,9 +140,8 @@ export function MessageInput({
     }
   };
 
-  const handleSearchToggle = (enabled: boolean, provider: 'tavily' | 'firecrawl') => {
+  const handleSearchToggle = (enabled: boolean) => {
     setSearchEnabled(enabled);
-    setSearchProvider(provider);
   };
 
   const handleReasoningToggle = (model: string, enabled: boolean) => {
@@ -361,13 +355,12 @@ export function MessageInput({
               />
               <WebSearch
                 enabled={searchEnabled}
-                provider={searchProvider}
+                provider="tavily"
                 onToggle={handleSearchToggle}
                 disabled={disabled}
               />
               <MCPTools
                 enabledTools={enabledTools}
-                searchProvider={searchProvider}
                 onToggle={handleToolToggle}
                 onShowCustomization={onShowCustomization}
                 disabled={disabled}

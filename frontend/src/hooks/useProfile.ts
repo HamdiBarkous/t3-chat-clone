@@ -37,9 +37,9 @@ export function useSupabaseMCP(): UseSupabaseMCPReturn {
         supabase_project_ref: profileData.supabase_project_ref || '',
         supabase_read_only: profileData.supabase_read_only ?? true
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to fetch Supabase MCP config:', err);
-      setError(err.message || 'Failed to fetch configuration');
+      setError(err instanceof Error ? err.message : 'Failed to fetch configuration');
       // Keep default values on error
     } finally {
       setLoading(false);
@@ -61,9 +61,9 @@ export function useSupabaseMCP(): UseSupabaseMCPReturn {
         supabase_project_ref: updatedProfile.supabase_project_ref || '',
         supabase_read_only: updatedProfile.supabase_read_only ?? true
       });
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Failed to update Supabase MCP config:', err);
-      setError(err.message || 'Failed to update configuration');
+      setError(err instanceof Error ? err.message : 'Failed to update configuration');
       throw err; // Re-throw so the component can handle it
     }
   };

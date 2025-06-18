@@ -234,7 +234,7 @@ function preprocessMathContent(content: string): string {
   return processed;
 }
 
-export const MarkdownRenderer = React.memo(function MarkdownRenderer({ content, className = '', isStreaming = false }: MarkdownRendererProps) {
+export const MarkdownRenderer = React.memo(function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
   // Preprocess the content to fix math rendering issues
   const processedContent = preprocessMathContent(content);
   
@@ -267,8 +267,8 @@ export const MarkdownRenderer = React.memo(function MarkdownRenderer({ content, 
         ]}
         components={{
           // Code blocks with syntax highlighting
-          // eslint-disable-next-line @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any
-          code({ node, className, children, ...props }: any) {
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          code({ className, children, ...props }: any) {
             const match = /language-(\w+)/.exec(className || '');
             const language = match ? match[1] : '';
             const isInline = !match;
