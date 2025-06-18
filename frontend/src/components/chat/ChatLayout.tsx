@@ -8,6 +8,7 @@
 import React, { useState } from 'react';
 import { Sidebar } from './Sidebar';
 import { clsx } from 'clsx';
+import { ThemeSwitcher } from '@/components/ui/ThemeSwitcher';
 
 interface ChatLayoutProps {
   children: React.ReactNode;
@@ -84,6 +85,9 @@ export function ChatLayout({
               <h1 className="text-lg font-semibold text-text-primary transition-opacity duration-300">T3.chat</h1>
             )}
           </div>
+          
+          {/* Theme Switcher */}
+          <ThemeSwitcher />
         </header>
 
         {/* Chat content */}
