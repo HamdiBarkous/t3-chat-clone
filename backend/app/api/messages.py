@@ -29,7 +29,7 @@ class StreamChatRequest(BaseModel):
     existing_user_message_id: Optional[str] = None
     use_tools: Optional[bool] = None  # Per-message tool toggle
     enabled_tools: Optional[List[str]] = None  # Override conversation tool settings
-    reasoning: Optional[dict] = None  # Reasoning configuration
+    reasoning: Optional[bool] = None  # Enable/disable reasoning
 
 
 class EnhancedMessageCreate(BaseModel):

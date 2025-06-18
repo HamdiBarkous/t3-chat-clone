@@ -126,7 +126,7 @@ class OpenRouterService:
         model: Optional[str] = None,
         use_tools: Optional[bool] = None,
         enabled_tools: Optional[List[str]] = None,
-        reasoning: Optional[Dict[str, Any]] = None
+        reasoning: Optional[bool] = None
     ) -> AsyncGenerator[str, None]:
         """Stream chat completion with proper tool calling accumulation"""
         conversation_uuid = UUID(conversation_id)

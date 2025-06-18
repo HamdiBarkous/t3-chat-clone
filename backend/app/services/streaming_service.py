@@ -39,7 +39,7 @@ class StreamingService:
         existing_user_message_id: Optional[str] = None,
         use_tools: Optional[bool] = None,
         enabled_tools: Optional[List[str]] = None,
-        reasoning: Optional[dict] = None
+        reasoning: Optional[bool] = None
     ) -> AsyncGenerator[str, None]:
         """Ultra-fast streaming with minimal DB overhead and proper SSE format"""
         

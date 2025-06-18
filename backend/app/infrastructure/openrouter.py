@@ -42,30 +42,39 @@ class OpenRouterClient:
         temperature: float = 0.7,
         use_transforms: bool = True,
         tools: Optional[List[Dict[str, Any]]] = None,
-        reasoning: Optional[Dict[str, Any]] = None
+        reasoning: Optional[bool] = None
     ) -> Dict[str, Any]:
         """Send chat completion request to OpenRouter"""
         if not self.api_key:
             raise ValueError("OpenRouter API key not configured")
 
+        # Set model-specific max_tokens to avoid credit issues
+        if max_tokens is None:
+            if "claude-sonnet-4" in model or "claude-opus-4" in model:
+                max_tokens = 4000  # Lower limit for expensive models
+            elif "claude" in model:
+                max_tokens = 8000  # Moderate limit for other Claude models
+            elif "gpt-4" in model:
+                max_tokens = 4000  # Reasonable limit for GPT-4 models
+            else:
+                max_tokens = 8000  # Default for other models
+
         payload = {
             "model": model,
             "messages": messages,
             "temperature": temperature,
+            "max_tokens": max_tokens,
         }
         
         # Add transforms for automatic context management
         if use_transforms and settings.openrouter_use_transforms:
             payload["transforms"] = ["middle-out"]
-        
-        if max_tokens:
-            payload["max_tokens"] = max_tokens
             
         if tools:
             payload["tools"] = tools
             
         if reasoning:
-            payload["reasoning"] = reasoning
+            payload["reasoning"] = {"effort": "high"}
 
         async with httpx.AsyncClient() as client:
             try:
@@ -78,9 +87,17 @@ class OpenRouterClient:
                 response.raise_for_status()
                 return response.json()
             except httpx.HTTPStatusError as e:
-                raise ValueError(f"OpenRouter API error: {e.response.status_code} - {e.response.text}")
+                # Provide user-friendly error messages for common issues
+                if e.response.status_code == 402:
+                    raise ValueError(f"Insufficient credits for {model}. This model requires more tokens than available.")
+                elif e.response.status_code == 429:
+                    raise ValueError(f"Rate limit exceeded for {model}. Please try again later.")
+                elif e.response.status_code == 404:
+                    raise ValueError(f"Model {model} not found or not available.")
+                else:
+                    raise ValueError(f"OpenRouter API error: {e.response.status_code} - {e.response.text}")
             except Exception as e:
-                raise ValueError(f"OpenRouter request failed: {str(e)}")
+                raise ValueError(f"OpenRouter request failed for {model}: {str(e)}")
 
     async def chat_completion_stream(
         self, 
@@ -90,58 +107,95 @@ class OpenRouterClient:
         temperature: float = 0.7,
         use_transforms: bool = True,
         tools: Optional[List[Dict[str, Any]]] = None,
-        reasoning: Optional[Dict[str, Any]] = None
+        reasoning: Optional[bool] = None
     ) -> AsyncGenerator[Dict[str, Any], None]:
         """Send streaming chat completion request to OpenRouter"""
         if not self.api_key:
             raise ValueError("OpenRouter API key not configured")
+
+        # Set model-specific max_tokens to avoid credit issues
+        if max_tokens is None:
+            if "claude-sonnet-4" in model or "claude-opus-4" in model:
+                max_tokens = 4000  # Lower limit for expensive models
+            elif "claude" in model:
+                max_tokens = 8000  # Moderate limit for other Claude models
+            elif "gpt-4" in model:
+                max_tokens = 4000  # Reasonable limit for GPT-4 models
+            else:
+                max_tokens = 8000  # Default for other models
 
         payload = {
             "model": model,
             "messages": messages,
             "temperature": temperature,
             "stream": True,
+            "max_tokens": max_tokens,
         }
         
         # Add transforms for automatic context management
         if use_transforms and settings.openrouter_use_transforms:
             payload["transforms"] = ["middle-out"]
-        
-        if max_tokens:
-            payload["max_tokens"] = max_tokens
             
         if tools:
             payload["tools"] = tools
             
         if reasoning:
-            payload["reasoning"] = reasoning
+            payload["reasoning"] = {"effort": "high"}
 
-        async with httpx.AsyncClient() as client:
+        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
             try:
-                async with client.stream(
-                    "POST",
+                response = await client.post(
                     f"{self.base_url}/chat/completions",
                     headers=self.headers,
                     json=payload,
-                    timeout=60.0
-                ) as response:
-                    response.raise_for_status()
-                    
-                    async for line in response.aiter_lines():
-                        if line.startswith("data: "):
-                            data = line[6:]  # Remove "data: " prefix
-                            if data.strip() == "[DONE]":
-                                break
-                            try:
-                                chunk = json.loads(data)
-                                yield chunk
-                            except json.JSONDecodeError:
-                                continue
+                    timeout=None  # Use client timeout instead
+                )
+                response.raise_for_status()
+                
+                # Process the streaming response
+                async for line in response.aiter_lines():
+                    line = line.strip()
+                    if line.startswith("data: "):
+                        data = line[6:]  # Remove "data: " prefix
+                        if data.strip() == "[DONE]":
+                            break
+                        try:
+                            chunk = json.loads(data)
+                            yield chunk
+                        except json.JSONDecodeError:
+                            # Skip malformed JSON chunks
+                            continue
+                    elif line.startswith("event: "):
+                        # Handle SSE events if present
+                        continue
+                    elif line == "":
+                        # Skip empty lines
+                        continue
                                 
             except httpx.HTTPStatusError as e:
-                raise ValueError(f"OpenRouter streaming API error: {e.response.status_code} - {e.response.text}")
+                error_detail = "Unknown error"
+                try:
+                    error_detail = await e.response.aread()
+                    error_detail = error_detail.decode('utf-8')
+                except:
+                    error_detail = f"HTTP {e.response.status_code}"
+                
+                # Provide user-friendly error messages for common issues
+                if e.response.status_code == 402:
+                    if "credits" in error_detail.lower():
+                        raise ValueError(f"Insufficient credits for {model}. This model requires more tokens than available.")
+                    else:
+                        raise ValueError(f"Payment required for {model}. Please check your OpenRouter credits.")
+                elif e.response.status_code == 429:
+                    raise ValueError(f"Rate limit exceeded for {model}. Please try again later.")
+                elif e.response.status_code == 404:
+                    raise ValueError(f"Model {model} not found or not available.")
+                else:
+                    raise ValueError(f"OpenRouter streaming API error: {e.response.status_code} - {error_detail}")
+            except httpx.TimeoutException:
+                raise ValueError(f"OpenRouter streaming request timed out for {model}")
             except Exception as e:
-                raise ValueError(f"OpenRouter streaming request failed: {str(e)}")
+                raise ValueError(f"OpenRouter streaming request failed for {model}: {str(e)}")
 
     def format_messages_for_openrouter(self, messages: List[Dict[str, Any]], system_prompt: Optional[str] = None) -> List[Dict[str, Any]]:
         """Format messages for OpenRouter API - handles both text and vision messages"""
