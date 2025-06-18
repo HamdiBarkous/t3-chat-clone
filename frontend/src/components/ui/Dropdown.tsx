@@ -11,7 +11,7 @@ import { clsx } from 'clsx';
 interface DropdownOption {
   value: string;
   label: string;
-  description?: string;
+  info?: string;
 }
 
 interface DropdownProps {
@@ -21,6 +21,7 @@ interface DropdownProps {
   placeholder?: string;
   disabled?: boolean;
   className?: string;
+  direction?: 'up' | 'down' | 'auto';
 }
 
 export function Dropdown({
@@ -30,12 +31,29 @@ export function Dropdown({
   placeholder = 'Select an option',
   disabled = false,
   className,
+  direction = 'down',
 }: DropdownProps) {
   const [isOpen, setIsOpen] = useState(false);
   const [focusedIndex, setFocusedIndex] = useState(-1);
+  const [dropdownDirection, setDropdownDirection] = useState(direction);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   const selectedOption = options.find(option => option.value === value);
+
+  // Calculate dropdown direction when opening
+  useEffect(() => {
+    if (isOpen && direction === 'auto' && dropdownRef.current) {
+      const rect = dropdownRef.current.getBoundingClientRect();
+      const viewportHeight = window.innerHeight;
+      const spaceBelow = viewportHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      
+      // If there's more space above or not enough space below, open upward
+      setDropdownDirection(spaceBelow < 200 && spaceAbove > spaceBelow ? 'up' : 'down');
+    } else if (direction !== 'auto') {
+      setDropdownDirection(direction);
+    }
+  }, [isOpen, direction]);
 
   // Close dropdown when clicking outside
   useEffect(() => {
@@ -116,8 +134,8 @@ export function Dropdown({
             {selectedOption ? (
               <div>
                 <div className="font-medium text-sm">{selectedOption.label}</div>
-                {selectedOption.description && (
-                  <div className="text-xs text-text-muted truncate">{selectedOption.description}</div>
+                {selectedOption.info && (
+                  <div className="text-xs text-text-muted truncate">{selectedOption.info}</div>
                 )}
               </div>
             ) : (
@@ -141,7 +159,10 @@ export function Dropdown({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div className={clsx(
+          "absolute z-50 w-full bg-popover border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto",
+          dropdownDirection === 'up' ? 'bottom-full mb-1' : 'top-full mt-1'
+        )}>
           {options.map((option, index) => (
             <button
               key={option.value}
@@ -155,12 +176,12 @@ export function Dropdown({
               )}
             >
               <div className="font-medium text-sm">{option.label}</div>
-              {option.description && (
+              {option.info && (
                 <div className={clsx(
                   "text-xs",
                   value === option.value ? "text-primary/80" : "text-text-muted"
                 )}>
-                  {option.description}
+                  {option.info}
                 </div>
               )}
             </button>
