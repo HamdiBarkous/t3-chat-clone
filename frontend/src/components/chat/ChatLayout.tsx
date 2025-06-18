@@ -15,13 +15,18 @@ interface ChatLayoutProps {
   onNewChat?: () => void;
   selectedConversationId?: string;
   onConversationSelect?: (conversationId: string) => void;
+  // Customization props
+  showCustomization?: boolean;
+  onCustomizationToggle?: () => void;
 }
 
 export function ChatLayout({ 
   children, 
   onNewChat,
   selectedConversationId,
-  onConversationSelect
+  onConversationSelect,
+  showCustomization = false,
+  onCustomizationToggle
 }: ChatLayoutProps) {
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -87,7 +92,28 @@ export function ChatLayout({
           </div>
           
           {/* Theme Switcher */}
-          <ThemeSwitcher />
+          <div className="flex items-center gap-2">
+            {/* Customization Toggle */}
+            <button
+              onClick={onCustomizationToggle}
+              className={clsx(
+                'flex items-center gap-2 px-3 py-2 rounded-lg transition-all duration-200 text-sm font-medium',
+                'hover:bg-muted/60 focus:outline-none focus:ring-2 focus:ring-primary/50',
+                showCustomization 
+                  ? 'bg-primary/15 border border-primary/40 text-primary' 
+                  : 'bg-card/50 border border-border/30 text-text-muted hover:text-text-primary'
+              )}
+              title={showCustomization ? 'Hide Customization' : 'Show Customization'}
+            >
+              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.5 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+              </svg>
+              <span className="hidden sm:inline">Customize</span>
+            </button>
+            
+            <ThemeSwitcher />
+          </div>
         </header>
 
         {/* Chat content */}

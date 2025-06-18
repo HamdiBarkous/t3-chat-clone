@@ -175,9 +175,12 @@ async def stream_chat_response(
             ),
             media_type="text/event-stream",
             headers={
-                "Cache-Control": "no-cache",
+                "Cache-Control": "no-cache, no-store, must-revalidate",
+                "Pragma": "no-cache",
+                "Expires": "0",
                 "Connection": "keep-alive",
-                "X-Accel-Buffering": "no"
+                "X-Accel-Buffering": "no",  # Disable nginx buffering
+                "Transfer-Encoding": "chunked"  # Ensure chunked encoding
             }
         )
     except ValueError as e:

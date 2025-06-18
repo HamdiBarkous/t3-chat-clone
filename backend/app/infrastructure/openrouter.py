@@ -40,6 +40,7 @@ class OpenRouterClient:
         model: str,
         max_tokens: Optional[int] = None,
         temperature: float = 0.7,
+        top_p: float = 1.0,
         use_transforms: bool = True,
         tools: Optional[List[Dict[str, Any]]] = None,
         reasoning: Optional[bool] = None
@@ -63,6 +64,7 @@ class OpenRouterClient:
             "model": model,
             "messages": messages,
             "temperature": temperature,
+            "top_p": top_p,
             "max_tokens": max_tokens,
         }
         
@@ -105,6 +107,7 @@ class OpenRouterClient:
         model: str,
         max_tokens: Optional[int] = None,
         temperature: float = 0.7,
+        top_p: float = 1.0,
         use_transforms: bool = True,
         tools: Optional[List[Dict[str, Any]]] = None,
         reasoning: Optional[bool] = None
@@ -128,6 +131,7 @@ class OpenRouterClient:
             "model": model,
             "messages": messages,
             "temperature": temperature,
+            "top_p": top_p,
             "stream": True,
             "max_tokens": max_tokens,
         }
@@ -142,36 +146,45 @@ class OpenRouterClient:
         if reasoning:
             payload["reasoning"] = {"effort": "high"}
 
-        async with httpx.AsyncClient(timeout=httpx.Timeout(60.0, connect=10.0)) as client:
+        async with httpx.AsyncClient(
+            timeout=httpx.Timeout(60.0, connect=10.0),
+            limits=httpx.Limits(max_connections=100, max_keepalive_connections=20)
+        ) as client:
             try:
-                response = await client.post(
+                async with client.stream(
+                    "POST",
                     f"{self.base_url}/chat/completions",
                     headers=self.headers,
-                    json=payload,
-                    timeout=None  # Use client timeout instead
-                )
-                response.raise_for_status()
-                
-                # Process the streaming response
-                async for line in response.aiter_lines():
-                    line = line.strip()
-                    if line.startswith("data: "):
-                        data = line[6:]  # Remove "data: " prefix
-                        if data.strip() == "[DONE]":
-                            break
-                        try:
-                            chunk = json.loads(data)
-                            yield chunk
-                        except json.JSONDecodeError:
-                            # Skip malformed JSON chunks
-                            continue
-                    elif line.startswith("event: "):
-                        # Handle SSE events if present
-                        continue
-                    elif line == "":
-                        # Skip empty lines
-                        continue
-                                
+                    json=payload
+                ) as response:
+                    response.raise_for_status()
+                    
+                    # Process the streaming response using text streaming to avoid buffering
+                    buffer = ""
+                    async for text_chunk in response.aiter_text(chunk_size=1):  # Process character by character for maximum responsiveness
+                        buffer += text_chunk
+                        
+                        # Look for complete lines ending with \n
+                        while '\n' in buffer:
+                            line, buffer = buffer.split('\n', 1)
+                            line = line.strip()
+                            
+                            if line.startswith("data: "):
+                                data = line[6:]  # Remove "data: " prefix
+                                if data.strip() == "[DONE]":
+                                    return
+                                try:
+                                    chunk_data = json.loads(data)
+                                    yield chunk_data
+                                except json.JSONDecodeError:
+                                    # Skip malformed JSON chunks
+                                    continue
+                            elif line.startswith("event: "):
+                                # Handle SSE events if present
+                                continue
+                            elif line == "":
+                                # Skip empty lines
+                                continue
             except httpx.HTTPStatusError as e:
                 error_detail = "Unknown error"
                 try:

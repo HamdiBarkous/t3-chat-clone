@@ -70,6 +70,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
   // Reasoning timing tracking
   const reasoningStartTimeRef = useRef<number | null>(null)
   
+  // Deduplication tracking
+  const lastSentMessageRef = useRef<{ content: string; timestamp: number } | null>(null)
+  
   // Get conversation hook for title updates
   const { updateConversationTitle } = useConversations()
 
@@ -112,6 +115,17 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
 
   const sendMessage = useCallback(async (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[], reasoning?: boolean) => {
     if (!conversationId || isStreaming) return
+
+    // Prevent duplicate messages within 1 second
+    const now = Date.now();
+    if (lastSentMessageRef.current && 
+        lastSentMessageRef.current.content === content && 
+        now - lastSentMessageRef.current.timestamp < 1000) {
+      console.log('Duplicate message prevented');
+      return;
+    }
+    
+    lastSentMessageRef.current = { content, timestamp: now };
 
     try {
       setError(null)
@@ -512,6 +526,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
                     ...msg,
                     id: completeData.id,
                     content: completeData.content, // Use final content from server
+                    reasoning: streamingReasoningRef.current || '', // Store final reasoning content
                     status: MessageStatus.COMPLETED,
                     created_at: completeData.created_at,
                     model_used: completeData.model_used,
@@ -660,9 +675,14 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
   // Reset conversation state when conversationId changes
   useEffect(() => {
     if (conversationId) {
-      loadMessages()
+      // Only load messages if we don't have any messages for this conversation yet
+      // This prevents race conditions with initial message sending
+      const hasMessages = messages.length > 0;
+      if (!hasMessages && !isStreaming) {
+        loadMessages()
+      }
     }
-  }, [conversationId, loadMessages])
+  }, [conversationId, loadMessages, messages.length, isStreaming])
 
   return {
     messages,

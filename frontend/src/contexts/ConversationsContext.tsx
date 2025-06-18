@@ -16,7 +16,8 @@ import type {
   MessageEditRequest,
   MessageRetryRequest,
   MessageEditResponse,
-  MessageRetryResponse
+  MessageRetryResponse,
+  CustomizationUpdate
 } from '@/types/api';
 
 interface ConversationsContextType {
@@ -26,7 +27,9 @@ interface ConversationsContextType {
   hasMore: boolean
   error: string | null
   createConversation: (data: ConversationCreate) => Promise<ConversationResponse | null>
+  getConversation: (id: string) => Promise<ConversationResponse | null>
   updateConversation: (id: string, data: ConversationUpdate) => Promise<ConversationResponse | null>
+  updateConversationCustomization: (id: string, data: CustomizationUpdate) => Promise<ConversationResponse | null>
   deleteConversation: (id: string) => Promise<boolean>
   branchConversation: (conversationId: string, messageId: string) => Promise<ConversationResponse | null>
   editMessage: (conversationId: string, messageId: string, newContent: string) => Promise<ConversationResponse | null>
@@ -111,6 +114,20 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     }
   }, [])
 
+  const getConversation = useCallback(async (id: string): Promise<ConversationResponse | null> => {
+    try {
+      setError(null)
+      
+      const conversation = await apiClient.get<ConversationResponse>(`/conversations/${id}`)
+      return conversation
+    } catch (err) {
+      const errorMessage = err instanceof ApiError ? err.message : 'Failed to fetch conversation'
+      setError(errorMessage)
+      console.error('Error fetching conversation:', err)
+      return null
+    }
+  }, [])
+
   const updateConversation = useCallback(async (
     id: string, 
     data: ConversationUpdate
@@ -132,6 +149,31 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
       const errorMessage = err instanceof ApiError ? err.message : 'Failed to update conversation'
       setError(errorMessage)
       console.error('Error updating conversation:', err)
+      return null
+    }
+  }, [])
+
+  const updateConversationCustomization = useCallback(async (
+    id: string, 
+    data: CustomizationUpdate
+  ): Promise<ConversationResponse | null> => {
+    try {
+      setError(null)
+      
+      const updatedConversation = await apiClient.patch<ConversationResponse>(`/conversations/${id}/customization`, data)
+      
+      // Update in the list (merge with existing list item data)
+      setConversations(prev => 
+        prev.map(conv => 
+          conv.id === id ? { ...conv, ...updatedConversation } : conv
+        )
+      )
+      
+      return updatedConversation
+    } catch (err) {
+      const errorMessage = err instanceof ApiError ? err.message : 'Failed to update conversation customization'
+      setError(errorMessage)
+      console.error('Error updating conversation customization:', err)
       return null
     }
   }, [])
@@ -277,7 +319,9 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     hasMore,
     error,
     createConversation,
+    getConversation,
     updateConversation,
+    updateConversationCustomization,
     deleteConversation,
     branchConversation,
     editMessage,

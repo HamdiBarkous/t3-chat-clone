@@ -180,7 +180,15 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
               } else {
                 return (
                   <div className="text-text-muted italic">
-                    {isStreaming ? 'Thinking...' : 'No content'}
+                    {isStreaming ? (
+                      <div className="flex items-center gap-1">
+                        <div className="flex gap-1">
+                          <div className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:-0.3s]"></div>
+                          <div className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:-0.15s]"></div>
+                          <div className="w-1 h-1 bg-text-muted rounded-full animate-bounce"></div>
+                        </div>
+                      </div>
+                    ) : 'No content'}
                   </div>
                 );
               }

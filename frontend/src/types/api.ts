@@ -74,6 +74,8 @@ export interface ConversationBase {
   title?: string;
   current_model: string;
   system_prompt?: string;
+  temperature?: number;
+  top_p?: number;
 }
 
 export type ConversationCreate = ConversationBase;
@@ -82,6 +84,8 @@ export interface ConversationUpdate {
   title?: string;
   current_model?: string;
   system_prompt?: string;
+  temperature?: number;
+  top_p?: number;
 }
 
 export interface ConversationResponse extends ConversationBase {
@@ -189,6 +193,12 @@ export interface SystemPromptUpdate {
 
 export interface ModelUpdate {
   model: string;
+}
+
+export interface CustomizationUpdate {
+  system_prompt?: string;
+  temperature?: number;
+  top_p?: number;
 }
 
 export interface BranchRequest {
