@@ -163,6 +163,9 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
   const formatContextLength = (length?: number): string => {
     if (!length) return '';
+    if (length >= 1000000) {
+      return `${(length / 1000000).toFixed(length % 1000000 === 0 ? 0 : 1)}M`;
+    }
     return `${(length / 1000).toFixed(0)}K`;
   };
 
@@ -237,11 +240,6 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                 {currentModel?.name || 'Select Model'}
               </span>
             </div>
-            {currentModel?.context_length && (
-              <div className="text-xs text-text-muted/80">
-                {formatContextLength(currentModel.context_length)} context
-              </div>
-            )}
           </div>
         </div>
         <svg
@@ -267,18 +265,27 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
             ? "bottom-full mb-2 slide-in-from-bottom-2" 
             : "top-full mt-2 slide-in-from-top-2"
         )}>
-          {Object.entries(groupedModels).map(([company, companyModels]) => (
-            <div key={company} className="p-2">
+          {Object.entries(groupedModels).map(([company, companyModels], companyIndex) => (
+            <div key={company} className={clsx(
+              "relative",
+              companyIndex > 0 && "mt-4 pt-4 border-t border-border/30"
+            )}>
               {/* Company Header */}
-              <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-muted/90 border-b border-border/30 mb-1">
-                <div className="flex-shrink-0 opacity-80">
-                  {getCompanyIcon(company)}
+              <div className="mx-3 mb-3 px-3 py-2.5 bg-muted/30 backdrop-blur-sm rounded-lg border border-border/20">
+                <div className="flex items-center gap-2 text-sm font-semibold text-text-primary/90">
+                  <div className="flex-shrink-0 opacity-90">
+                    {getCompanyIcon(company)}
+                  </div>
+                  <span className="tracking-wide uppercase text-xs font-bold opacity-80">{company}</span>
+                  <div className="flex-1 h-px bg-gradient-to-r from-border/40 to-transparent ml-2"></div>
+                  <span className="text-xs text-text-muted/60 font-normal">
+                    {companyModels.length} model{companyModels.length !== 1 ? 's' : ''}
+                  </span>
                 </div>
-                <span className="tracking-wide">{company}</span>
               </div>
 
               {/* Models in Company */}
-              <div className="space-y-1">
+              <div className="mx-3 mb-3 space-y-1 bg-card/20 backdrop-blur-sm rounded-lg p-2 border border-border/10">
                 {companyModels.map((model) => (
                   <button
                     key={model.id}
@@ -291,7 +298,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                       'transform hover:scale-[1.01] active:scale-[0.99]',
                       model.id === value
                         ? 'bg-primary/15 text-primary border border-primary/40 shadow-md shadow-primary/10'
-                        : 'text-text-primary hover:text-text-primary/90'
+                        : 'text-text-primary hover:text-text-primary/90 border border-transparent hover:border-border/30'
                     )}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
