@@ -7,6 +7,7 @@
 
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
+import { OpenAI } from '@lobehub/icons';
 
 interface ModelInfo {
   id: string;
@@ -39,13 +40,38 @@ const getCompanyFromModel = (modelId: string): string => {
   return 'Other';
 };
 
-const getCompanyIcon = (company: string): string => {
+const getCompanyIcon = (company: string): React.ReactNode => {
   switch (company) {
-    case 'Google': return '🟢';
-    case 'Anthropic': return '🟠';
-    case 'OpenAI': return '🔵';
-    case 'DeepSeek': return '🟣';
-    default: return '⚪';
+    case 'Google': 
+      return (
+        <img 
+          src="/icons/companies/google.svg" 
+          alt="Google" 
+          className="w-5 h-5"
+        />
+      );
+    case 'Anthropic': 
+      return (
+        <img 
+          src="https://img.icons8.com/fluency/48/claude.png" 
+          alt="claude" 
+          className="w-5 h-5"
+        />
+      );
+    case 'OpenAI': 
+      return (
+        <OpenAI.Avatar size={20} />
+      );
+    case 'DeepSeek': 
+      return (
+        <img 
+          src="/icons/companies/deepseek.svg" 
+          alt="DeepSeek" 
+          className="w-5 h-5"
+        />
+      );
+    default: 
+      return <div className="w-5 h-5 bg-muted rounded-full" />;
   }
 };
 
@@ -180,9 +206,9 @@ export function ModelSelector({
         )}
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <span className="text-lg">
+          <div className="flex-shrink-0">
             {getCompanyIcon(getCompanyFromModel(value))}
-          </span>
+          </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
               <span className="font-medium truncate">
@@ -250,7 +276,9 @@ export function ModelSelector({
             <div key={company} className="p-2">
               {/* Company Header */}
               <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-muted border-b border-border/50 mb-1">
-                <span>{getCompanyIcon(company)}</span>
+                <div className="flex-shrink-0">
+                  {getCompanyIcon(company)}
+                </div>
                 <span>{company}</span>
               </div>
 
