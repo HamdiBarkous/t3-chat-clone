@@ -210,15 +210,18 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         onClick={() => !disabled && setIsOpen(!isOpen)}
         disabled={disabled}
         className={clsx(
-          'w-full flex items-center justify-between px-4 py-3 bg-secondary border border-border rounded-lg',
-          'text-left text-text-primary transition-all duration-200',
-          'hover:bg-muted focus:outline-none focus:ring-2 focus:ring-primary/50',
-          disabled && 'opacity-50 cursor-not-allowed',
-          isOpen && 'ring-2 ring-primary/50 border-primary/50'
+          'w-full flex items-center justify-between px-4 py-3',
+          'bg-secondary/80 backdrop-blur-md border border-border/50 rounded-xl',
+          'text-left text-text-primary transition-all duration-300 ease-out',
+          'hover:bg-secondary/90 hover:border-primary/30 hover:shadow-lg hover:shadow-primary/10',
+          'focus:outline-none focus:ring-2 focus:ring-primary/50 focus:border-primary/50',
+          'transform hover:scale-[1.02] active:scale-[0.98]',
+          disabled && 'opacity-50 cursor-not-allowed hover:scale-100',
+          isOpen && 'ring-2 ring-primary/60 border-primary/50 bg-secondary/95 shadow-lg shadow-primary/15'
         )}
       >
         <div className="flex items-center gap-3 min-w-0 flex-1">
-          <div className="flex-shrink-0">
+          <div className="flex-shrink-0 transition-transform duration-200 group-hover:scale-110">
             {getCompanyIcon(getCompanyFromModel(value))}
           </div>
           <div className="min-w-0 flex-1">
@@ -235,7 +238,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
               </span>
             </div>
             {currentModel?.context_length && (
-              <div className="text-xs text-text-muted">
+              <div className="text-xs text-text-muted/80">
                 {formatContextLength(currentModel.context_length)} context
               </div>
             )}
@@ -243,8 +246,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
         </div>
         <svg
           className={clsx(
-            'w-4 h-4 text-text-muted transition-transform duration-200',
-            isOpen && 'rotate-180'
+            'w-4 h-4 text-text-muted/70 transition-all duration-300 ease-out',
+            isOpen && 'rotate-180 text-primary/80'
           )}
           fill="none"
           stroke="currentColor"
@@ -257,19 +260,21 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
       {/* Dropdown Menu */}
       {isOpen && (
         <div className={clsx(
-          "absolute left-0 right-0 bg-secondary border border-border rounded-lg shadow-lg z-50 max-h-96 overflow-y-auto",
+          "absolute left-0 right-0 z-50 max-h-96 overflow-y-auto custom-scrollbar",
+          "bg-secondary/85 backdrop-blur-xl border border-border/40 rounded-xl shadow-2xl",
+          "animate-in fade-in-0 zoom-in-95 duration-200 ease-out",
           openUpward 
-            ? "bottom-full mb-2" 
-            : "top-full mt-2"
+            ? "bottom-full mb-2 slide-in-from-bottom-2" 
+            : "top-full mt-2 slide-in-from-top-2"
         )}>
           {Object.entries(groupedModels).map(([company, companyModels]) => (
             <div key={company} className="p-2">
               {/* Company Header */}
-              <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-muted border-b border-border/50 mb-1">
-                <div className="flex-shrink-0">
+              <div className="flex items-center gap-2 px-3 py-2 text-sm font-medium text-text-muted/90 border-b border-border/30 mb-1">
+                <div className="flex-shrink-0 opacity-80">
                   {getCompanyIcon(company)}
                 </div>
-                <span>{company}</span>
+                <span className="tracking-wide">{company}</span>
               </div>
 
               {/* Models in Company */}
@@ -280,11 +285,13 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                     type="button"
                     onClick={() => handleModelSelect(model.id)}
                     className={clsx(
-                      'w-full flex items-center justify-between px-3 py-2.5 rounded-md text-left transition-all duration-150',
-                      'hover:bg-muted focus:outline-none focus:bg-muted',
+                      'w-full flex items-center justify-between px-3 py-2.5 rounded-lg text-left',
+                      'transition-all duration-200 ease-out group',
+                      'hover:bg-muted/60 hover:backdrop-blur-sm focus:outline-none focus:bg-muted/70',
+                      'transform hover:scale-[1.01] active:scale-[0.99]',
                       model.id === value
-                        ? 'bg-primary/10 text-primary border border-primary/30'
-                        : 'text-text-primary'
+                        ? 'bg-primary/15 text-primary border border-primary/40 shadow-md shadow-primary/10'
+                        : 'text-text-primary hover:text-text-primary/90'
                     )}
                   >
                     <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -295,12 +302,12 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                             !model.reasoning_by_default,
                             reasoningByModel?.[model.id] || false
                           )}
-                          <span className="font-medium truncate">
+                          <span className="font-medium truncate group-hover:text-text-primary transition-colors">
                             {model.name}
                           </span>
                         </div>
                         {model.context_length && (
-                          <div className="text-xs text-text-muted">
+                          <div className="text-xs text-text-muted/70 group-hover:text-text-muted/90 transition-colors">
                             {formatContextLength(model.context_length)} context
                           </div>
                         )}
@@ -308,7 +315,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                     </div>
                     
                     {model.id === value && (
-                      <svg className="w-4 h-4 text-primary" fill="currentColor" viewBox="0 0 20 20">
+                      <svg className="w-4 h-4 text-primary animate-in zoom-in-50 duration-150" fill="currentColor" viewBox="0 0 20 20">
                         <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                       </svg>
                     )}
