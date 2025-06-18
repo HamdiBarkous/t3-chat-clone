@@ -102,8 +102,8 @@ export function ThemeSwitcher({ className }: ThemeSwitcherProps) {
                       {theme.name === 'violet-storm' && 'Deep violet with cosmic energy'}
                       {theme.name === 'arctic-nexus' && 'Cool ice-blue minimalism'}
                       {theme.name === 'ember-glow' && 'Warm orange fire tones'}
-                      {theme.name === 'forest-whisper' && 'Natural green serenity'}
-                      {theme.name === 'cosmic-midnight' && 'Rich purple cosmic depths'}
+                      {theme.name === 'neon-cyber' && 'Electric cyberpunk vibes'}
+                      {theme.name === 'rose-gold' && 'Elegant pink and gold luxury'}
                     </div>
                   </div>
                   
