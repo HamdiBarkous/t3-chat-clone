@@ -390,7 +390,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         },
 
         onToolCall: (data: unknown) => {
-          const toolData = data as { name: string; arguments: Record<string, any>; status: string }
+          const toolData = data as { name: string; arguments: Record<string, unknown>; status: string }
           
           // Add new tool execution
           const newTool: ToolCall = {
@@ -610,7 +610,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         },
 
         onToolCall: (data: unknown) => {
-          const toolData = data as { name: string; arguments: Record<string, any>; status: string }
+          const toolData = data as { name: string; arguments: Record<string, unknown>; status: string }
           
           const newTool: ToolCall = {
             id: `${toolData.name}-${Date.now()}`,

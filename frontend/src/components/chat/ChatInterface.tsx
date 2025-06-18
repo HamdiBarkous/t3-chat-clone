@@ -49,7 +49,7 @@ export function ChatInterface({ conversationId, conversation, onShowCustomizatio
   // Check if this is a branched conversation
   const isBranchedConversation = conversation?.title?.startsWith('Branch from ');
 
-  const handleSendMessage = useCallback(async (content: string, files?: File[], enabledTools?: string[], reasoning?: any) => {
+  const handleSendMessage = useCallback(async (content: string, files?: File[], enabledTools?: string[], reasoning?: boolean) => {
     if ((!content.trim() && (!files || files.length === 0)) || isStreaming) return;
     
     const useTools = enabledTools && enabledTools.length > 0;

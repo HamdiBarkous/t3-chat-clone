@@ -170,7 +170,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   };
 
   // Render reasoning indicator with Brain icon
-  const renderReasoningIndicator = (model: any, canToggle: boolean, isEnabled: boolean) => {
+  const renderReasoningIndicator = (model: ModelInfo, canToggle: boolean, isEnabled: boolean) => {
     if (!model.reasoning_capable) return null;
     
     const isOn = canToggle ? isEnabled : true;

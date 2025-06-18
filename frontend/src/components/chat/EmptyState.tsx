@@ -6,7 +6,6 @@
 'use client';
 
 import React from 'react';
-import { useAuth } from '@/contexts/AuthContext';
 import { clsx } from 'clsx';
 
 interface EmptyStateProps {
@@ -15,8 +14,7 @@ interface EmptyStateProps {
   variant?: 'conversations' | 'chat' | 'welcome';
 }
 
-export function EmptyState({ onNewChat, className, variant = 'chat' }: EmptyStateProps) {
-  const { user } = useAuth();
+export function EmptyState({ className, variant = 'chat' }: EmptyStateProps) {
 
   if (variant === 'conversations') {
     return (

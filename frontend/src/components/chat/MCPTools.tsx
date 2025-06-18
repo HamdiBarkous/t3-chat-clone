@@ -12,13 +12,12 @@ import { useSupabaseMCP } from '@/hooks/useProfile';
 
 interface MCPToolsProps {
   enabledTools: string[];
-  searchProvider: 'tavily' | 'firecrawl';
   onToggle: (toolId: string, enabled: boolean, provider?: 'tavily' | 'firecrawl') => void;
   onShowCustomization?: () => void;
   disabled?: boolean;
 }
 
-export function MCPTools({ enabledTools, searchProvider, onToggle, onShowCustomization, disabled = false }: MCPToolsProps) {
+export function MCPTools({ enabledTools, onToggle, onShowCustomization, disabled = false }: MCPToolsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [mounted, setMounted] = useState(false);
   const [showSupabaseSetup, setShowSupabaseSetup] = useState(false);
