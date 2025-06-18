@@ -46,10 +46,10 @@ export function AuthGuard({
 // Loading spinner component
 function AuthLoadingSpinner() {
   return (
-    <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
+    <div className="min-h-screen bg-background flex items-center justify-center">
       <div className="flex flex-col items-center space-y-4">
-        <div className="w-8 h-8 border-2 border-[#8b5cf6] border-t-transparent rounded-full animate-spin" />
-        <p className="text-white text-sm">Loading...</p>
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
+        <p className="text-text-primary text-sm">Loading...</p>
       </div>
     </div>
   );

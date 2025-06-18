@@ -13,7 +13,7 @@
   --popover: #1f1b2e;
   --popover-foreground: #f4f1ff;
   
-  --primary: #8b5cf6; /* Core purple */
+  --primary: #7c3aed; /* Blue-toned purple (less pink) */
   --primary-foreground: #ffffff;
   
   --secondary: #2a2438; /* Violet-gray secondary */
@@ -28,9 +28,9 @@
   --destructive: #ef4444; /* Clean red */
   --destructive-foreground: #ffffff;
   
-  --border: rgba(139, 92, 246, 0.15); /* Subtle purple border */
+  --border: rgba(124, 58, 237, 0.15); /* Subtle blue-purple border */
   --input: #2a2438;
-  --ring: rgba(139, 92, 246, 0.5); /* Purple focus ring */
+  --ring: rgba(124, 58, 237, 0.5); /* Blue-purple focus ring */
   --radius: 0.75rem;
 
   /* Custom Properties */
@@ -39,16 +39,16 @@
   --chat-bg: transparent;
   --message-bg: #2a2438; /* Violet user bubble */
   
-  --purple-accent: #8b5cf6;
-  --purple-light: #a78bfa;
-  --purple-dark: #7c3aed;
+  --purple-accent: #7c3aed; /* Blue-toned purple */
+  --purple-light: #8b5cf6; /* Slightly lighter blue-purple */
+  --purple-dark: #6d28d9; /* Deeper blue-purple */
 
   --text-primary: #f4f1ff; /* Violet-tinted white */
   --text-secondary: #d4d4d8; /* Clean gray */
   --text-muted: #a1a1aa; /* Balanced muted */
 
   /* FX */
-  --purple-glow: 0 6px 24px rgba(139, 92, 246, 0.18);
+  --purple-glow: 0 6px 24px rgba(124, 58, 237, 0.18);
   --code-bg: #1a1625; /* Violet code background */
   --green-accent: #22c55e; /* Fresh green */
 }
