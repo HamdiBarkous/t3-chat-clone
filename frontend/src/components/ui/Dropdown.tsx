@@ -104,11 +104,11 @@ export function Dropdown({
         onKeyDown={handleKeyDown}
         disabled={disabled}
         className={clsx(
-          'w-full px-3 py-2 text-left bg-[#2d2d2d] border border-[#3f3f46] rounded-lg text-white transition-colors',
-          'focus:outline-none focus:ring-2 focus:ring-[#8b5cf6] focus:border-transparent',
+          'w-full px-3 py-2 text-left bg-secondary border border-border rounded-lg text-text-primary transition-colors',
+          'focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent',
           disabled 
             ? 'opacity-50 cursor-not-allowed' 
-            : 'hover:border-[#52525b] cursor-pointer'
+            : 'hover:border-primary/50 cursor-pointer'
         )}
       >
         <div className="flex items-center justify-between">
@@ -117,17 +117,17 @@ export function Dropdown({
               <div>
                 <div className="font-medium text-sm">{selectedOption.label}</div>
                 {selectedOption.description && (
-                  <div className="text-xs text-zinc-400 truncate">{selectedOption.description}</div>
+                  <div className="text-xs text-text-muted truncate">{selectedOption.description}</div>
                 )}
               </div>
             ) : (
-              <span className="text-zinc-500">{placeholder}</span>
+              <span className="text-text-muted">{placeholder}</span>
             )}
           </div>
           
           <svg 
             className={clsx(
-              'w-4 h-4 text-zinc-400 transition-transform ml-2 flex-shrink-0',
+              'w-4 h-4 text-text-muted transition-transform ml-2 flex-shrink-0',
               isOpen && 'rotate-180'
             )} 
             fill="none" 
@@ -141,7 +141,7 @@ export function Dropdown({
 
       {/* Dropdown Menu */}
       {isOpen && (
-        <div className="absolute z-50 w-full mt-1 bg-[#1e1e1e] border border-[#3f3f46] rounded-lg shadow-lg max-h-60 overflow-y-auto">
+        <div className="absolute z-50 w-full mt-1 bg-popover border border-border rounded-lg shadow-lg max-h-60 overflow-y-auto">
           {options.map((option, index) => (
             <button
               key={option.value}
@@ -149,14 +149,19 @@ export function Dropdown({
               onClick={() => handleOptionClick(option.value)}
               className={clsx(
                 'w-full px-3 py-2 text-left transition-colors',
-                'hover:bg-[#2d2d2d] focus:bg-[#2d2d2d] focus:outline-none',
-                focusedIndex === index && 'bg-[#2d2d2d]',
-                value === option.value && 'bg-[#8b5cf6]/10 text-[#8b5cf6]'
+                'hover:bg-muted focus:bg-muted focus:outline-none',
+                focusedIndex === index && 'bg-muted',
+                value === option.value ? 'bg-primary/20 text-primary' : 'text-text-primary'
               )}
             >
               <div className="font-medium text-sm">{option.label}</div>
               {option.description && (
-                <div className="text-xs text-zinc-400">{option.description}</div>
+                <div className={clsx(
+                  "text-xs",
+                  value === option.value ? "text-primary/80" : "text-text-muted"
+                )}>
+                  {option.description}
+                </div>
               )}
             </button>
           ))}

@@ -119,7 +119,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
                   {/* Display images */}
                   {images.length > 0 && (
                     <div className="mb-2">
-                      <div className="text-xs text-zinc-500 mb-1">
+                      <div className="text-xs text-text-muted mb-1">
                         Image{images.length > 1 ? 's' : ''} ({images.length}):
                       </div>
                       <div className="grid grid-cols-2 gap-2 max-w-sm">
@@ -137,7 +137,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
                   {/* Display regular documents */}
                   {regularDocs.length > 0 && (
                     <div>
-                      <div className="text-xs text-zinc-500 mb-1">
+                      <div className="text-xs text-text-muted mb-1">
                         Attached file{regularDocs.length > 1 ? 's' : ''} ({regularDocs.length}):
                       </div>
                       <div className="flex flex-wrap gap-1">
@@ -157,24 +157,17 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
           </div>
         )}
 
-        {/* Message Bubble */}
-        <div 
-          className={clsx(
-            'rounded-lg relative',
-            isUser 
-              ? 'bg-[#8b5cf6] text-white px-4 py-3' 
-              : 'bg-[#2d2d2d] text-white border border-[#3f3f46]'
-          )}
-        >
-          {/* Message Text */}
-          {isUser ? (
-            <div className="whitespace-pre-wrap break-words">
+        {/* Message Content */}
+        {isUser ? (
+          // User messages in a subtle box using CSS custom properties
+          <div className="message-bg rounded-lg px-4 py-3 border border-border">
+            <div className="whitespace-pre-wrap break-words text-primary">
               {isEditing ? (
                 <div className="space-y-2">
                   <textarea
                     value={editContent}
                     onChange={(e) => setEditContent(e.target.value)}
-                    className="w-full bg-[#7c3aed] text-white placeholder-purple-200 border border-purple-400 rounded p-2 resize-none focus:outline-none focus:ring-2 focus:ring-purple-300"
+                    className="w-full bg-input text-primary placeholder-text-muted border border-border rounded p-2 resize-none focus:outline-none focus:ring-2 focus:ring-ring focus:border-transparent"
                     rows={3}
                     placeholder="Edit your message..."
                   />
@@ -182,14 +175,14 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
                     <button
                       onClick={handleEditMessage}
                       disabled={!editContent.trim() || isSaving}
-                      className="px-3 py-1 bg-purple-600 hover:bg-purple-700 disabled:opacity-50 disabled:cursor-not-allowed text-white text-sm rounded transition-colors"
+                      className="px-3 py-1 purple-accent hover:bg-purple-dark disabled:opacity-50 disabled:cursor-not-allowed text-primary text-sm rounded transition-colors"
                     >
                       {isSaving ? 'Creating branch...' : 'Send'}
                     </button>
                     <button
                       onClick={cancelEditing}
                       disabled={isSaving}
-                      className="px-3 py-1 bg-purple-800 hover:bg-purple-900 text-white text-sm rounded transition-colors"
+                      className="px-3 py-1 bg-secondary hover:bg-muted text-primary text-sm rounded transition-colors"
                     >
                       Cancel
                     </button>
@@ -199,28 +192,29 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
                 message.content
               )}
             </div>
-          ) : (
-            <div className={clsx(isAssistant ? 'p-4' : 'px-4 py-3')}>
-              {message.content ? (
-                <MarkdownRenderer content={message.content} />
-              ) : isStreaming ? (
-                // Show typing indicator when streaming and no content yet
-                <div className="flex items-center gap-1.5">
-                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce" />
-                  <div className="w-1.5 h-1.5 bg-[#7c3aed] rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                  <div className="w-1.5 h-1.5 bg-[#8b5cf6] rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-                </div>
-              ) : null}
-              {isStreaming && message.content && (
-                <span className="inline-block w-2 h-5 bg-[#8b5cf6] ml-1 animate-pulse" />
-              )}
-            </div>
-          )}
-        </div>
+          </div>
+        ) : (
+          // AI messages blend into background (no box) using CSS custom properties
+          <div className="text-primary">
+            {message.content ? (
+              <MarkdownRenderer content={message.content} />
+            ) : isStreaming ? (
+              // Show typing indicator when streaming and no content yet
+              <div className="flex items-center gap-1.5 py-2">
+                <div className="w-1.5 h-1.5 purple-accent rounded-full animate-bounce" />
+                <div className="w-1.5 h-1.5 bg-purple-dark rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
+                <div className="w-1.5 h-1.5 purple-accent rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
+              </div>
+            ) : null}
+            {isStreaming && message.content && (
+              <span className="inline-block w-2 h-5 purple-accent ml-1 animate-pulse" />
+            )}
+          </div>
+        )}
 
         {/* Metadata */}
         <div className={clsx(
-          'flex items-center gap-2 mt-1 text-xs text-zinc-500',
+          'flex items-center gap-2 mt-1 text-xs text-text-muted',
           isUser ? 'flex-row-reverse' : 'flex-row'
         )}>
           <span>{formatTimestamp(message.created_at)}</span>
@@ -229,7 +223,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
           {message.role === 'user' && (
             <div className="flex items-center gap-1">
               {message.status === MessageStatus.COMPLETED && (
-                <svg className="w-3 h-3 text-zinc-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
                 </svg>
               )}
@@ -248,7 +242,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
               {isUser && !isEditing && (
                 <button
                   onClick={startEditing}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-xs hover:bg-zinc-800 transition-colors text-zinc-400 hover:text-zinc-200"
+                  className="flex items-center gap-1 px-2 py-1 rounded text-xs hover:bg-muted transition-colors text-text-muted hover:text-text-secondary"
                   title="Edit message"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -265,9 +259,9 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
                   disabled={isRetrying}
                   className={clsx(
                     'flex items-center gap-1 px-2 py-1 rounded text-xs',
-                    'hover:bg-zinc-800 transition-colors',
+                    'hover:bg-muted transition-colors',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
-                    isRetrying ? 'text-zinc-500' : 'text-zinc-400 hover:text-zinc-200'
+                    isRetrying ? 'text-text-muted' : 'text-text-muted hover:text-text-secondary'
                   )}
                   title="Retry response"
                 >
@@ -285,9 +279,9 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
                   disabled={isBranching}
                   className={clsx(
                     'flex items-center gap-1 px-2 py-1 rounded text-xs',
-                    'hover:bg-zinc-800 transition-colors',
+                    'hover:bg-muted transition-colors',
                     'disabled:opacity-50 disabled:cursor-not-allowed',
-                    isBranching ? 'text-zinc-500' : 'text-zinc-400 hover:text-zinc-200'
+                    isBranching ? 'text-text-muted' : 'text-text-muted hover:text-text-secondary'
                   )}
                   title="Branch from here"
                 >

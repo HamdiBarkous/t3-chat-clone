@@ -2,44 +2,60 @@
 @plugin "@tailwindcss/typography";
 
 :root {
-  /* Base colors from the chat interface */
-  --background: #1a1a1a;
-  --foreground: #ffffff;
-  --card: #1e1e1e;
-  --card-foreground: #ffffff;
-  --popover: #1e1e1e;
-  --popover-foreground: #ffffff;
-  --primary: #8b5cf6;
-  --primary-foreground: #ffffff;
-  --secondary: #2d2d2d;
-  --secondary-foreground: #d4d4d8;
-  --muted: #2d2d2d;
-  --muted-foreground: #71717a;
-  --accent: #7c3aed;
-  --accent-foreground: #ffffff;
-  --destructive: #ef4444;
-  --destructive-foreground: #ffffff;
-  --border: #3f3f46;
-  --input: #2d2d2d;
-  --ring: #8b5cf6;
-  --radius: 0.5rem;
+  /* Premium Midnight Amethyst Theme */
+  --background-start: #0a0612; /* Deep space black */
+  --background-end: #050308; /* Darker gradient end */
+  --foreground: #f8fafc; /* Crisp white */
   
-  /* Custom chat interface colors */
-  --sidebar-bg: #171717;
-  --sidebar-item-hover: #262626;
-  --chat-bg: #1a1a1a;
-  --message-bg: #2d2d2d;
-  --purple-accent: #8b5cf6;
-  --purple-light: #a78bfa;
+  --card: #1a1425; /* Rich dark purple card */
+  --card-foreground: #f8fafc;
+  
+  --popover: #1a1425;
+  --popover-foreground: #f8fafc;
+  
+  --primary: #9333ea; /* Vibrant amethyst purple */
+  --primary-foreground: #ffffff;
+  
+  --secondary: #1e1b26; /* Sophisticated dark purple */
+  --secondary-foreground: #e2e8f0;
+
+  --muted: #2d2438; /* Muted purple-gray */
+  --muted-foreground: #94a3b8;
+  
+  --accent: #a855f7; /* Bright accent purple */
+  --accent-foreground: #ffffff;
+  
+  --destructive: #dc2626; /* Premium red */
+  --destructive-foreground: #ffffff;
+  
+  --border: rgba(147, 51, 234, 0.15); /* Subtle purple border */
+  --input: #1e1b26;
+  --ring: rgba(147, 51, 234, 0.6);
+  --radius: 0.75rem;
+
+  /* Custom Properties */
+  --sidebar-bg: #0a0612;
+  --sidebar-item-hover: #1a1425;
+  --chat-bg: transparent; 
+  --message-bg: #1e1b26; /* User message bubble */
+  
+  --purple-accent: #9333ea;
+  --purple-light: #c084fc;
   --purple-dark: #7c3aed;
-  --text-primary: #ffffff;
-  --text-secondary: #d4d4d8;
-  --text-muted: #71717a;
+
+  --text-primary: #f8fafc; /* Premium white */
+  --text-secondary: #e2e8f0; /* Light gray */
+  --text-muted: #94a3b8; /* Sophisticated muted */
+
+  /* FX */
+  --purple-glow: 0 8px 32px rgba(147, 51, 234, 0.15);
+  --code-bg: #050308; /* Ultra dark for code */
+  --green-accent: #10b981; /* Premium emerald green */
 }
 
 @theme inline {
   /* Base theme colors */
-  --color-background: var(--background);
+  --color-background: var(--background-start);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
   --color-card-foreground: var(--card-foreground);
@@ -81,14 +97,15 @@
 
 @media (prefers-color-scheme: dark) {
   :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
+    --background-start: #1e1a2c;
+    --background-end: #161320;
   }
 }
 
 body {
-  background: var(--background);
-  color: var(--foreground);
+  background: linear-gradient(180deg, var(--background-start) 0%, var(--background-end) 100%);
+  background-attachment: fixed;
+  color: var(--text-primary);
   font-family: Arial, Helvetica, sans-serif;
 }
 
@@ -97,9 +114,23 @@ body {
 .chat-bg { background-color: var(--chat-bg); }
 .message-bg { background-color: var(--message-bg); }
 .purple-accent { background-color: var(--purple-accent); }
+.bg-purple-dark { background-color: var(--purple-dark); }
 .text-primary { color: var(--text-primary); }
 .text-secondary { color: var(--text-secondary); }
 .text-muted { color: var(--text-muted); }
+
+/* Additional utility classes for the chat interface */
+.bg-input { background-color: var(--input); }
+.bg-secondary { background-color: var(--secondary); }
+.bg-muted { background-color: var(--muted); }
+.border-border { border-color: var(--border); }
+.ring-ring { --tw-ring-color: var(--ring); }
+.placeholder-text-muted::placeholder { color: var(--text-muted); }
+
+/* Hover states */
+.hover\:bg-purple-dark:hover { background-color: var(--purple-dark); }
+.hover\:bg-muted:hover { background-color: var(--muted); }
+.hover\:text-green-400:hover { color: var(--green-accent); }
 
 /* Line clamp utility */
 .line-clamp-2 {

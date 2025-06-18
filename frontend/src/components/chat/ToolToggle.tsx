@@ -69,10 +69,7 @@ export function ToolToggle({ enabled, enabledTools, onToggle, disabled = false }
         size="sm"
         onClick={() => setIsOpen(!isOpen)}
         disabled={disabled}
-        className={clsx(
-          'flex items-center gap-2 transition-colors',
-          enabled && 'bg-[#8b5cf6] hover:bg-[#7c3aed]'
-        )}
+        className="flex items-center gap-2 transition-colors"
       >
         <span className="text-sm">🤖</span>
         <span className="text-sm">
@@ -91,10 +88,10 @@ export function ToolToggle({ enabled, enabledTools, onToggle, disabled = false }
 
       {/* Dropdown Panel */}
       {isOpen && (
-        <div className="absolute bottom-full mb-2 left-0 w-64 bg-[#2d2d2d] border border-[#3f3f46] rounded-lg shadow-lg z-50">
+        <div className="absolute bottom-full mb-2 left-0 w-64 bg-secondary border border-border rounded-lg shadow-lg z-50">
           <div className="p-3">
             <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-medium text-white">MCP Servers</h3>
+              <h3 className="text-sm font-medium text-text-primary">MCP Servers</h3>
               <Button
                 type="button"
                 variant={enabled ? 'secondary' : 'primary'}
@@ -107,11 +104,11 @@ export function ToolToggle({ enabled, enabledTools, onToggle, disabled = false }
             </div>
 
             {loading ? (
-              <div className="text-sm text-zinc-400 text-center py-2">
+              <div className="text-sm text-text-muted text-center py-2">
                 Loading servers...
               </div>
             ) : availableClients.length === 0 ? (
-              <div className="text-sm text-zinc-400 text-center py-2">
+              <div className="text-sm text-text-muted text-center py-2">
                 No MCP servers available
               </div>
             ) : (
@@ -123,8 +120,8 @@ export function ToolToggle({ enabled, enabledTools, onToggle, disabled = false }
                       key={client}
                       className={clsx(
                         'flex items-center gap-3 p-2 rounded-md cursor-pointer transition-colors',
-                        'hover:bg-[#3f3f46]',
-                        isEnabled && 'bg-[#3f3f46]'
+                        'hover:bg-muted',
+                        isEnabled && 'bg-muted'
                       )}
                     >
                       <input
@@ -132,13 +129,13 @@ export function ToolToggle({ enabled, enabledTools, onToggle, disabled = false }
                         checked={isEnabled}
                         onChange={() => toggleClient(client)}
                         disabled={disabled}
-                        className="w-4 h-4 text-[#8b5cf6] bg-[#1a1a1a] border-[#3f3f46] rounded focus:ring-[#8b5cf6] focus:ring-2"
+                        className="w-4 h-4 text-primary bg-background border-border rounded focus:ring-primary focus:ring-2"
                       />
                       <div className="flex-1">
-                        <div className="text-sm font-medium text-white capitalize">
+                        <div className="text-sm font-medium text-text-primary capitalize">
                           {client}
                         </div>
-                        <div className="text-xs text-zinc-400">
+                        <div className="text-xs text-text-muted">
                           {client === 'supabase' ? 'Database operations' : 
                            client === 'firecrawl' ? 'Web scraping & search' : 
                            client === 'tavily' ? 'AI-powered web search' : 
@@ -147,7 +144,7 @@ export function ToolToggle({ enabled, enabledTools, onToggle, disabled = false }
                         </div>
                       </div>
                       {isEnabled && (
-                        <div className="w-2 h-2 bg-[#8b5cf6] rounded-full"></div>
+                        <div className="w-2 h-2 bg-primary rounded-full"></div>
                       )}
                     </label>
                   );
@@ -155,8 +152,8 @@ export function ToolToggle({ enabled, enabledTools, onToggle, disabled = false }
               </div>
             )}
 
-            <div className="mt-3 pt-3 border-t border-[#3f3f46]">
-              <div className="text-xs text-zinc-500">
+            <div className="mt-3 pt-3 border-t border-border">
+              <div className="text-xs text-text-muted">
                 {enabled 
                   ? `${enabledTools.length} server${enabledTools.length !== 1 ? 's' : ''} enabled`
                   : 'Click a server to enable agent mode'

@@ -118,5 +118,3 @@ class TavilyMCPClient(BaseMCPClient):
             
         return await self.call_tool("tavily_answer_search", params)
 
-    # Remove the overridden method - use the base class implementation
-    # which will query the actual MCP server for tools 

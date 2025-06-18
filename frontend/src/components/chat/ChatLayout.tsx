@@ -25,7 +25,7 @@ export function ChatLayout({
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   return (
-    <div className="h-screen bg-[#1a1a1a] flex overflow-hidden">
+    <div className="h-screen bg-chat-bg flex overflow-hidden">
       {/* Mobile backdrop */}
       {sidebarOpen && (
         <div 
@@ -37,7 +37,7 @@ export function ChatLayout({
       {/* Sidebar */}
       <aside
         className={clsx(
-          'z-50 bg-[#171717] border-r border-[#3f3f46] transform transition-all duration-300 ease-in-out',
+          'z-50 bg-sidebar-bg border-r border-border transform transition-all duration-300 ease-in-out',
           // Mobile: fixed overlay
           'fixed inset-y-0 left-0 w-80 md:relative md:h-full',
           // Desktop: collapsible width
@@ -62,12 +62,12 @@ export function ChatLayout({
       {/* Main content */}
       <main className="flex-1 flex flex-col min-w-0 transition-all duration-300 ease-in-out">
         {/* Header with toggle button */}
-        <header className="bg-[#171717] border-b border-[#3f3f46] px-4 py-3 flex items-center justify-between">
+        <header className="bg-sidebar-bg/50 backdrop-blur-sm border-b border-border px-4 py-3 flex items-center justify-between">
           <div className="flex items-center space-x-3">
             {/* Sidebar toggle button */}
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
-              className="p-2 text-zinc-400 hover:text-white transition-colors rounded-lg hover:bg-[#2d2d2d]"
+              className="p-2 text-text-muted hover:text-text-primary transition-colors rounded-lg hover:bg-muted"
               title={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
             >
               <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -81,7 +81,7 @@ export function ChatLayout({
             
             {/* App title when sidebar is hidden */}
             {!sidebarOpen && (
-              <h1 className="text-lg font-semibold text-white transition-opacity duration-300">T3.chat</h1>
+              <h1 className="text-lg font-semibold text-text-primary transition-opacity duration-300">T3.chat</h1>
             )}
           </div>
         </header>
