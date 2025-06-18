@@ -245,7 +245,7 @@ body {
   background: linear-gradient(
     90deg,
     transparent,
-    rgba(255, 60, 166, 0.05),
+    rgba(124, 58, 237, 0.05),
     transparent
   );
   transition: left 0.6s ease;
@@ -261,11 +261,7 @@ body {
 }
 
 .conversation-card.selected {
-  transform: translateY(-1px) scale(1.005);
-  box-shadow: 
-    0 10px 30px rgba(255, 60, 166, 0.15),
-    0 4px 12px rgba(255, 60, 166, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
+  /* No special effects - clean selection */
 }
 
 /* Streaming title specific styles */
@@ -285,7 +281,7 @@ body {
   );
   margin-left: 2px;
   border-radius: 1px;
-  box-shadow: 0 0 8px rgba(255, 60, 166, 0.6);
+  box-shadow: 0 0 8px rgba(124, 58, 237, 0.3);
 }
 
 /* Responsive enhancements */
@@ -427,7 +423,7 @@ body {
 
 /* Focus styles for accessibility */
 .conversation-card:focus-within {
-  outline: 2px solid rgba(255, 60, 166, 0.5);
+  outline: 2px solid rgba(124, 58, 237, 0.5);
   outline-offset: 2px;
 }
 

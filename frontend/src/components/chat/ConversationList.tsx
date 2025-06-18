@@ -447,7 +447,7 @@ export function ConversationList({
                     'transition-all duration-300 ease-out transform-gpu',
                     'hover:shadow-lg hover:shadow-black/10 hover:-translate-y-0.5',
                     selectedConversationId === conversation.id
-                      ? 'selected bg-gradient-to-r from-primary/15 to-primary/10 border border-primary/30 shadow-lg shadow-primary/10 translate-y-0'
+                      ? 'selected bg-secondary border border-border'
                       : 'hover:bg-gradient-to-r hover:from-muted hover:to-muted/80 border border-transparent',
                     newConversationIds.has(conversation.id) && 'animate-slide-in-up-stagger',
                     isBranch && 'ml-6 relative before:absolute before:left-[-24px] before:top-1/2 before:w-4 before:h-px before:bg-border before:transform before:-translate-y-1/2',
@@ -458,10 +458,7 @@ export function ConversationList({
                     animationDelay: newConversationIds.has(conversation.id) ? `${groupIndex * 100 + index * 50}ms` : '0ms'
                   }}
                 >
-                  {/* Subtle gradient overlay for selected state */}
-                  {selectedConversationId === conversation.id && (
-                    <div className="absolute inset-0 bg-gradient-to-r from-primary/5 to-transparent rounded-xl pointer-events-none" />
-                  )}
+
                   
                   <div className="relative p-3.5 flex items-center">
                     {/* Branch indicator with enhanced styling */}
