@@ -55,8 +55,10 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
   // Check if this is a branched conversation
   const isBranchedConversation = conversation?.title?.startsWith('Branch from ');
 
-  const handleSendMessage = async (content: string, files?: File[], useTools?: boolean, enabledTools?: string[]) => {
+  const handleSendMessage = async (content: string, files?: File[], enabledTools?: string[]) => {
     if ((!content.trim() && (!files || files.length === 0)) || isStreaming) return;
+    
+    const useTools = enabledTools && enabledTools.length > 0;
     
     try {
       await sendMessage(content.trim(), currentModel, files, useTools, enabledTools);

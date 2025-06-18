@@ -12,11 +12,12 @@ import { FileUpload, useFileUpload } from '@/components/ui/FileUpload';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
 import { ImagePreview } from '@/components/ui/ImagePreview';
 import { useModels } from '@/hooks/useModels';
-import { ToolToggle } from '@/components/chat/ToolToggle';
+import { MCPTools } from '@/components/chat/MCPTools';
+import { WebSearch } from '@/components/chat/WebSearch';
 import { clsx } from 'clsx';
 
 interface MessageInputProps {
-  onSendMessage: (content: string, files?: File[], useTools?: boolean, enabledTools?: string[]) => void;
+  onSendMessage: (content: string, files?: File[], enabledTools?: string[]) => void;
   disabled?: boolean;
   currentModel?: string;
   onModelChange?: (model: string) => void;
@@ -32,9 +33,12 @@ export function MessageInput({
   const [isFocused, setIsFocused] = useState(false);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   
-  // Tool state
-  const [toolsEnabled, setToolsEnabled] = useState(false);
+  // MCP Tools state
   const [enabledTools, setEnabledTools] = useState<string[]>([]);
+  const [searchProvider, setSearchProvider] = useState<'tavily' | 'firecrawl'>('tavily');
+  
+  // Web search state (separate from other MCP tools)
+  const [searchEnabled, setSearchEnabled] = useState(false);
   
   // File upload functionality
   const { uploadedFiles, addFiles, removeFile, clearFiles } = useFileUpload();
@@ -82,11 +86,16 @@ export function MessageInput({
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if ((message.trim() || uploadedFiles.length > 0) && !disabled) {
+      // Combine web search and other MCP tools
+      const allEnabledTools = [
+        ...(searchEnabled ? [searchProvider] : []),
+        ...enabledTools
+      ];
+      
       onSendMessage(
         message.trim(), 
         uploadedFiles, 
-        toolsEnabled, 
-        toolsEnabled ? enabledTools : undefined
+        allEnabledTools
       );
       setMessage('');
       clearFiles();
@@ -104,9 +113,22 @@ export function MessageInput({
     onModelChange?.(model);
   };
 
-  const handleToolToggle = (enabled: boolean, tools: string[]) => {
-    setToolsEnabled(enabled);
-    setEnabledTools(tools);
+  const handleToolToggle = (toolId: string, enabled: boolean, provider?: 'tavily' | 'firecrawl') => {
+    // Only handle non-search tools (supabase, sequential_thinking)
+    if (toolId === 'tavily' || toolId === 'firecrawl') {
+      return; // These are handled by WebSearch component
+    }
+    
+    if (enabled) {
+      setEnabledTools(prev => [...prev.filter(id => id !== toolId), toolId]);
+    } else {
+      setEnabledTools(prev => prev.filter(id => id !== toolId));
+    }
+  };
+
+  const handleSearchToggle = (enabled: boolean, provider: 'tavily' | 'firecrawl') => {
+    setSearchEnabled(enabled);
+    setSearchProvider(provider);
   };
 
   const canSend = (message.trim().length > 0 || uploadedFiles.length > 0) && !disabled;
@@ -114,23 +136,6 @@ export function MessageInput({
   return (
     <div className="border-t border-border bg-transparent p-4">
       <div className="max-w-4xl mx-auto">
-        {/* Model Selector and Tool Toggle */}
-        <div className="mb-3 flex items-center gap-3">
-          <Dropdown
-            options={availableModels}
-            value={currentModel}
-            onChange={handleModelChange}
-            disabled={disabled}
-            className="w-48"
-          />
-          <ToolToggle
-            enabled={toolsEnabled}
-            enabledTools={enabledTools}
-            onToggle={handleToolToggle}
-            disabled={disabled}
-          />
-        </div>
-
         {/* Uploaded Files Display */}
         {uploadedFiles.length > 0 && (
           <div className="mb-3 p-3 bg-secondary border border-border rounded-lg">
@@ -206,7 +211,7 @@ export function MessageInput({
         <form onSubmit={handleSubmit} className="relative">
           <div 
             className={clsx(
-              "relative transition-all duration-300 rounded-lg",
+              "relative transition-all duration-300 rounded-lg mb-3",
               isFocused 
                 ? "ring-2 ring-primary border-transparent" 
                 : "border border-border",
@@ -307,25 +312,40 @@ export function MessageInput({
                   'focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-offset-background',
                   'shadow-lg backdrop-blur-sm flex-shrink-0',
                   canSend 
-                    ? 'bg-primary text-primary-foreground focus:ring-primary'
-                    : 'bg-secondary text-text-muted cursor-not-allowed'
+                    ? 'purple-accent hover:bg-purple-dark text-primary-foreground transform hover:scale-105 active:scale-95 focus:ring-purple-light/50' 
+                    : 'bg-muted text-text-muted cursor-not-allowed'
                 )}
-                title={canSend ? "Send message" : "Type a message to send"}
+                title={canSend ? 'Send message' : 'Type a message to send'}
               >
-                <svg 
-                  className="w-4 h-4" 
-                  fill="none" 
-                  stroke="currentColor" 
-                  viewBox="0 0 24 24"
-                >
-                  <path 
-                    strokeLinecap="round" 
-                    strokeLinejoin="round" 
-                    strokeWidth={2.5} 
-                    d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" 
-                  />
+                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
                 </svg>
               </Button>
+            </div>
+          </div>
+
+          {/* Model Selector and Tools - Moved below textarea */}
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-3">
+              <Dropdown
+                options={availableModels}
+                value={currentModel}
+                onChange={handleModelChange}
+                disabled={disabled}
+                className="w-48"
+              />
+              <WebSearch
+                enabled={searchEnabled}
+                provider={searchProvider}
+                onToggle={handleSearchToggle}
+                disabled={disabled}
+              />
+              <MCPTools
+                enabledTools={enabledTools}
+                searchProvider={searchProvider}
+                onToggle={handleToolToggle}
+                disabled={disabled}
+              />
             </div>
           </div>
         </form>
