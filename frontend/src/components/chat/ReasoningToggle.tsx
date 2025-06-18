@@ -24,8 +24,9 @@ export function ReasoningToggle({
   modelSupportsReasoning = false,
   modelReasonsByDefault = false,
 }: ReasoningToggleProps) {
-  // Don't show the toggle if model doesn't support reasoning (unless it reasons by default)
-  if (!modelSupportsReasoning && !modelReasonsByDefault) {
+  // Only show the toggle for models that support reasoning AND can toggle it
+  // Don't show for models that reason by default (can't be disabled)
+  if (!modelSupportsReasoning || modelReasonsByDefault) {
     return null;
   }
 
@@ -34,16 +35,10 @@ export function ReasoningToggle({
   };
 
   const getToggleText = () => {
-    if (modelReasonsByDefault) {
-      return enabled ? 'Reasoning On' : 'Reasoning Off';
-    }
     return enabled ? 'Reasoning On' : 'Reasoning Off';
   };
 
   const getToggleIcon = () => {
-    if (modelReasonsByDefault && enabled) {
-      return '🧠'; // Brain for reasoning by default
-    }
     return enabled ? '💭' : '⚡'; // Thought bubble for reasoning, lightning for fast mode
   };
 

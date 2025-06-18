@@ -177,7 +177,7 @@ class OpenRouterClient:
                 try:
                     error_detail = await e.response.aread()
                     error_detail = error_detail.decode('utf-8')
-                except:
+                except Exception:
                     error_detail = f"HTTP {e.response.status_code}"
                 
                 # Provide user-friendly error messages for common issues
