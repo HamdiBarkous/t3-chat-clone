@@ -42,9 +42,9 @@ class Settings(BaseSettings):
         "http://localhost:5173",  # Vite dev server
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
-        "http://3.86.89.176:8000",  # EC2 backend
+        "http://54.144.220.40:8000",  # EC2 backend
         "https://*.vercel.app",  # Vercel deployment domains
-        "https://t3-chat.vercel.app",  # Your specific Vercel domain
+        "https://t3-chat-clone-dc22kjqzl-hamdi-barkous-projects.vercel.app",  # Your actual Vercel domain
         "*"  # Allow all origins for now (change this in production)
     ]
     
