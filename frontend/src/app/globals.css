@@ -118,11 +118,15 @@ body {
 .text-primary { color: var(--text-primary); }
 .text-secondary { color: var(--text-secondary); }
 .text-muted { color: var(--text-muted); }
+.text-purple-light { color: var(--purple-light); }
+.text-green-accent { color: var(--green-accent); }
+.text-destructive-foreground { color: var(--destructive-foreground); }
 
 /* Additional utility classes for the chat interface */
 .bg-input { background-color: var(--input); }
 .bg-secondary { background-color: var(--secondary); }
 .bg-muted { background-color: var(--muted); }
+.bg-destructive-foreground { background-color: var(--destructive-foreground); }
 .border-border { border-color: var(--border); }
 .ring-ring { --tw-ring-color: var(--ring); }
 .placeholder-text-muted::placeholder { color: var(--text-muted); }
@@ -131,6 +135,7 @@ body {
 .hover\:bg-purple-dark:hover { background-color: var(--purple-dark); }
 .hover\:bg-muted:hover { background-color: var(--muted); }
 .hover\:text-green-400:hover { color: var(--green-accent); }
+.hover\:text-purple-light:hover { color: var(--purple-light); }
 
 /* Line clamp utility */
 .line-clamp-2 {

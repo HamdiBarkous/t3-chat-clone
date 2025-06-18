@@ -24,8 +24,8 @@ export function ImageDisplay({ document, size = 'md', className }: ImageDisplayP
   // In a real implementation, you might want to fetch the image from a storage service
   const placeholderUrl = `data:image/svg+xml;base64,${btoa(`
     <svg width="300" height="200" xmlns="http://www.w3.org/2000/svg">
-      <rect width="100%" height="100%" fill="#2d2d2d"/>
-      <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="#8b5cf6" font-family="sans-serif" font-size="14">
+              <rect width="100%" height="100%" fill="var(--secondary)"/>
+        <text x="50%" y="50%" text-anchor="middle" dy=".3em" fill="var(--primary)" font-family="sans-serif" font-size="14">
         ${document.filename}
       </text>
     </svg>
@@ -65,24 +65,24 @@ export function ImageDisplay({ document, size = 'md', className }: ImageDisplayP
   return (
     <>
       <div className={clsx(
-        'relative group cursor-pointer rounded-lg overflow-hidden border border-[#3f3f46] bg-[#2d2d2d]',
+        'relative group cursor-pointer rounded-lg overflow-hidden border border-border bg-secondary',
         sizeClasses[size],
         className
       )}>
         {isLoading && (
           <div className="absolute inset-0 flex items-center justify-center">
-            <div className="w-4 h-4 border-2 border-[#8b5cf6] border-t-transparent rounded-full animate-spin" />
+            <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           </div>
         )}
 
         {error ? (
-          <div className="w-full h-full flex flex-col items-center justify-center text-zinc-500 p-4">
+          <div className="w-full h-full flex flex-col items-center justify-center text-text-muted p-4">
             <svg className="w-8 h-8 mb-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 15.5C3.312 16.333 4.271 18 5.81 18z" />
             </svg>
             <div className="text-xs text-center">
               <div className="font-medium">Image unavailable</div>
-              <div className="text-zinc-600">{document.filename}</div>
+              <div className="text-text-muted/60">{document.filename}</div>
             </div>
           </div>
         ) : (
@@ -96,18 +96,18 @@ export function ImageDisplay({ document, size = 'md', className }: ImageDisplayP
             />
             
             {/* Hover overlay */}
-            <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
-              <svg className="w-6 h-6 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <div className="absolute inset-0 bg-background/80 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+              <svg className="w-6 h-6 text-text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0zM10 7v3m0 0v3m0-3h3m-3 0H7" />
               </svg>
             </div>
 
             {/* Image info overlay */}
-            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/75 to-transparent text-white text-xs p-2">
+            <div className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-background/90 to-transparent text-text-primary text-xs p-2">
               <div className="truncate font-medium" title={document.filename}>
                 {document.filename}
               </div>
-              <div className="text-zinc-300 flex items-center gap-2">
+              <div className="text-text-muted flex items-center gap-2">
                 <span className="uppercase">{document.file_type}</span>
                 <span>•</span>
                 <span>{formatFileSize(document.file_size)}</span>
@@ -120,7 +120,7 @@ export function ImageDisplay({ document, size = 'md', className }: ImageDisplayP
       {/* Modal for full-size view */}
       {isModalOpen && (
         <div 
-          className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 p-4"
+          className="fixed inset-0 bg-background/90 backdrop-blur-sm flex items-center justify-center z-50 p-4"
           onClick={closeModal}
         >
           <div className="relative max-w-screen-lg max-h-screen-lg">
@@ -133,7 +133,7 @@ export function ImageDisplay({ document, size = 'md', className }: ImageDisplayP
             {/* Close button */}
             <button
               onClick={closeModal}
-              className="absolute top-4 right-4 w-8 h-8 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-black/75 transition-colors"
+              className="absolute top-4 right-4 w-8 h-8 bg-background/80 text-text-primary rounded-full flex items-center justify-center hover:bg-background/90 transition-colors"
             >
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -141,9 +141,9 @@ export function ImageDisplay({ document, size = 'md', className }: ImageDisplayP
             </button>
 
             {/* Image info */}
-            <div className="absolute bottom-4 left-4 right-4 bg-black/75 text-white rounded p-3">
+            <div className="absolute bottom-4 left-4 right-4 bg-background/80 text-text-primary rounded p-3">
               <div className="font-medium">{document.filename}</div>
-              <div className="text-sm text-zinc-300 flex items-center gap-2 mt-1">
+              <div className="text-sm text-text-muted flex items-center gap-2 mt-1">
                 <span className="uppercase">{document.file_type}</span>
                 <span>•</span>
                 <span>{formatFileSize(document.file_size)}</span>

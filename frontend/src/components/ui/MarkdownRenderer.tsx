@@ -244,7 +244,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           [rehypeKatex, {
             // KaTeX options for better rendering
             throwOnError: false, // Don't throw on math errors, show error instead
-            errorColor: '#cc0000',
+            errorColor: 'var(--destructive)',
             strict: false, // Allow some non-standard LaTeX
             trust: false, // Don't trust user input for security
             macros: {

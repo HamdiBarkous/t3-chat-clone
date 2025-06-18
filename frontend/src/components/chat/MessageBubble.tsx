@@ -228,7 +228,7 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
                 </svg>
               )}
               {message.status === MessageStatus.FAILED && (
-                <svg className="w-3 h-3 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <svg className="w-3 h-3 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                 </svg>
               )}

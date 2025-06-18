@@ -71,7 +71,7 @@ function ToolCard({ tool }: ToolCardProps) {
       case 'completed':
         return <span className="text-green-accent">✅</span>;
       case 'failed':
-        return <span className="text-red-400">❌</span>;
+        return <span className="text-destructive">❌</span>;
       default:
         return <span className="text-text-muted">⏳</span>;
     }
@@ -178,7 +178,7 @@ function ToolCard({ tool }: ToolCardProps) {
               <div className="bg-code-bg border border-border rounded p-3 max-h-60 overflow-y-auto">
                 <pre className={clsx(
                   'text-sm whitespace-pre-wrap overflow-x-auto',
-                  tool.error ? 'text-red-300' : 'text-text-secondary'
+                  tool.error ? 'text-destructive' : 'text-text-secondary'
                 )}>
                   {tool.error || tool.result}
                 </pre>

@@ -68,7 +68,7 @@ function ConfirmContent() {
       case 'loading':
         return {
           icon: (
-            <div className="w-8 h-8 border-2 border-[#8b5cf6] border-t-transparent rounded-full animate-spin" />
+            <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
           ),
           title: 'Confirming your email...',
           message: 'Please wait while we verify your account.',
@@ -77,7 +77,7 @@ function ConfirmContent() {
         return {
           icon: (
             <svg
-              className="w-8 h-8 text-green-500"
+              className="w-8 h-8 text-green-accent"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -97,7 +97,7 @@ function ConfirmContent() {
         return {
           icon: (
             <svg
-              className="w-8 h-8 text-red-500"
+              className="w-8 h-8 text-destructive"
               fill="none"
               stroke="currentColor"
               viewBox="0 0 24 24"
@@ -119,19 +119,19 @@ function ConfirmContent() {
   const content = getStatusContent();
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
-        <div className="bg-[#1e1e1e] p-8 rounded-lg border border-[#3f3f46]">
+        <div className="bg-card p-8 rounded-lg border border-border">
           <div className="text-center">
-            <div className="w-16 h-16 mx-auto mb-4 bg-[#8b5cf6]/20 rounded-full flex items-center justify-center">
+            <div className="w-16 h-16 mx-auto mb-4 bg-primary/20 rounded-full flex items-center justify-center">
               {content.icon}
             </div>
             
-            <h1 className="text-2xl font-semibold text-white mb-2">
+            <h1 className="text-2xl font-semibold text-text-primary mb-2">
               {content.title}
             </h1>
             
-            <p className="text-zinc-400 mb-6">
+            <p className="text-text-muted mb-6">
               {content.message}
             </p>
             
@@ -139,14 +139,14 @@ function ConfirmContent() {
               <div className="space-y-4">
                 <button
                   onClick={() => router.push('/auth/signup')}
-                  className="w-full px-4 py-2 text-sm bg-[#8b5cf6] text-white rounded-lg hover:bg-[#7c3aed] transition-colors"
+                  className="w-full px-4 py-2 text-sm bg-primary text-primary-foreground rounded-lg hover:bg-purple-dark transition-colors"
                 >
                   Try signing up again
                 </button>
                 
                 <button
                   onClick={() => router.push('/auth/login')}
-                  className="w-full px-4 py-2 text-sm text-zinc-400 hover:text-white transition-colors"
+                  className="w-full px-4 py-2 text-sm text-text-muted hover:text-text-primary transition-colors"
                 >
                   Back to login
                 </button>
@@ -154,7 +154,7 @@ function ConfirmContent() {
             )}
             
             {status === 'success' && (
-              <p className="text-sm text-zinc-500">
+              <p className="text-sm text-text-muted">
                 Redirecting to login page...
               </p>
             )}
@@ -168,8 +168,8 @@ function ConfirmContent() {
 export default function ConfirmPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
-        <div className="w-8 h-8 border-2 border-[#8b5cf6] border-t-transparent rounded-full animate-spin" />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="w-8 h-8 border-2 border-primary border-t-transparent rounded-full animate-spin" />
       </div>
     }>
       <ConfirmContent />

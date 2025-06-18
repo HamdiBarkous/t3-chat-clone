@@ -148,7 +148,7 @@ export function FileUpload({
 
       {/* Error Display */}
       {error && (
-        <div className="mt-2 text-sm text-red-400 bg-red-900/20 border border-red-500/20 rounded px-3 py-2">
+        <div className="mt-2 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded px-3 py-2">
           {error}
         </div>
       )}
