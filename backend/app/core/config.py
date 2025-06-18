@@ -7,7 +7,7 @@ class Settings(BaseSettings):
     # FastAPI App Settings
     app_name: str = "T3 Chat Backend"
     app_version: str = "0.1.0"
-    debug: bool = True
+    debug: bool = os.getenv("DEBUG", "true").lower() == "true"
     host: str = "0.0.0.0"
     port: int = 8000
     
@@ -42,6 +42,10 @@ class Settings(BaseSettings):
         "http://localhost:5173",  # Vite dev server
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
+        "http://3.86.89.176:8000",  # EC2 backend
+        "https://*.vercel.app",  # Vercel deployment domains
+        "https://t3-chat.vercel.app",  # Your specific Vercel domain
+        "*"  # Allow all origins for now (change this in production)
     ]
     
     class Config:
