@@ -83,6 +83,10 @@ class ProfileRow(SupabaseModel):
     email: Optional[str] = None
     display_name: Optional[str] = None
     preferred_model: Optional[str] = None
+    # Supabase MCP Configuration
+    supabase_access_token: Optional[str] = None
+    supabase_project_ref: Optional[str] = None
+    supabase_read_only: bool = True
     created_at: datetime
     updated_at: datetime
 
@@ -138,12 +142,20 @@ class ProfileRowCreate(SupabaseModel):
     email: Optional[str] = None
     display_name: Optional[str] = None
     preferred_model: Optional[str] = None
+    # Supabase MCP Configuration
+    supabase_access_token: Optional[str] = None
+    supabase_project_ref: Optional[str] = None
+    supabase_read_only: Optional[bool] = True
 
 
 class ProfileRowUpdate(SupabaseModel):
     """Model for updating profiles in Supabase"""
     display_name: Optional[str] = None
     preferred_model: Optional[str] = None
+    # Supabase MCP Configuration
+    supabase_access_token: Optional[str] = None
+    supabase_project_ref: Optional[str] = None
+    supabase_read_only: Optional[bool] = None
 
 
 # Extended models that include related data for complex queries

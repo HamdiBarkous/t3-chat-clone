@@ -1,44 +1,98 @@
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
+from uuid import UUID
 from app.mcp_clients import SupabaseMCPClient, FirecrawlMCPClient, TavilyMCPClient, SequentialThinkingMCPClient
+from app.infrastructure.repositories.supabase.profile_repository import SupabaseProfileRepository
 
 
 class ToolService:
-    """Simple service to manage MCP tools and convert them for OpenRouter"""
+    """Service to manage MCP tools and convert them for OpenRouter with user-specific credentials"""
     
-    def __init__(self):
-        self.mcp_clients = {}
+    def __init__(self, user_id: Optional[UUID] = None, profile_repo: Optional[SupabaseProfileRepository] = None):
+        """
+        Initialize ToolService with optional user-specific credentials
         
-        # Initialize MCP clients (always available, used per-message)
-        try:
-            self.mcp_clients["supabase"] = SupabaseMCPClient()
-        except Exception as e:
-            print(f"Failed to initialize Supabase MCP client: {e}")
+        Args:
+            user_id: User ID to fetch credentials for
+            profile_repo: Profile repository to fetch user credentials
+        """
+        self.user_id = user_id
+        self.profile_repo = profile_repo
+        self.mcp_clients = {}
+        self._user_profile = None
+
+    async def _get_user_profile(self):
+        """Get user profile with MCP credentials"""
+        if self._user_profile is not None:
+            return self._user_profile
             
+        if self.user_id and self.profile_repo:
+            try:
+                profile = await self.profile_repo.get_profile(self.user_id)
+                self._user_profile = profile
+                return profile
+            except Exception as e:
+                print(f"Failed to fetch user profile: {e}")
+                self._user_profile = {}
+                return {}
+        
+        self._user_profile = {}
+        return {}
+
+    async def _initialize_client(self, client_name: str):
+        """Initialize a specific MCP client with user credentials if available"""
+        if client_name in self.mcp_clients:
+            return self.mcp_clients[client_name]
+
         try:
-            self.mcp_clients["firecrawl"] = FirecrawlMCPClient()
-        except Exception as e:
-            print(f"Failed to initialize Firecrawl MCP client: {e}")
+            if client_name == "supabase":
+                # Get user profile for Supabase credentials
+                profile = await self._get_user_profile()
+                
+                # Check if user has configured Supabase MCP credentials
+                access_token = profile.supabase_access_token if profile else None
+                project_ref = profile.supabase_project_ref if profile else None
+                read_only = profile.supabase_read_only if profile is not None else True
+                
+                if access_token:
+                    print(f"Initializing Supabase MCP with user credentials (read_only: {read_only})")
+                    self.mcp_clients[client_name] = SupabaseMCPClient(
+                        access_token=access_token,
+                        project_ref=project_ref,
+                        read_only=read_only
+                    )
+                else:
+                    print("No Supabase MCP credentials found for user, skipping Supabase client")
+                    return None
+                    
+            elif client_name == "firecrawl":
+                self.mcp_clients[client_name] = FirecrawlMCPClient()
+                
+            elif client_name == "tavily":
+                self.mcp_clients[client_name] = TavilyMCPClient()
+                
+            elif client_name == "sequential_thinking":
+                self.mcp_clients[client_name] = SequentialThinkingMCPClient()
+                
+            else:
+                print(f"Unknown MCP client: {client_name}")
+                return None
+                
+            return self.mcp_clients[client_name]
             
-        try:
-            self.mcp_clients["tavily"] = TavilyMCPClient()
         except Exception as e:
-            print(f"Failed to initialize Tavily MCP client: {e}")
-            
-        try:
-            self.mcp_clients["sequential_thinking"] = SequentialThinkingMCPClient()
-        except Exception as e:
-            print(f"Failed to initialize Sequential Thinking MCP client: {e}")
+            print(f"Failed to initialize {client_name} MCP client: {e}")
+            return None
 
     async def get_openai_format_tools(self, enabled_tools: List[str]) -> List[Dict[str, Any]]:
         """Convert MCP tools to OpenAI/OpenRouter format"""
         openai_tools = []
         
         for tool_name in enabled_tools:
-            if tool_name not in self.mcp_clients:
-                continue
-                
             try:
-                mcp_client = self.mcp_clients[tool_name]
+                mcp_client = await self._initialize_client(tool_name)
+                if not mcp_client:
+                    continue
+                    
                 mcp_tools = await mcp_client.get_available_tools()
                 
                 for mcp_tool in mcp_tools:
@@ -68,7 +122,7 @@ class ToolService:
     async def execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> str:
         """Execute a tool call and return the result as a string"""
         try:
-            # Parse client name and tool name (format: "supabase_list_tables" or "sequential_thinking_sequentialthinking")
+            # Parse client name and tool name (format: "supabase_list_tables")
             if "_" not in tool_name:
                 raise ValueError(f"Invalid tool name format: {tool_name}")
             
@@ -76,7 +130,9 @@ class ToolService:
             client_name = None
             actual_tool_name = None
             
-            for registered_client in self.mcp_clients.keys():
+            # Check against known clients
+            known_clients = ["supabase", "firecrawl", "tavily", "sequential_thinking"]
+            for registered_client in known_clients:
                 if tool_name.startswith(f"{registered_client}_"):
                     client_name = registered_client
                     actual_tool_name = tool_name[len(registered_client) + 1:]  # +1 for the underscore
@@ -85,7 +141,11 @@ class ToolService:
             if not client_name:
                 raise ValueError(f"Unknown MCP client for tool: {tool_name}")
             
-            mcp_client = self.mcp_clients[client_name]
+            # Initialize client if needed
+            mcp_client = await self._initialize_client(client_name)
+            if not mcp_client:
+                raise ValueError(f"Failed to initialize {client_name} MCP client")
+            
             result = await mcp_client.call_tool(actual_tool_name, arguments)
             
             # Convert result to string for LLM consumption
@@ -115,9 +175,22 @@ class ToolService:
             print(error_msg)
             return error_msg
 
-    def get_available_tool_names(self) -> List[str]:
-        """Get list of available MCP client names"""
-        return list(self.mcp_clients.keys())
+    async def get_available_tool_names(self) -> List[str]:
+        """Get list of available MCP client names for this user"""
+        available_clients = []
+        
+        # Check each client type
+        known_clients = ["supabase", "firecrawl", "tavily", "sequential_thinking"]
+        
+        for client_name in known_clients:
+            try:
+                client = await self._initialize_client(client_name)
+                if client:
+                    available_clients.append(client_name)
+            except Exception as e:
+                print(f"Client {client_name} not available: {e}")
+        
+        return available_clients
 
     async def test_tool(self, tool_name: str, arguments: Dict[str, Any]) -> Dict[str, Any]:
         """Test a tool execution and return detailed result"""
@@ -135,4 +208,13 @@ class ToolService:
                 "error": str(e),
                 "tool_name": tool_name,
                 "arguments": arguments
-            } 
+            }
+
+    async def cleanup(self):
+        """Clean up all MCP clients"""
+        for client in self.mcp_clients.values():
+            if hasattr(client, 'cleanup'):
+                try:
+                    await client.cleanup()
+                except Exception as e:
+                    print(f"Error cleaning up client: {e}") 

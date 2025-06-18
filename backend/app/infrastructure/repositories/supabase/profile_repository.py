@@ -95,7 +95,10 @@ class SupabaseProfileRepository:
         user_id: UUID, 
         email: str, 
         display_name: str, 
-        preferred_model: str = "openai/gpt-4o-mini"
+        preferred_model: str = "openai/gpt-4o-mini",
+        supabase_access_token: str = None,
+        supabase_project_ref: str = None,
+        supabase_read_only: bool = True
     ) -> ProfileRow:
         """Create a new profile with user ID"""
         try:
@@ -103,7 +106,10 @@ class SupabaseProfileRepository:
                 id=user_id,
                 email=email,
                 display_name=display_name,
-                preferred_model=preferred_model
+                preferred_model=preferred_model,
+                supabase_access_token=supabase_access_token,
+                supabase_project_ref=supabase_project_ref,
+                supabase_read_only=supabase_read_only
             )
             return await self.create(create_data)
         except Exception as e:
@@ -116,7 +122,10 @@ class SupabaseProfileRepository:
             # Map ProfileUpdate to ProfileRowUpdate
             update_data = ProfileRowUpdate(
                 display_name=getattr(profile_data, 'name', None),
-                preferred_model=getattr(profile_data, 'preferred_model', None)
+                preferred_model=getattr(profile_data, 'preferred_model', None),
+                supabase_access_token=getattr(profile_data, 'supabase_access_token', None),
+                supabase_project_ref=getattr(profile_data, 'supabase_project_ref', None),
+                supabase_read_only=getattr(profile_data, 'supabase_read_only', None)
             )
             return await self.update(user_id, update_data)
         except Exception as e:

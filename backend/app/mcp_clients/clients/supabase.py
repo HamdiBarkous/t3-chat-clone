@@ -1,26 +1,25 @@
 from typing import Dict, Any, List, Optional
-from app.core.config import settings
 from ..base import BaseMCPClient
 
 
 class SupabaseMCPClient(BaseMCPClient):
     """Supabase MCP client for database operations and project management"""
     
-    def __init__(self, access_token: Optional[str] = None, project_ref: Optional[str] = None, read_only: Optional[bool] = None):
+    def __init__(self, access_token: str, project_ref: Optional[str] = None, read_only: bool = True):
         """
         Initialize Supabase MCP client
         
         Args:
-            access_token: Supabase personal access token (defaults to settings)
+            access_token: Supabase personal access token (required)
             project_ref: Specific project reference to scope to (optional)
-            read_only: Whether to restrict to read-only operations (defaults to settings)
+            read_only: Whether to restrict to read-only operations (defaults to True)
         """
-        self.access_token = access_token or settings.supabase_access_token
-        self.project_ref = project_ref or settings.supabase_project_ref
-        self.read_only = read_only if read_only is not None else settings.mcp_supabase_read_only
+        if not access_token:
+            raise ValueError("Supabase access token is required")
         
-        if not self.access_token:
-            raise ValueError("Supabase access token is required. Set SUPABASE_ACCESS_TOKEN environment variable.")
+        self.access_token = access_token
+        self.project_ref = project_ref
+        self.read_only = read_only
         
         server_config = self.get_server_config()
         super().__init__(server_config)

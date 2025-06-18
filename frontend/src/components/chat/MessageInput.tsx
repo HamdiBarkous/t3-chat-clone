@@ -23,6 +23,7 @@ interface MessageInputProps {
   disabled?: boolean;
   currentModel?: string;
   onModelChange?: (model: string) => void;
+  onShowCustomization?: () => void;
 }
 
 export function MessageInput({
@@ -30,6 +31,7 @@ export function MessageInput({
   disabled = false,
   currentModel = 'openai/gpt-4o-mini',
   onModelChange,
+  onShowCustomization,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -367,6 +369,7 @@ export function MessageInput({
                 enabledTools={enabledTools}
                 searchProvider={searchProvider}
                 onToggle={handleToolToggle}
+                onShowCustomization={onShowCustomization}
                 disabled={disabled}
               />
             </div>

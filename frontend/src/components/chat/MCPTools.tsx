@@ -8,18 +8,27 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
 import { clsx } from 'clsx';
+import { useSupabaseMCP } from '@/hooks/useProfile';
 
 interface MCPToolsProps {
   enabledTools: string[];
   searchProvider: 'tavily' | 'firecrawl';
   onToggle: (toolId: string, enabled: boolean, provider?: 'tavily' | 'firecrawl') => void;
+  onShowCustomization?: () => void;
   disabled?: boolean;
 }
 
-export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = false }: MCPToolsProps) {
+export function MCPTools({ enabledTools, searchProvider, onToggle, onShowCustomization, disabled = false }: MCPToolsProps) {
   const [isExpanded, setIsExpanded] = useState(false);
   const [mounted, setMounted] = useState(false);
+  const [showSupabaseSetup, setShowSupabaseSetup] = useState(false);
   const buttonRef = useRef<HTMLButtonElement>(null);
+
+  // Get user's Supabase MCP config
+  const { config: supabaseMCPConfig, loading: configLoading } = useSupabaseMCP();
+
+  // Check if user has Supabase credentials configured
+  const hasSupabaseCredentials = !configLoading && supabaseMCPConfig.supabase_access_token && supabaseMCPConfig.supabase_access_token.length > 0;
 
   useEffect(() => {
     setMounted(true);
@@ -32,11 +41,14 @@ export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = fa
         setIsExpanded(false);
         buttonRef.current?.focus();
       }
+      if (showSupabaseSetup && e.key === 'Escape') {
+        setShowSupabaseSetup(false);
+      }
     };
 
     document.addEventListener('keydown', handleKeyDown);
     return () => document.removeEventListener('keydown', handleKeyDown);
-  }, [isExpanded]);
+  }, [isExpanded, showSupabaseSetup]);
 
   const getToolInfo = (toolId: string) => {
     switch (toolId) {
@@ -69,7 +81,7 @@ export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = fa
       case 'supabase':
         return {
           name: 'Supabase',
-          description: 'Database operations & management',
+          description: hasSupabaseCredentials ? 'Database operations & management' : 'Setup required in customization',
           category: 'Database',
           icon: (
             <img 
@@ -104,10 +116,19 @@ export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = fa
   };
 
   const handleToolToggle = (toolId: string) => {
+    // Special handling for Supabase if credentials not configured
+    if (toolId === 'supabase' && !hasSupabaseCredentials) {
+      setShowSupabaseSetup(true);
+      return;
+    }
+
     const isEnabled = enabledTools.includes(toolId);
-    
-    // Handle non-web-search tools
     onToggle(toolId, !isEnabled);
+  };
+
+  const handleSupabaseSetup = () => {
+    setShowSupabaseSetup(false);
+    onShowCustomization?.();
   };
 
   const getActiveTools = () => {
@@ -116,8 +137,6 @@ export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = fa
 
   const activeTools = getActiveTools();
   const hasActiveTools = activeTools.length > 0;
-
-
 
   return (
     <div className="relative flex items-center gap-2">
@@ -184,6 +203,7 @@ export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = fa
           {['supabase', 'sequential_thinking'].map((toolId) => {
             const toolInfo = getToolInfo(toolId);
             const isEnabled = enabledTools.includes(toolId);
+            const needsSetup = toolId === 'supabase' && !hasSupabaseCredentials;
             
             return (
               <button
@@ -194,15 +214,17 @@ export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = fa
                 className={clsx(
                   'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-300 text-sm font-medium relative overflow-hidden',
                   'shadow-sm hover:shadow-md',
-                  isEnabled 
-                    ? 'text-primary bg-gradient-to-r from-primary/8 to-primary/12 hover:from-primary/12 hover:to-primary/18 border border-primary/20 hover:border-primary/30' 
-                    : 'text-text-muted/70 hover:text-text-primary bg-gradient-to-r from-white/3 to-white/8 hover:from-white/8 hover:to-white/15 backdrop-blur-md border border-white/5 hover:border-white/20',
+                  needsSetup
+                    ? 'text-text-muted bg-gradient-to-r from-muted/30 to-muted/40 hover:from-muted/40 hover:to-muted/50 border border-border/40 hover:border-border/60'
+                    : isEnabled 
+                      ? 'text-primary bg-gradient-to-r from-primary/8 to-primary/12 hover:from-primary/12 hover:to-primary/18 border border-primary/20 hover:border-primary/30' 
+                      : 'text-text-muted/70 hover:text-text-primary bg-gradient-to-r from-white/3 to-white/8 hover:from-white/8 hover:to-white/15 backdrop-blur-md border border-white/5 hover:border-white/20',
                   'transform hover:scale-[1.02] active:scale-[0.96] active:duration-75',
                   'before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/20 before:to-primary/10 before:opacity-0 before:transition-opacity before:duration-200',
                   'active:before:opacity-100',
                   disabled && 'opacity-50 cursor-not-allowed hover:scale-100'
                 )}
-                title={`${isEnabled ? 'Disable' : 'Enable'} ${toolInfo.name}`}
+                title={needsSetup ? `Setup ${toolInfo.name} in customization sidebar` : `${isEnabled ? 'Disable' : 'Enable'} ${toolInfo.name}`}
               >
                 {/* Ripple effect on click */}
                 <div className="absolute inset-0 overflow-hidden rounded-lg">
@@ -226,8 +248,18 @@ export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = fa
                   {toolInfo.name}
                 </span>
                 
+                                 {/* Setup indicator */}
+                 {needsSetup && (
+                   <div className="relative z-10 flex items-center">
+                     <svg className="w-3 h-3 text-text-muted/60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.5 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z" />
+                       <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+                     </svg>
+                   </div>
+                 )}
+                
                 {/* Active indicator with pulse animation */}
-                {isEnabled && (
+                {isEnabled && !needsSetup && (
                   <div className="relative z-10">
                     <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
                   </div>
@@ -242,6 +274,75 @@ export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = fa
             );
           })}
         </div>
+      )}
+
+      {/* Supabase Setup Modal */}
+      {showSupabaseSetup && mounted && createPortal(
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-background border border-border rounded-xl shadow-2xl max-w-md w-full mx-4">
+            <div className="p-6">
+              <div className="flex items-center gap-3 mb-4">
+                <img 
+                  src="https://www.vectorlogo.zone/logos/supabase/supabase-icon.svg" 
+                  alt="Supabase"
+                  className="w-8 h-8 object-contain"
+                />
+                <div>
+                  <h3 className="text-lg font-semibold text-text-primary">Setup Supabase MCP</h3>
+                  <p className="text-sm text-text-muted">Configure your credentials to enable database tools</p>
+                </div>
+              </div>
+              
+              <div className="space-y-3 mb-6">
+                <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="w-6 h-6 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-medium">
+                    1
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">Open Customization Sidebar</p>
+                    <p className="text-xs text-text-muted">Click the settings icon in the top-right corner</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="w-6 h-6 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-medium">
+                    2
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">Add Supabase Credentials</p>
+                    <p className="text-xs text-text-muted">Enter your access token and optional project reference</p>
+                  </div>
+                </div>
+                
+                <div className="flex items-start gap-3 p-3 bg-muted/30 rounded-lg">
+                  <div className="w-6 h-6 bg-primary/10 text-primary rounded-full flex items-center justify-center text-sm font-medium">
+                    3
+                  </div>
+                  <div>
+                    <p className="text-sm font-medium text-text-primary">Apply Changes</p>
+                    <p className="text-xs text-text-muted">Save your settings to enable Supabase tools</p>
+                  </div>
+                </div>
+              </div>
+              
+              <div className="flex items-center gap-3">
+                <button
+                  onClick={handleSupabaseSetup}
+                  className="flex-1 px-4 py-2 bg-primary text-primary-foreground rounded-lg hover:bg-primary/90 transition-colors text-sm font-medium"
+                >
+                  Open Customization
+                </button>
+                <button
+                  onClick={() => setShowSupabaseSetup(false)}
+                  className="px-4 py-2 bg-muted text-text-muted hover:bg-muted/80 rounded-lg transition-colors text-sm font-medium"
+                >
+                  Later
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
       )}
     </div>
   );

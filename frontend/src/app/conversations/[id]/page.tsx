@@ -10,6 +10,7 @@ import { ChatLayout } from '@/components/chat/ChatLayout';
 import { ChatInterface } from '@/components/chat/ChatInterface';
 import { CustomizationSidebar } from '@/components/chat/CustomizationSidebar';
 import { useConversations } from '@/contexts/ConversationsContext';
+import { useSupabaseMCP } from '@/hooks/useProfile';
 import { useState, useMemo, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
 import type { ConversationResponse } from '@/types/api';
@@ -33,6 +34,19 @@ function ConversationPage({ params }: ConversationPageProps) {
   const [topP, setTopP] = useState(1);
   const [conversationDetails, setConversationDetails] = useState<ConversationResponse | null>(null);
   const [isApplying, setIsApplying] = useState(false);
+
+  // Supabase MCP state
+  const { config: supabaseMCPConfig, updateConfig: updateSupabaseMCPConfig } = useSupabaseMCP();
+  const [supabaseAccessToken, setSupabaseAccessToken] = useState('');
+  const [supabaseProjectRef, setSupabaseProjectRef] = useState('');
+  const [supabaseReadOnly, setSupabaseReadOnly] = useState(true);
+
+  // Update local state when config changes
+  useEffect(() => {
+    setSupabaseAccessToken(supabaseMCPConfig.supabase_access_token);
+    setSupabaseProjectRef(supabaseMCPConfig.supabase_project_ref);
+    setSupabaseReadOnly(supabaseMCPConfig.supabase_read_only);
+  }, [supabaseMCPConfig]);
   
   // Use real conversations hook
   const { conversations, loading, createConversation, getConversation, updateConversationCustomization } = useConversations();
@@ -74,31 +88,43 @@ function ConversationPage({ params }: ConversationPageProps) {
 
   // Function to apply customization settings
   const handleApplyCustomization = async () => {
-    if (!conversationId || isApplying) return;
+    if (isApplying) return;
 
     setIsApplying(true);
     try {
-      const customizationData: any = {};
-      
-      // Only include changed values
-      if (systemPrompt !== (conversationDetails?.system_prompt || '')) {
-        customizationData.system_prompt = systemPrompt;
-      }
-      if (temperature !== (conversationDetails?.temperature || 1)) {
-        customizationData.temperature = temperature;
-      }
-      if (topP !== (conversationDetails?.top_p || 1)) {
-        customizationData.top_p = topP;
-      }
+      // Save Supabase MCP configuration
+      await updateSupabaseMCPConfig({
+        supabase_access_token: supabaseAccessToken,
+        supabase_project_ref: supabaseProjectRef,
+        supabase_read_only: supabaseReadOnly
+      });
 
-      // Only make API call if there are changes
-      if (Object.keys(customizationData).length > 0) {
-        const updatedConversation = await updateConversationCustomization(conversationId, customizationData);
-        if (updatedConversation) {
-          setConversationDetails(updatedConversation);
-          console.log('Customization settings applied successfully');
+      // Apply conversation-specific settings if there's a conversation
+      if (conversationId) {
+        const customizationData: any = {};
+        
+        // Only include changed values
+        if (systemPrompt !== (conversationDetails?.system_prompt || '')) {
+          customizationData.system_prompt = systemPrompt;
+        }
+        if (temperature !== (conversationDetails?.temperature || 1)) {
+          customizationData.temperature = temperature;
+        }
+        if (topP !== (conversationDetails?.top_p || 1)) {
+          customizationData.top_p = topP;
+        }
+
+        // Only make API call if there are changes
+        if (Object.keys(customizationData).length > 0) {
+          const updatedConversation = await updateConversationCustomization(conversationId, customizationData);
+          if (updatedConversation) {
+            setConversationDetails(updatedConversation);
+            console.log('Customization settings applied successfully');
+          }
         }
       }
+    } catch (error) {
+      console.error('Failed to save customization settings:', error);
     } finally {
       setIsApplying(false);
     }
@@ -109,6 +135,9 @@ function ConversationPage({ params }: ConversationPageProps) {
     setSystemPrompt('');
     setTemperature(1);
     setTopP(1);
+    setSupabaseAccessToken('');
+    setSupabaseProjectRef('');
+    setSupabaseReadOnly(true);
   };
 
   // Redirect to home if conversation not found after conversations are loaded
@@ -192,6 +221,7 @@ function ConversationPage({ params }: ConversationPageProps) {
         <ChatInterface 
           conversationId={conversationId}
           conversation={selectedConversation}
+          onShowCustomization={handleCustomizationToggle}
         />
       ) : (
         <div className="flex-1 flex items-center justify-center">
@@ -215,6 +245,15 @@ function ConversationPage({ params }: ConversationPageProps) {
         originalTemperature={conversationDetails?.temperature || 1}
         originalTopP={conversationDetails?.top_p || 1}
         isApplying={isApplying}
+        supabaseAccessToken={supabaseAccessToken}
+        supabaseProjectRef={supabaseProjectRef}
+        supabaseReadOnly={supabaseReadOnly}
+        onSupabaseAccessTokenChange={setSupabaseAccessToken}
+        onSupabaseProjectRefChange={setSupabaseProjectRef}
+        onSupabaseReadOnlyChange={setSupabaseReadOnly}
+        originalSupabaseAccessToken={supabaseMCPConfig.supabase_access_token}
+        originalSupabaseProjectRef={supabaseMCPConfig.supabase_project_ref}
+        originalSupabaseReadOnly={supabaseMCPConfig.supabase_read_only}
       />
     </ChatLayout>
   );

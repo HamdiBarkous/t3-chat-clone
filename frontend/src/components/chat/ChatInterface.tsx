@@ -16,9 +16,10 @@ import type { Conversation } from '@/types/api';
 interface ChatInterfaceProps {
   conversationId: string;
   conversation?: Conversation;
+  onShowCustomization?: () => void;
 }
 
-export function ChatInterface({ conversationId, conversation }: ChatInterfaceProps) {
+export function ChatInterface({ conversationId, conversation, onShowCustomization }: ChatInterfaceProps) {
   const [currentModel, setCurrentModel] = useState(conversation?.current_model || 'openai/gpt-4o');
   const initialMessageSentRef = useRef(false);
   const searchParams = useSearchParams();
@@ -166,6 +167,7 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
         disabled={isStreaming || loading}
         currentModel={currentModel}
         onModelChange={handleModelChange}
+        onShowCustomization={onShowCustomization}
       />
     </div>
   );
