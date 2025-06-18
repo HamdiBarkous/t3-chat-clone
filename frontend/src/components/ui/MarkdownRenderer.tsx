@@ -178,10 +178,14 @@ function preprocessMathContent(content: string): string {
   let processed = content;
   
   // Convert \[ \] to $$ $$ for display math
-  processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, '$$\n$1\n$$');
+  processed = processed.replace(/\\\[([\s\S]*?)\\\]/g, (match, content) => {
+    return `\n\n$$${content}$$\n\n`;
+  });
   
   // Convert \( \) to $ $ for inline math
-  processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, '$$$1$$');
+  processed = processed.replace(/\\\(([\s\S]*?)\\\)/g, (match, content) => {
+    return `$${content}$`;
+  });
   
   // Fix double backslashes in math expressions
   // This handles the common issue where LaTeX commands get double-escaped
@@ -223,9 +227,6 @@ function preprocessMathContent(content: string): string {
     
     return '$' + fixedContent + '$';
   });
-  
-  // Ensure proper spacing around display math
-  processed = processed.replace(/\$\$([\s\S]*?)\$\$/g, '\n\n$$$$1$$\n\n');
   
   // Clean up excessive newlines
   processed = processed.replace(/\n{3,}/g, '\n\n');
