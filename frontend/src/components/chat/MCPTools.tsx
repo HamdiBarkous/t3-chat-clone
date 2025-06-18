@@ -191,28 +191,52 @@ export function MCPTools({ enabledTools, searchProvider, onToggle, disabled = fa
                 onClick={() => handleToolToggle(toolId)}
                 disabled={disabled}
                 className={clsx(
-                  'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-300 text-sm font-medium',
+                  'flex items-center gap-2 px-3 py-1.5 rounded-lg transition-all duration-300 text-sm font-medium relative overflow-hidden',
                   'shadow-sm hover:shadow-md',
                   isEnabled 
                     ? 'text-primary bg-gradient-to-r from-primary/8 to-primary/12 hover:from-primary/12 hover:to-primary/18 border border-primary/20 hover:border-primary/30' 
                     : 'text-text-muted/70 hover:text-text-primary bg-gradient-to-r from-white/3 to-white/8 hover:from-white/8 hover:to-white/15 backdrop-blur-md border border-white/5 hover:border-white/20',
-                  'transform hover:scale-[1.02] active:scale-[0.98]',
+                  'transform hover:scale-[1.02] active:scale-[0.96] active:duration-75',
+                  'before:absolute before:inset-0 before:bg-gradient-to-r before:from-primary/20 before:to-primary/10 before:opacity-0 before:transition-opacity before:duration-200',
+                  'active:before:opacity-100',
                   disabled && 'opacity-50 cursor-not-allowed hover:scale-100'
                 )}
                 title={`${isEnabled ? 'Disable' : 'Enable'} ${toolInfo.name}`}
               >
+                {/* Ripple effect on click */}
+                <div className="absolute inset-0 overflow-hidden rounded-lg">
+                  <div className={clsx(
+                    'absolute inset-0 bg-gradient-to-r from-primary/30 to-primary/20 rounded-full transition-all duration-500 ease-out',
+                    'scale-0 opacity-0',
+                    'active:scale-150 active:opacity-100 active:duration-300'
+                  )} />
+                </div>
+
                 {/* Icon */}
-                <div className="w-4 h-4 flex items-center justify-center">
+                <div className={clsx(
+                  'w-4 h-4 flex items-center justify-center relative z-10 transition-transform duration-200',
+                  'group-active:scale-110'
+                )}>
                   {toolInfo.icon}
                 </div>
                 
                 {/* Label */}
-                <span>{toolInfo.name}</span>
+                <span className="relative z-10 transition-all duration-200">
+                  {toolInfo.name}
+                </span>
                 
-                {/* Active indicator */}
+                {/* Active indicator with pulse animation */}
                 {isEnabled && (
-                  <div className="w-1 h-1 bg-primary rounded-full"></div>
+                  <div className="relative z-10">
+                    <div className="w-1 h-1 bg-primary rounded-full animate-pulse"></div>
+                  </div>
                 )}
+
+                {/* Success flash effect when toggling */}
+                <div className={clsx(
+                  'absolute inset-0 bg-gradient-to-r from-green-400/20 to-emerald-400/20 rounded-lg transition-opacity duration-200',
+                  'opacity-0 pointer-events-none'
+                )} />
               </button>
             );
           })}
