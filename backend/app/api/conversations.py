@@ -1,8 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Query
 from fastapi.responses import StreamingResponse
-from typing import List
+from typing import List, Optional
 from uuid import UUID
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 from app.dependencies.auth import get_current_user
 from app.dependencies.repositories import get_conversation_repository, get_message_repository, get_document_repository, ConversationRepositoryType, MessageRepositoryType, DocumentRepositoryType
@@ -21,6 +21,12 @@ class SystemPromptUpdate(BaseModel):
 
 class ModelUpdate(BaseModel):
     model: str
+
+
+class CustomizationUpdate(BaseModel):
+    system_prompt: Optional[str] = None
+    temperature: Optional[float] = Field(default=None, ge=0.0, le=2.0, description="Temperature parameter (0.0-2.0)")
+    top_p: Optional[float] = Field(default=None, ge=0.1, le=1.0, description="Top-p parameter (0.1-1.0)")
 
 
 class BranchRequest(BaseModel):
@@ -162,6 +168,37 @@ async def update_conversation_model(
     user_id = UUID(current_user["id"])
     
     conversation_update = ConversationUpdate(current_model=model_data.model)
+    conversation = await conversation_service.update_conversation(conversation_id, user_id, conversation_update)
+    
+    if not conversation:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Conversation not found"
+        )
+    
+    return conversation
+
+
+@router.patch("/{conversation_id}/customization", response_model=ConversationResponse)
+async def update_conversation_customization(
+    conversation_id: UUID,
+    customization_data: CustomizationUpdate,
+    current_user: dict = Depends(get_current_user),
+    conversation_service: ConversationService = Depends(get_conversation_service)
+):
+    """Update conversation customization settings (system prompt, temperature, top_p)"""
+    user_id = UUID(current_user["id"])
+    
+    # Build the update with only provided fields
+    update_data = {}
+    if customization_data.system_prompt is not None:
+        update_data["system_prompt"] = customization_data.system_prompt
+    if customization_data.temperature is not None:
+        update_data["temperature"] = customization_data.temperature
+    if customization_data.top_p is not None:
+        update_data["top_p"] = customization_data.top_p
+    
+    conversation_update = ConversationUpdate(**update_data)
     conversation = await conversation_service.update_conversation(conversation_id, user_id, conversation_update)
     
     if not conversation:

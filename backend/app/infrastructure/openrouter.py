@@ -40,6 +40,7 @@ class OpenRouterClient:
         model: str,
         max_tokens: Optional[int] = None,
         temperature: float = 0.7,
+        top_p: float = 1.0,
         use_transforms: bool = True,
         tools: Optional[List[Dict[str, Any]]] = None,
         reasoning: Optional[bool] = None
@@ -63,6 +64,7 @@ class OpenRouterClient:
             "model": model,
             "messages": messages,
             "temperature": temperature,
+            "top_p": top_p,
             "max_tokens": max_tokens,
         }
         
@@ -105,6 +107,7 @@ class OpenRouterClient:
         model: str,
         max_tokens: Optional[int] = None,
         temperature: float = 0.7,
+        top_p: float = 1.0,
         use_transforms: bool = True,
         tools: Optional[List[Dict[str, Any]]] = None,
         reasoning: Optional[bool] = None
@@ -128,6 +131,7 @@ class OpenRouterClient:
             "model": model,
             "messages": messages,
             "temperature": temperature,
+            "top_p": top_p,
             "stream": True,
             "max_tokens": max_tokens,
         }

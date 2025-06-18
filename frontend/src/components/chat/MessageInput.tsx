@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useRef, useEffect, useMemo } from 'react';
+import React, { useState, useRef, useEffect, useMemo, useCallback } from 'react';
 import { Button } from '@/components/ui/Button';
 import { ModelSelector } from '@/components/ui/ModelSelector';
 import { FileUpload, useFileUpload } from '@/components/ui/FileUpload';
@@ -14,6 +14,7 @@ import { ImagePreview } from '@/components/ui/ImagePreview';
 import { useModels } from '@/hooks/useModels';
 import { MCPTools } from '@/components/chat/MCPTools';
 import { WebSearch } from '@/components/chat/WebSearch';
+import { ToolToggle } from './ToolToggle';
 
 import { clsx } from 'clsx';
 
@@ -27,7 +28,7 @@ interface MessageInputProps {
 export function MessageInput({
   onSendMessage,
   disabled = false,
-  currentModel = 'openai/gpt-4o',
+  currentModel = 'openai/gpt-4o-mini',
   onModelChange,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');

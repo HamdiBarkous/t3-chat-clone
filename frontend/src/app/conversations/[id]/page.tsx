@@ -8,6 +8,7 @@
 import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ChatLayout } from '@/components/chat/ChatLayout';
 import { ChatInterface } from '@/components/chat/ChatInterface';
+import { CustomizationSidebar } from '@/components/chat/CustomizationSidebar';
 import { NewConversationModal } from '@/components/conversation/NewConversationModal';
 import { useConversations } from '@/contexts/ConversationsContext';
 import { useState, useMemo, useEffect, use } from 'react';
@@ -26,8 +27,16 @@ function ConversationPage({ params }: ConversationPageProps) {
   const conversationId = resolvedParams.id;
   const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
   
+  // Customization state
+  const [showCustomization, setShowCustomization] = useState(false);
+  const [systemPrompt, setSystemPrompt] = useState('');
+  const [temperature, setTemperature] = useState(1);
+  const [topP, setTopP] = useState(1);
+  const [conversationDetails, setConversationDetails] = useState<ConversationResponse | null>(null);
+  const [isApplying, setIsApplying] = useState(false);
+  
   // Use real conversations hook
-  const { conversations, loading, createConversation } = useConversations();
+  const { conversations, loading, createConversation, getConversation, updateConversationCustomization } = useConversations();
   
   // Get selected conversation and convert to ConversationResponse format
   const selectedConversation = useMemo((): ConversationResponse | undefined => {
@@ -45,6 +54,63 @@ function ConversationPage({ params }: ConversationPageProps) {
       updated_at: listItem.updated_at
     };
   }, [conversations, conversationId]);
+
+  // Load conversation details when conversation ID changes
+  useEffect(() => {
+    const loadConversationDetails = async () => {
+      if (conversationId && !loading) {
+        const details = await getConversation(conversationId);
+        if (details) {
+          setConversationDetails(details);
+          // Initialize customization state with loaded values
+          setSystemPrompt(details.system_prompt || '');
+          setTemperature(details.temperature || 1);
+          setTopP(details.top_p || 1);
+        }
+      }
+    };
+
+    loadConversationDetails();
+  }, [conversationId, loading, getConversation]);
+
+  // Function to apply customization settings
+  const handleApplyCustomization = async () => {
+    if (!conversationId || isApplying) return;
+
+    setIsApplying(true);
+    try {
+      const customizationData: any = {};
+      
+      // Only include changed values
+      if (systemPrompt !== (conversationDetails?.system_prompt || '')) {
+        customizationData.system_prompt = systemPrompt;
+      }
+      if (temperature !== (conversationDetails?.temperature || 1)) {
+        customizationData.temperature = temperature;
+      }
+      if (topP !== (conversationDetails?.top_p || 1)) {
+        customizationData.top_p = topP;
+      }
+
+      // Only make API call if there are changes
+      if (Object.keys(customizationData).length > 0) {
+        const updatedConversation = await updateConversationCustomization(conversationId, customizationData);
+        if (updatedConversation) {
+          setConversationDetails(updatedConversation);
+          console.log('Customization settings applied successfully');
+        }
+      }
+    } finally {
+      setIsApplying(false);
+    }
+  };
+
+  // Function to reset customization to defaults
+  const handleResetCustomization = () => {
+    setSystemPrompt('');
+    setTemperature(1);
+    setTopP(1);
+  };
 
   // Redirect to home if conversation not found after conversations are loaded
   useEffect(() => {
@@ -78,6 +144,10 @@ function ConversationPage({ params }: ConversationPageProps) {
     router.push(`/conversations/${selectedConversationId}`);
   };
 
+  const handleCustomizationToggle = () => {
+    setShowCustomization(!showCustomization);
+  };
+
   // Show loading state while conversations are loading
   if (loading) {
     return (
@@ -86,6 +156,8 @@ function ConversationPage({ params }: ConversationPageProps) {
           onNewChat={handleNewChat}
           selectedConversationId={conversationId}
           onConversationSelect={handleConversationSelect}
+          showCustomization={showCustomization}
+          onCustomizationToggle={handleCustomizationToggle}
         >
           <div className="flex-1 flex items-center justify-center">
             <div className="text-text-muted">Loading conversation...</div>
@@ -103,6 +175,8 @@ function ConversationPage({ params }: ConversationPageProps) {
           onNewChat={handleNewChat}
           selectedConversationId={undefined}
           onConversationSelect={handleConversationSelect}
+          showCustomization={showCustomization}
+          onCustomizationToggle={handleCustomizationToggle}
         >
           <div className="flex-1 flex items-center justify-center">
             <div className="text-text-muted">No conversations found</div>
@@ -117,6 +191,8 @@ function ConversationPage({ params }: ConversationPageProps) {
       onNewChat={handleNewChat}
       selectedConversationId={conversationId}
       onConversationSelect={handleConversationSelect}
+      showCustomization={showCustomization}
+      onCustomizationToggle={handleCustomizationToggle}
     >
       {selectedConversation ? (
         <ChatInterface 
@@ -133,6 +209,24 @@ function ConversationPage({ params }: ConversationPageProps) {
         isOpen={isNewConversationModalOpen}
         onClose={() => setIsNewConversationModalOpen(false)}
         onCreateConversation={handleCreateConversation}
+      />
+
+      {/* Customization Sidebar */}
+      <CustomizationSidebar
+        isOpen={showCustomization}
+        onClose={() => setShowCustomization(false)}
+        systemPrompt={systemPrompt}
+        temperature={temperature}
+        topP={topP}
+        onSystemPromptChange={setSystemPrompt}
+        onTemperatureChange={setTemperature}
+        onTopPChange={setTopP}
+        onApply={handleApplyCustomization}
+        onReset={handleResetCustomization}
+        originalSystemPrompt={conversationDetails?.system_prompt || ''}
+        originalTemperature={conversationDetails?.temperature || 1}
+        originalTopP={conversationDetails?.top_p || 1}
+        isApplying={isApplying}
       />
     </ChatLayout>
   );

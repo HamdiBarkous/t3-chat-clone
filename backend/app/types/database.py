@@ -55,6 +55,8 @@ class ConversationRow(SupabaseModel):
     title: Optional[str] = None
     current_model: str
     system_prompt: Optional[str] = None
+    temperature: Optional[float] = 1.0
+    top_p: Optional[float] = 1.0
     created_at: datetime
     updated_at: datetime
     parent_conversation_id: Optional[UUID] = None
@@ -92,6 +94,8 @@ class ConversationRowCreate(SupabaseModel):
     title: Optional[str] = None
     current_model: str
     system_prompt: Optional[str] = None
+    temperature: Optional[float] = 1.0
+    top_p: Optional[float] = 1.0
     parent_conversation_id: Optional[UUID] = None
     root_conversation_id: Optional[UUID] = None
     branch_type: Optional[BranchType] = None
@@ -103,6 +107,8 @@ class ConversationRowUpdate(SupabaseModel):
     title: Optional[str] = None
     current_model: Optional[str] = None
     system_prompt: Optional[str] = None
+    temperature: Optional[float] = None
+    top_p: Optional[float] = None
     parent_conversation_id: Optional[UUID] = None
     root_conversation_id: Optional[UUID] = None
     branch_type: Optional[BranchType] = None

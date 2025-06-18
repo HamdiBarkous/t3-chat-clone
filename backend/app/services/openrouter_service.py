@@ -167,6 +167,8 @@ class OpenRouterService:
         async for chunk in openrouter_client.chat_completion_stream(
             messages=openrouter_messages,
             model=model_to_use,
+            temperature=conversation.temperature or 1.0,
+            top_p=conversation.top_p or 1.0,
             tools=tools,
             reasoning=reasoning
         ):
@@ -274,6 +276,8 @@ class OpenRouterService:
                         async for follow_up_chunk in openrouter_client.chat_completion_stream(
                             messages=current_messages,
                             model=model_to_use,
+                            temperature=conversation.temperature or 1.0,
+                            top_p=conversation.top_p or 1.0,
                             tools=tools,  # Keep tools available for potential next round
                             reasoning=reasoning
                         ):
