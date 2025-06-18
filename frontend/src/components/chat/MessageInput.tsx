@@ -41,8 +41,8 @@ export function MessageInput({
   // Web search state (separate from other MCP tools)
   const [searchEnabled, setSearchEnabled] = useState(false);
   
-  // Reasoning state
-  const [reasoningEnabled, setReasoningEnabled] = useState(false);
+  // Reasoning state - track per model
+  const [reasoningByModel, setReasoningByModel] = useState<Record<string, boolean>>({});
   
   // File upload functionality
   const { uploadedFiles, addFiles, removeFile, clearFiles } = useFileUpload();
@@ -111,7 +111,7 @@ export function MessageInput({
         message.trim(), 
         uploadedFiles, 
         allEnabledTools,
-        reasoningEnabled
+        reasoningByModel[currentModel] ?? false
       );
       setMessage('');
       clearFiles();
@@ -147,8 +147,8 @@ export function MessageInput({
     setSearchProvider(provider);
   };
 
-  const handleReasoningToggle = (enabled: boolean) => {
-    setReasoningEnabled(enabled);
+  const handleReasoningToggle = (model: string, enabled: boolean) => {
+    setReasoningByModel(prev => ({ ...prev, [model]: enabled }));
   };
 
   const canSend = (message.trim().length > 0 || uploadedFiles.length > 0) && !disabled;
@@ -353,7 +353,7 @@ export function MessageInput({
                 onChange={handleModelChange}
                 disabled={disabled}
                 className="w-64"
-                reasoningEnabled={reasoningEnabled}
+                reasoningByModel={reasoningByModel}
                 onReasoningToggle={handleReasoningToggle}
               />
               <WebSearch

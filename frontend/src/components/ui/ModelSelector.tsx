@@ -8,6 +8,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { OpenAI } from '@lobehub/icons';
+import { Brain } from 'lucide-react';
 
 interface ModelInfo {
   id: string;
@@ -23,9 +24,9 @@ interface ModelSelectorProps {
   onChange: (model: string) => void;
   disabled?: boolean;
   className?: string;
-  // Reasoning props
-  reasoningEnabled?: boolean;
-  onReasoningToggle?: (enabled: boolean) => void;
+  // Reasoning props - now per model
+  reasoningByModel?: Record<string, boolean>;
+  onReasoningToggle?: (model: string, enabled: boolean) => void;
 }
 
 interface GroupedModels {
@@ -75,27 +76,15 @@ const getCompanyIcon = (company: string): React.ReactNode => {
   }
 };
 
-const getReasoningIcon = (model: ModelInfo): string => {
-  if (!model.reasoning_capable) return '';
-  if (model.reasoning_by_default) return '🧠'; // Always reasoning
-  return '💭'; // Optional reasoning
-};
-
-const getReasoningTooltip = (model: ModelInfo): string => {
-  if (!model.reasoning_capable) return '';
-  if (model.reasoning_by_default) return 'Reasoning by default';
-  return 'Reasoning available';
-};
-
-export function ModelSelector({
+export const ModelSelector: React.FC<ModelSelectorProps> = ({
   models,
   value,
   onChange,
   disabled = false,
   className = '',
-  reasoningEnabled = false,
+  reasoningByModel,
   onReasoningToggle,
-}: ModelSelectorProps) {
+}) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openUpward, setOpenUpward] = useState(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -172,22 +161,45 @@ export function ModelSelector({
     setIsOpen(false);
   };
 
-  const handleReasoningToggle = (e: React.MouseEvent) => {
-    e.stopPropagation(); // Prevent dropdown from opening
-    if (disabled) return; // Respect disabled state
-    if (onReasoningToggle) {
-      onReasoningToggle(!reasoningEnabled);
-    }
-  };
-
-  // Check if current model supports optional reasoning
-  const showReasoningToggle = currentModel && 
-    currentModel.reasoning_capable && 
-    !currentModel.reasoning_by_default;
-
   const formatContextLength = (length?: number): string => {
     if (!length) return '';
     return `${(length / 1000).toFixed(0)}K`;
+  };
+
+  // Render reasoning indicator with Brain icon
+  const renderReasoningIndicator = (model: any, canToggle: boolean, isEnabled: boolean) => {
+    if (!model.reasoning_capable) return null;
+    
+    const isOn = canToggle ? isEnabled : true;
+    
+    const handleClick = (e: React.MouseEvent) => {
+      if (canToggle && onReasoningToggle) {
+        e.stopPropagation();
+        onReasoningToggle(model.id, !isEnabled);
+      }
+    };
+
+    return (
+      <div
+        className={`flex items-center ${canToggle ? 'cursor-pointer' : 'cursor-default'}`}
+        onClick={handleClick}
+        title={
+          canToggle 
+            ? `Reasoning ${isOn ? 'ON' : 'OFF'} - Click to toggle`
+            : 'Reasoning always enabled'
+        }
+      >
+        <Brain 
+          size={16}
+          className={`${
+            isOn 
+              ? 'text-purple-light fill-purple-light/20 stroke-2' 
+              : 'text-muted opacity-50 stroke-1'
+          } ${!isOn ? 'line-through' : ''}`}
+          strokeWidth={isOn ? 2 : 1}
+        />
+      </div>
+    );
   };
 
   return (
@@ -211,38 +223,16 @@ export function ModelSelector({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
+              {currentModel && (
+                renderReasoningIndicator(
+                  currentModel,
+                  !currentModel.reasoning_by_default,
+                  reasoningByModel?.[currentModel.id] || false
+                )
+              )}
               <span className="font-medium truncate">
                 {currentModel?.name || 'Select Model'}
               </span>
-              {currentModel && getReasoningIcon(currentModel) && !showReasoningToggle && (
-                <span 
-                  className="text-sm"
-                  title={getReasoningTooltip(currentModel)}
-                >
-                  {getReasoningIcon(currentModel)}
-                </span>
-              )}
-              {showReasoningToggle && (
-                <div
-                  onClick={handleReasoningToggle}
-                  className={clsx(
-                    'flex items-center gap-1 px-2 py-1 rounded text-xs font-medium transition-all duration-200 cursor-pointer',
-                    'border border-border hover:bg-muted',
-                    reasoningEnabled 
-                      ? 'bg-primary/10 text-primary border-primary/30' 
-                      : 'bg-secondary text-text-muted',
-                    disabled && 'opacity-50 cursor-not-allowed'
-                  )}
-                  title={reasoningEnabled ? 'Disable reasoning' : 'Enable reasoning'}
-                >
-                  <span className="text-xs">
-                    {reasoningEnabled ? '💭' : '⚡'}
-                  </span>
-                  <span>
-                    {reasoningEnabled ? 'Reasoning' : 'Fast'}
-                  </span>
-                </div>
-              )}
             </div>
             {currentModel?.context_length && (
               <div className="text-xs text-text-muted">
@@ -300,17 +290,14 @@ export function ModelSelector({
                     <div className="flex items-center gap-3 min-w-0 flex-1">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
+                          {renderReasoningIndicator(
+                            model,
+                            !model.reasoning_by_default,
+                            reasoningByModel?.[model.id] || false
+                          )}
                           <span className="font-medium truncate">
                             {model.name}
                           </span>
-                          {getReasoningIcon(model) && (
-                            <span 
-                              className="text-sm"
-                              title={getReasoningTooltip(model)}
-                            >
-                              {getReasoningIcon(model)}
-                            </span>
-                          )}
                         </div>
                         {model.context_length && (
                           <div className="text-xs text-text-muted">
