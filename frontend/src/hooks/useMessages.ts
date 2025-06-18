@@ -108,7 +108,6 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     try {
       setError(null)
       setIsStreaming(true)
-      setToolExecutions([]) // Clear previous tool executions
       
       // Reset streaming state
       setStreamingContent('')
