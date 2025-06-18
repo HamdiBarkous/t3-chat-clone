@@ -25,7 +25,7 @@ class ToolService:
             print(f"Failed to initialize Tavily MCP client: {e}")
             
         try:
-            self.mcp_clients["sequential-thinking"] = SequentialThinkingMCPClient()
+            self.mcp_clients["sequential_thinking"] = SequentialThinkingMCPClient()
         except Exception as e:
             print(f"Failed to initialize Sequential Thinking MCP client: {e}")
 
@@ -68,14 +68,22 @@ class ToolService:
     async def execute_tool_call(self, tool_name: str, arguments: Dict[str, Any]) -> str:
         """Execute a tool call and return the result as a string"""
         try:
-            # Parse client name and tool name (format: "supabase_list_tables")
+            # Parse client name and tool name (format: "supabase_list_tables" or "sequential_thinking_sequentialthinking")
             if "_" not in tool_name:
                 raise ValueError(f"Invalid tool name format: {tool_name}")
             
-            client_name, actual_tool_name = tool_name.split("_", 1)
+            # Find the longest matching client name from the start of the tool name
+            client_name = None
+            actual_tool_name = None
             
-            if client_name not in self.mcp_clients:
-                raise ValueError(f"Unknown MCP client: {client_name}")
+            for registered_client in self.mcp_clients.keys():
+                if tool_name.startswith(f"{registered_client}_"):
+                    client_name = registered_client
+                    actual_tool_name = tool_name[len(registered_client) + 1:]  # +1 for the underscore
+                    break
+            
+            if not client_name:
+                raise ValueError(f"Unknown MCP client for tool: {tool_name}")
             
             mcp_client = self.mcp_clients[client_name]
             result = await mcp_client.call_tool(actual_tool_name, arguments)
