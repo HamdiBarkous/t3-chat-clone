@@ -7,7 +7,8 @@
 
 import React, { useCallback, useState } from 'react';
 import { clsx } from 'clsx';
-import { supabase, getApiBaseUrlWithoutVersion } from '@/lib/api';
+import { supabase } from '@/lib/supabase';
+import { getApiBaseUrlWithoutVersion } from '@/lib/api';
 
 interface FileUploadProps {
   onFileSelect: (files: File[]) => void;

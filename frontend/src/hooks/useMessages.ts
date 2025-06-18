@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
-import { apiClient, ApiError, supabase, getApiBaseUrlWithoutVersion } from '@/lib/api'
+import { apiClient, ApiError, getApiBaseUrlWithoutVersion } from '@/lib/api'
+import { supabase } from '@/lib/supabase'
 import { streamingService, StreamingCallbacks } from '@/lib/streaming'
 import type { Message, MessageListResponse, MessageResponse } from '@/types/api'
 import { MessageStatus } from '@/types/api'
