@@ -70,13 +70,13 @@ export function MessageList({
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="relative w-8 h-8">
           {/* Spinning gradient icon */}
-          <div className="absolute inset-0 bg-gradient-to-r from-[#8b5cf6] via-[#7c3aed] to-[#8b5cf6] rounded-full animate-spin animate-pulse" 
+                      <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-dark to-primary rounded-full animate-spin animate-pulse" 
                style={{ animationDuration: '1.5s' }}>
           </div>
           
           {/* Inner icon */}
-          <div className="absolute inset-1 bg-[#1a1a1a] rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-[#8b5cf6] animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <div className="absolute inset-1 bg-background rounded-full flex items-center justify-center">
+              <svg className="w-4 h-4 text-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
@@ -89,13 +89,13 @@ export function MessageList({
     return (
       <div className="flex-1 flex items-center justify-center p-8">
         <div className="text-center">
-          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-[#2d2d2d] to-[#1a1a1a] rounded-full flex items-center justify-center border border-[#3f3f46]">
-            <svg className="w-8 h-8 text-zinc-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+          <div className="w-16 h-16 mx-auto mb-4 bg-gradient-to-br from-secondary to-background rounded-full flex items-center justify-center border border-border">
+            <svg className="w-8 h-8 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
             </svg>
           </div>
-          <h3 className="text-lg font-medium text-white mb-2">Start the conversation</h3>
-          <p className="text-zinc-400">Send a message to begin chatting with AI</p>
+                      <h3 className="text-lg font-medium text-text-primary mb-2">Start the conversation</h3>
+            <p className="text-text-muted">Send a message to begin chatting with AI</p>
         </div>
       </div>
     );

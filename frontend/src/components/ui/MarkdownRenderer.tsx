@@ -105,8 +105,8 @@ function LanguageIcon({ language }: { language: string }) {
   
   // Fallback for unknown languages or failed icon loads
   return (
-    <div className="w-5 h-5 bg-purple-500 rounded-sm flex items-center justify-center">
-      <span className="text-white text-xs font-bold">{language.charAt(0).toUpperCase()}</span>
+    <div className="w-5 h-5 bg-primary rounded-sm flex items-center justify-center">
+      <span className="text-primary-foreground text-xs font-bold">{language.charAt(0).toUpperCase()}</span>
     </div>
   );
 }
@@ -244,7 +244,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           [rehypeKatex, {
             // KaTeX options for better rendering
             throwOnError: false, // Don't throw on math errors, show error instead
-            errorColor: '#cc0000',
+            errorColor: 'var(--destructive)',
             strict: false, // Allow some non-standard LaTeX
             trust: false, // Don't trust user input for security
             macros: {
@@ -460,7 +460,7 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
           
           // Horizontal rule
           hr: () => (
-            <hr className="border-purple-500/30 my-6" />
+            <hr className="border-border my-6" />
           ),
           
           // Strong/Bold

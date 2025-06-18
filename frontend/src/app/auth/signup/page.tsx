@@ -25,8 +25,8 @@ export default function SignupPage() {
   // Don't render until we know auth state
   if (!initialized) {
     return (
-      <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center">
-        <div className="text-white">Loading...</div>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-text-primary">Loading...</div>
       </div>
     );
   }
@@ -37,22 +37,22 @@ export default function SignupPage() {
   }
 
   return (
-    <div className="min-h-screen bg-[#1a1a1a] flex items-center justify-center p-4">
+    <div className="min-h-screen bg-background flex items-center justify-center p-4">
       <div className="w-full max-w-md">
         {signupResult?.needsConfirmation ? (
-          <div className="bg-[#1e1e1e] border border-[#3f3f46] rounded-lg p-6 text-center">
+          <div className="bg-card border border-border rounded-lg p-6 text-center">
             <div className="mb-4">
-              <svg className="w-12 h-12 mx-auto text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <svg className="w-12 h-12 mx-auto text-green-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
               </svg>
             </div>
-            <h2 className="text-xl font-semibold text-white mb-2">Check Your Email</h2>
-            <p className="text-zinc-400 mb-6">
+            <h2 className="text-xl font-semibold text-text-primary mb-2">Check Your Email</h2>
+            <p className="text-text-muted mb-6">
               {signupResult.message || 'Please check your email and click the confirmation link to activate your account.'}
             </p>
             <button
               onClick={() => router.push('/auth/login')}
-              className="text-[#8b5cf6] hover:text-[#a78bfa] transition-colors"
+              className="text-primary hover:text-purple-light transition-colors"
             >
               Back to Sign In
             </button>

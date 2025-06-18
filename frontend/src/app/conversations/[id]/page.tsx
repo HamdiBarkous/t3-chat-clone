@@ -88,7 +88,7 @@ function ConversationPage({ params }: ConversationPageProps) {
           onConversationSelect={handleConversationSelect}
         >
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-zinc-400">Loading conversation...</div>
+            <div className="text-text-muted">Loading conversation...</div>
           </div>
         </ChatLayout>
       </AuthGuard>
@@ -105,7 +105,7 @@ function ConversationPage({ params }: ConversationPageProps) {
           onConversationSelect={handleConversationSelect}
         >
           <div className="flex-1 flex items-center justify-center">
-            <div className="text-zinc-400">No conversations found</div>
+            <div className="text-text-muted">No conversations found</div>
           </div>
         </ChatLayout>
       </AuthGuard>
@@ -125,7 +125,7 @@ function ConversationPage({ params }: ConversationPageProps) {
         />
       ) : (
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-zinc-400">Conversation not found</div>
+          <div className="text-text-muted">Conversation not found</div>
         </div>
       )}
 

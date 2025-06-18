@@ -283,7 +283,7 @@ export function MessageInput({
                     disabled={disabled}
                     className={clsx(
                       'relative p-1.5 min-w-0 rounded-full transition-all duration-200 ease-in-out transform',
-                      'bg-transparent text-text-muted hover:bg-muted hover:text-green-400',
+                      'bg-transparent text-text-muted hover:bg-muted hover:text-green-accent',
                       'hover:scale-110 active:scale-95 active:bg-input',
                       'focus:outline-none focus:ring-2 focus:ring-green-accent/50 focus:ring-offset-0',
                       disabled && 'opacity-50 cursor-not-allowed hover:scale-100'

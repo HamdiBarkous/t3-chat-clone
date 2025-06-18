@@ -56,7 +56,7 @@ function HomePage() {
         onConversationSelect={handleConversationSelect}
       >
         <div className="flex-1 flex items-center justify-center">
-          <div className="text-zinc-400">Loading conversations...</div>
+          <div className="text-text-muted">Loading conversations...</div>
         </div>
       </ChatLayout>
     );

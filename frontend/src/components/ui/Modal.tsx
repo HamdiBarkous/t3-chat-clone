@@ -58,7 +58,7 @@ export function Modal({
     <div className="fixed inset-0 z-50 overflow-y-auto">
       {/* Backdrop */}
       <div 
-        className="fixed inset-0 bg-black/50 transition-opacity"
+        className="fixed inset-0 bg-background/80 backdrop-blur-sm transition-opacity"
         onClick={onClose}
       />
 
@@ -66,22 +66,22 @@ export function Modal({
       <div className="flex min-h-full items-center justify-center p-4">
         <div
           className={clsx(
-            'relative w-full bg-[#1e1e1e] rounded-lg border border-[#3f3f46] shadow-xl',
+            'relative w-full bg-card rounded-lg border border-border shadow-xl',
             sizeClasses[size]
           )}
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
           {(title || showCloseButton) && (
-            <div className="flex items-center justify-between p-6 border-b border-[#3f3f46]">
+            <div className="flex items-center justify-between p-6 border-b border-border">
               {title && (
-                <h3 className="text-lg font-semibold text-white">{title}</h3>
+                <h3 className="text-lg font-semibold text-text-primary">{title}</h3>
               )}
               
               {showCloseButton && (
                 <button
                   onClick={onClose}
-                  className="p-1 text-zinc-400 hover:text-white transition-colors"
+                  className="p-1 text-text-muted hover:text-text-primary transition-colors"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />

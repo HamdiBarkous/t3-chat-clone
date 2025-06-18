@@ -63,12 +63,12 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
 
   return (
     <div className="w-full max-w-md mx-auto">
-      <div className="bg-[#1e1e1e] p-8 rounded-lg border border-[#3f3f46]">
+      <div className="bg-card p-8 rounded-lg border border-border">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-semibold text-white mb-2">
+          <h1 className="text-2xl font-semibold text-text-primary mb-2">
             Create your account
           </h1>
-          <p className="text-zinc-400">
+          <p className="text-text-muted">
             Join T3.chat and start chatting with AI
           </p>
         </div>
@@ -129,14 +129,14 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
           />
 
           {error && (
-            <div className="p-3 rounded-lg bg-red-900/20 border border-red-500/20">
-              <p className="text-red-400 text-sm">{error}</p>
+            <div className="p-3 rounded-lg bg-destructive/10 border border-destructive/20">
+              <p className="text-destructive text-sm">{error}</p>
             </div>
           )}
 
           {successMessage && (
-            <div className="p-3 rounded-lg bg-green-900/20 border border-green-500/20">
-              <p className="text-green-400 text-sm">{successMessage}</p>
+            <div className="p-3 rounded-lg bg-green-accent/10 border border-green-accent/20">
+              <p className="text-green-accent text-sm">{successMessage}</p>
             </div>
           )}
 
@@ -151,12 +151,12 @@ export function SignupForm({ onSuccess, onSwitchToLogin }: SignupFormProps) {
         </form>
 
         <div className="mt-6 text-center">
-          <p className="text-zinc-400 text-sm">
+          <p className="text-text-muted text-sm">
             Already have an account?{' '}
             <button
               type="button"
               onClick={onSwitchToLogin}
-              className="text-[#8b5cf6] hover:text-[#a78bfa] transition-colors"
+              className="text-primary hover:text-purple-light transition-colors"
             >
               Sign in
             </button>
