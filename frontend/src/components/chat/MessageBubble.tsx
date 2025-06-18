@@ -176,7 +176,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent }
 
         {/* Document Attachments (for user messages) */}
         {isUser && message.documents && message.documents.length > 0 && (
-          <div className="mt-3 max-w-full">
+          <div className="mt-4 max-w-full space-y-3">
             {/* Separate images from regular documents */}
             {(() => {
               const images = message.documents.filter(doc => doc.is_image);
@@ -186,41 +186,31 @@ export function MessageBubble({ message, isStreaming = false, streamingContent }
                 <>
                   {/* Display images */}
                   {images.length > 0 && (
-                    <div className="mb-3">
-                      <div className="text-xs text-text-muted mb-2 font-medium">
-                        Image{images.length > 1 ? 's' : ''} ({images.length}):
-                      </div>
-                      <div className={clsx(
-                        "gap-3",
-                        images.length === 1 ? "flex justify-start" : "grid grid-cols-2 max-w-md"
-                      )}>
-                        {images.map((doc) => (
-                          <ImageDisplay
-                            key={doc.id}
-                            document={doc}
-                            size={images.length === 1 ? "md" : "sm"}
-                            className="rounded-lg shadow-sm border border-border"
-                          />
-                        ))}
-                      </div>
+                    <div className={clsx(
+                      "gap-3",
+                      images.length === 1 ? "flex justify-start" : "grid grid-cols-2 max-w-md"
+                    )}>
+                      {images.map((doc) => (
+                        <ImageDisplay
+                          key={doc.id}
+                          document={doc}
+                          size={images.length === 1 ? "md" : "sm"}
+                          className="rounded-lg shadow-sm"
+                        />
+                      ))}
                     </div>
                   )}
 
                   {/* Display regular documents */}
                   {regularDocs.length > 0 && (
-                    <div>
-                      <div className="text-xs text-text-muted mb-2 font-medium">
-                        Attached file{regularDocs.length > 1 ? 's' : ''} ({regularDocs.length}):
-                      </div>
-                      <div className="flex flex-wrap gap-2">
-                        {regularDocs.map((doc) => (
-                          <DocumentBadge
-                            key={doc.id}
-                            document={doc}
-                            size="sm"
-                          />
-                        ))}
-                      </div>
+                    <div className="flex flex-wrap gap-2">
+                      {regularDocs.map((doc) => (
+                        <DocumentBadge
+                          key={doc.id}
+                          document={doc}
+                          size="sm"
+                        />
+                      ))}
                     </div>
                   )}
                 </>
