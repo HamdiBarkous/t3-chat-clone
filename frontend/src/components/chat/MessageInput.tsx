@@ -14,10 +14,11 @@ import { ImagePreview } from '@/components/ui/ImagePreview';
 import { useModels } from '@/hooks/useModels';
 import { MCPTools } from '@/components/chat/MCPTools';
 import { WebSearch } from '@/components/chat/WebSearch';
+import { ReasoningToggle } from '@/components/chat/ReasoningToggle';
 import { clsx } from 'clsx';
 
 interface MessageInputProps {
-  onSendMessage: (content: string, files?: File[], enabledTools?: string[]) => void;
+  onSendMessage: (content: string, files?: File[], enabledTools?: string[], reasoning?: any) => void;
   disabled?: boolean;
   currentModel?: string;
   onModelChange?: (model: string) => void;
@@ -40,11 +41,20 @@ export function MessageInput({
   // Web search state (separate from other MCP tools)
   const [searchEnabled, setSearchEnabled] = useState(false);
   
+  // Reasoning state
+  const [reasoningEnabled, setReasoningEnabled] = useState(false);
+  const [reasoningConfig, setReasoningConfig] = useState<any>(null);
+  
   // File upload functionality
   const { uploadedFiles, addFiles, removeFile, clearFiles } = useFileUpload();
   
   // Get models from backend
   const { models, loading: modelsLoading } = useModels();
+  
+  // Get current model info for reasoning capabilities
+  const currentModelInfo = useMemo(() => {
+    return models.find(model => model.id === currentModel);
+  }, [models, currentModel]);
   
   // Transform models for dropdown
   const availableModels = useMemo(() => {
@@ -95,7 +105,8 @@ export function MessageInput({
       onSendMessage(
         message.trim(), 
         uploadedFiles, 
-        allEnabledTools
+        allEnabledTools,
+        reasoningEnabled ? reasoningConfig : null
       );
       setMessage('');
       clearFiles();
@@ -129,6 +140,11 @@ export function MessageInput({
   const handleSearchToggle = (enabled: boolean, provider: 'tavily' | 'firecrawl') => {
     setSearchEnabled(enabled);
     setSearchProvider(provider);
+  };
+
+  const handleReasoningToggle = (enabled: boolean, config?: { effort?: string; max_tokens?: number }) => {
+    setReasoningEnabled(enabled);
+    setReasoningConfig(enabled ? config : null);
   };
 
   const canSend = (message.trim().length > 0 || uploadedFiles.length > 0) && !disabled;
@@ -346,6 +362,13 @@ export function MessageInput({
                 searchProvider={searchProvider}
                 onToggle={handleToolToggle}
                 disabled={disabled}
+              />
+              <ReasoningToggle
+                enabled={reasoningEnabled}
+                onToggle={handleReasoningToggle}
+                disabled={disabled}
+                modelSupportsReasoning={currentModelInfo?.reasoning_capable || false}
+                modelReasonsByDefault={currentModelInfo?.reasoning_by_default || false}
               />
             </div>
           </div>

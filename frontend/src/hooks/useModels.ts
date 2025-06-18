@@ -16,6 +16,8 @@ export interface AIModel {
     max_completion_tokens: number
     is_moderated: boolean
   }
+  reasoning_capable?: boolean
+  reasoning_by_default?: boolean
 }
 
 interface UseModelsReturn {

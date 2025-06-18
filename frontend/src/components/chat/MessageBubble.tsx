@@ -15,15 +15,18 @@ import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
 import { ImageDisplay } from '@/components/ui/ImageDisplay';
 import { useConversations } from '@/contexts/ConversationsContext';
+import { ReasoningDisplay } from './ReasoningDisplay';
 
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
   streamingContent?: string; // Direct streaming content for performance
+  streamingReasoning?: string; // Direct streaming reasoning content
+  reasoningStartTime?: number | null; // When reasoning started
 }
 
 // Memoized component to prevent unnecessary re-renders during streaming
-export function MessageBubble({ message, isStreaming = false, streamingContent }: MessageBubbleProps) {
+export function MessageBubble({ message, isStreaming = false, streamingContent, streamingReasoning, reasoningStartTime }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
   const router = useRouter();
@@ -150,6 +153,17 @@ export function MessageBubble({ message, isStreaming = false, streamingContent }
         ) : (
           // AI messages blend into background (no box) using CSS custom properties
           <div className="text-primary">
+            {/* Reasoning Display - Show for assistant messages with reasoning */}
+            {isAssistant && (message.reasoning || (isStreaming && streamingReasoning)) && (
+              <ReasoningDisplay
+                reasoning={message.reasoning || ''}
+                isStreaming={isStreaming}
+                streamingReasoning={streamingReasoning}
+                startTime={reasoningStartTime || undefined}
+              />
+            )}
+            
+            {/* Main Content */}
             {(() => {
               // Use streaming content if available and currently streaming, otherwise use message content
               const contentToRender = isStreaming && streamingContent !== undefined 

@@ -15,6 +15,57 @@ class OpenRouterService:
         # Lazy import to avoid circular dependency
         self._tool_service = None
 
+    def _determine_reasoning_capability(self, model: Dict[str, Any]) -> tuple[bool, bool]:
+        """
+        Determine reasoning capabilities based on OpenRouter API data
+        Returns: (reasoning_capable, reasoning_by_default)
+        """
+        model_id = model.get("id", "")
+        supported_params = model.get("supported_parameters", [])
+        
+        # Check if model supports reasoning parameters
+        has_reasoning_params = "reasoning" in supported_params or "include_reasoning" in supported_params
+        
+        # Models that reason by default (based on OpenRouter documentation and model behavior)
+        reasons_by_default = (
+            "deepseek-r1" in model_id or 
+            ("o1" in model_id and "openai" in model_id) or 
+            ("o3" in model_id and "openai" in model_id) or 
+            ("o4" in model_id and "openai" in model_id)
+        )
+        
+        # If model has reasoning params, it's capable
+        # If it's a reasoning-by-default model, mark it as such even if API doesn't show params
+        if has_reasoning_params:
+            return True, reasons_by_default
+        elif reasons_by_default:
+            # Some reasoning-by-default models might not expose reasoning params
+            # but still support reasoning (like OpenAI o-series)
+            return True, True
+        else:
+            return False, False
+
+    def _get_clean_model_name(self, model_id: str, api_name: str) -> str:
+        """Get clean, user-friendly model name"""
+        # Hardcoded clean model names for better UX
+        name_mapping = {
+            "google/gemini-2.5-flash-lite-preview-06-17": "Gemini 2.5 Flash Lite",
+            "google/gemini-2.5-flash": "Gemini 2.5 Flash",
+            "google/gemini-2.5-pro": "Gemini 2.5 Pro",
+            "anthropic/claude-sonnet-4": "Claude Sonnet 4",
+            "anthropic/claude-3.5-haiku": "Claude 3.5 Haiku",
+            "openai/o4-mini": "O4 Mini",
+            "openai/gpt-4.1": "GPT-4.1",
+            "openai/gpt-4.1-mini": "GPT-4.1 Mini",
+            "openai/gpt-4.1-nano": "GPT-4.1 Nano",
+            "openai/gpt-4o": "GPT-4o",
+            "openai/gpt-4o-mini": "GPT-4o Mini",
+            "deepseek/deepseek-r1-0528": "DeepSeek R1",
+            "deepseek/deepseek-chat-v3-0324": "DeepSeek Chat V3"
+        }
+        
+        return name_mapping.get(model_id, api_name)
+
     async def get_available_models(self) -> List[Dict[str, Any]]:
         """Get available models from OpenRouter"""
         models = await openrouter_client.get_available_models()
@@ -41,12 +92,21 @@ class OpenRouterService:
         for model in models:
             model_id = model.get("id")
             if model_id in allowed_models:
+                # Dynamically determine reasoning capabilities
+                reasoning_capable, reasoning_by_default = self._determine_reasoning_capability(model)
+                
+                # Get clean model name
+                api_name = model.get("name", model_id)
+                clean_name = self._get_clean_model_name(model_id, api_name)
+                
                 formatted_models.append({
                     "id": model_id,
-                    "name": model.get("name", model_id),
+                    "name": clean_name,
                     "context_length": model.get("context_length", 0),
                     "pricing": model.get("pricing", {}),
                     "top_provider": model.get("top_provider", {}),
+                    "reasoning_capable": reasoning_capable,
+                    "reasoning_by_default": reasoning_by_default,
                 })
         
         return formatted_models
@@ -65,7 +125,8 @@ class OpenRouterService:
         user_id: str,
         model: Optional[str] = None,
         use_tools: Optional[bool] = None,
-        enabled_tools: Optional[List[str]] = None
+        enabled_tools: Optional[List[str]] = None,
+        reasoning: Optional[Dict[str, Any]] = None
     ) -> AsyncGenerator[str, None]:
         """Stream chat completion with proper tool calling accumulation"""
         conversation_uuid = UUID(conversation_id)
@@ -110,7 +171,8 @@ class OpenRouterService:
         async for chunk in openrouter_client.chat_completion_stream(
             messages=openrouter_messages,
             model=model_to_use,
-            tools=tools
+            tools=tools,
+            reasoning=reasoning
         ):
             if "choices" in chunk and len(chunk["choices"]) > 0:
                 choice = chunk["choices"][0]
@@ -145,6 +207,11 @@ class OpenRouterService:
                     
                     # Send progress update for tool calls
                     yield f"data: {json.dumps({'type': 'tool_call_progress', 'data': {'accumulated_calls': len(accumulated_tool_calls)}})}\n\n"
+                
+                # Handle reasoning tokens (thinking)
+                elif "reasoning" in delta and delta["reasoning"]:
+                    # Stream reasoning content as it comes
+                    yield f"data: {json.dumps({'type': 'reasoning', 'data': delta['reasoning']})}\n\n"
                 
                 # Handle regular content (both tool and non-tool modes)
                 elif "content" in delta and delta["content"]:
@@ -211,7 +278,8 @@ class OpenRouterService:
                         async for follow_up_chunk in openrouter_client.chat_completion_stream(
                             messages=current_messages,
                             model=model_to_use,
-                            tools=tools  # Keep tools available for potential next round
+                            tools=tools,  # Keep tools available for potential next round
+                            reasoning=reasoning
                         ):
                             if "choices" in follow_up_chunk and len(follow_up_chunk["choices"]) > 0:
                                 follow_up_choice = follow_up_chunk["choices"][0]
@@ -243,6 +311,10 @@ class OpenRouterService:
                                                 accumulated_tool_calls[index]["function"]["name"] += tool_call_delta["function"]["name"]
                                             if tool_call_delta["function"].get("arguments"):
                                                 accumulated_tool_calls[index]["function"]["arguments"] += tool_call_delta["function"]["arguments"]
+                                
+                                # Handle reasoning tokens in follow-up
+                                elif "reasoning" in follow_up_delta and follow_up_delta["reasoning"]:
+                                    yield f"data: {json.dumps({'type': 'reasoning', 'data': follow_up_delta['reasoning']})}\n\n"
                                 
                                 # Handle regular content from follow-up
                                 elif "content" in follow_up_delta and follow_up_delta["content"]:

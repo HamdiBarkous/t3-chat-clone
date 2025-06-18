@@ -32,7 +32,9 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
     isStreaming,
     streamingMessageId,
     toolExecutions,
-    streamingContent
+    streamingContent,
+    streamingReasoning,
+    reasoningStartTime
   } = useMessages(conversationId);
   
   const { updateConversation } = useConversations();
@@ -55,13 +57,13 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
   // Check if this is a branched conversation
   const isBranchedConversation = conversation?.title?.startsWith('Branch from ');
 
-  const handleSendMessage = async (content: string, files?: File[], enabledTools?: string[]) => {
+  const handleSendMessage = async (content: string, files?: File[], enabledTools?: string[], reasoning?: any) => {
     if ((!content.trim() && (!files || files.length === 0)) || isStreaming) return;
     
     const useTools = enabledTools && enabledTools.length > 0;
     
     try {
-      await sendMessage(content.trim(), currentModel, files, useTools, enabledTools);
+      await sendMessage(content.trim(), currentModel, files, useTools, enabledTools, reasoning);
     } catch (error) {
       console.error('Failed to send message:', error);
     }
@@ -113,6 +115,8 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
         isLoadingConversation={loading && messages.length === 0}
         toolExecutions={toolExecutions}
         streamingContent={streamingContent}
+        streamingReasoning={streamingReasoning}
+        reasoningStartTime={reasoningStartTime}
       />
 
       {/* Message Input */}

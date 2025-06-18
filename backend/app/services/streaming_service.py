@@ -38,7 +38,8 @@ class StreamingService:
         model: Optional[str] = None,
         existing_user_message_id: Optional[str] = None,
         use_tools: Optional[bool] = None,
-        enabled_tools: Optional[List[str]] = None
+        enabled_tools: Optional[List[str]] = None,
+        reasoning: Optional[dict] = None
     ) -> AsyncGenerator[str, None]:
         """Ultra-fast streaming with minimal DB overhead and proper SSE format"""
         
@@ -133,7 +134,8 @@ class StreamingService:
                 user_id=user_id,
                 model=selected_model,
                 use_tools=use_tools,
-                enabled_tools=enabled_tools
+                enabled_tools=enabled_tools,
+                reasoning=reasoning
             ):
                 # Handle tool-enabled streaming (returns JSON) vs regular streaming (returns text)
                 try:
@@ -159,6 +161,13 @@ class StreamingService:
                         elif chunk_data.get('type') == 'tool_result':
                             # Tool result event - pass through  
                             yield self._format_sse_event('tool_result', chunk_data.get('data', {}))
+                            
+                        elif chunk_data.get('type') == 'reasoning':
+                            # Reasoning/thinking tokens - pass through
+                            yield self._format_sse_event('reasoning', {
+                                'chunk': chunk_data.get('data', ''),
+                                'content_type': 'reasoning'
+                            })
                             
                 except (json.JSONDecodeError, KeyError):
                     # Fallback: treat as plain text (regular streaming)

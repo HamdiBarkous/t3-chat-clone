@@ -32,13 +32,15 @@ interface UseMessagesReturn {
   messages: Message[]
   loading: boolean
   error: string | null
-  sendMessage: (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[]) => Promise<void>
+  sendMessage: (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[], reasoning?: any) => Promise<void>
   generateAIResponse: (model?: string) => Promise<void>
   loadMessages: () => Promise<void>
   isStreaming: boolean
   streamingMessageId: string | null
   toolExecutions: ToolCall[]
   streamingContent: string // Direct access to streaming content for optimization
+  streamingReasoning: string // Direct access to streaming reasoning content
+  reasoningStartTime: number | null // When current reasoning started
 }
 
 // Helper function to convert MessageResponse to Message with timestamp
@@ -60,8 +62,13 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
   
   // Optimized streaming state management
   const [streamingContent, setStreamingContent] = useState<string>('')
+  const [streamingReasoning, setStreamingReasoning] = useState<string>('')
   const streamingContentRef = useRef<string>('')
+  const streamingReasoningRef = useRef<string>('')
   const batchUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
+  // Reasoning timing tracking
+  const reasoningStartTimeRef = useRef<number | null>(null)
   
   // Get conversation hook for title updates
   const { updateConversationTitle } = useConversations()
@@ -74,6 +81,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     
     batchUpdateTimeoutRef.current = setTimeout(() => {
       setStreamingContent(streamingContentRef.current)
+      setStreamingReasoning(streamingReasoningRef.current)
     }, 50) // 20fps update rate for smooth streaming
   }, [])
 
@@ -102,7 +110,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     }
   }, [conversationId])
 
-  const sendMessage = useCallback(async (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[]) => {
+  const sendMessage = useCallback(async (content: string, model?: string, files?: File[], useTools?: boolean, enabledTools?: string[], reasoning?: any) => {
     if (!conversationId || isStreaming) return
 
     try {
@@ -111,7 +119,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       
       // Reset streaming state
       setStreamingContent('')
+      setStreamingReasoning('')
       streamingContentRef.current = ''
+      streamingReasoningRef.current = ''
 
       // Step 1: Create user message first (non-streaming endpoint)
       let userMessageId: string | null = null
@@ -213,7 +223,10 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           // Create temporary streaming message with timestamp based on current state
           setStreamingMessageId('streaming-temp')
           setStreamingContent('')
+          setStreamingReasoning('')
           streamingContentRef.current = ''
+          streamingReasoningRef.current = ''
+          reasoningStartTimeRef.current = null // Reset reasoning timer
           
           setMessages(prev => {
             const now = Date.now()
@@ -225,6 +238,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
               conversation_id: conversationId!,
               role: 'assistant',
               content: '', // Keep empty - use streamingContent for display
+              reasoning: '', // Initialize reasoning field
               status: MessageStatus.COMPLETED,
               created_at: new Date(timestamp).toISOString(),
               model_used: undefined,
@@ -243,6 +257,19 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           updateStreamingContent()
         },
 
+        onReasoningChunk: (data: unknown) => {
+          const reasoningData = data as { chunk: string; content_type: string }
+          
+          // Start timing if this is the first reasoning chunk
+          if (reasoningStartTimeRef.current === null) {
+            reasoningStartTimeRef.current = Date.now()
+          }
+          
+          // Accumulate reasoning content and trigger batched update
+          streamingReasoningRef.current += reasoningData.chunk
+          updateStreamingContent()
+        },
+
         onAssistantMessageComplete: (data: unknown) => {
           const completeData = data as AssistantMessageCompleteData
           
@@ -252,7 +279,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
             batchUpdateTimeoutRef.current = null
           }
           
-          // Final update with complete content - update the actual message
+          // Final update with complete content - update the actual message with reasoning
           setMessages(prev => 
             prev.map(msg => 
               msg.id === 'streaming-temp'
@@ -260,6 +287,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
                     ...msg,
                     id: completeData.id,
                     content: completeData.content, // Use final content from server
+                    reasoning: streamingReasoningRef.current || '', // Store final reasoning content
                     status: MessageStatus.COMPLETED,
                     created_at: completeData.created_at,
                     model_used: completeData.model_used,
@@ -272,7 +300,10 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setIsStreaming(false)
           setStreamingMessageId(null)
           setStreamingContent('')
+          setStreamingReasoning('')
           streamingContentRef.current = ''
+          streamingReasoningRef.current = ''
+          reasoningStartTimeRef.current = null
         },
 
         onError: (data: unknown) => {
@@ -291,7 +322,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setIsStreaming(false)
           setStreamingMessageId(null)
           setStreamingContent('')
+          setStreamingReasoning('')
           streamingContentRef.current = ''
+          streamingReasoningRef.current = ''
         },
 
         onConnectionError: (error) => {
@@ -299,7 +332,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setIsStreaming(false)
           setStreamingMessageId(null)
           setStreamingContent('')
+          setStreamingReasoning('')
           streamingContentRef.current = ''
+          streamingReasoningRef.current = ''
           
           // Clean up streaming state
           if (batchUpdateTimeoutRef.current) {
@@ -315,7 +350,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setIsStreaming(false)
           setStreamingMessageId(null)
           setStreamingContent('')
+          setStreamingReasoning('')
           streamingContentRef.current = ''
+          streamingReasoningRef.current = ''
           
           // Clean up streaming state
           if (batchUpdateTimeoutRef.current) {
@@ -373,7 +410,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       }
 
       // Start streaming for AI response only (user message already created)
-      await streamingService.startStreamWithExistingMessage(conversationId, content, model, userMessageId || undefined, streamCallbacks, useTools, enabledTools)
+      await streamingService.startStreamWithExistingMessage(conversationId, content, model, userMessageId || undefined, streamCallbacks, useTools, enabledTools, reasoning)
 
     } catch (err) {
       const errorMessage = err instanceof ApiError ? err.message : 'Failed to send message'
@@ -381,7 +418,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setIsStreaming(false)
       setStreamingMessageId(null)
       setStreamingContent('')
+      setStreamingReasoning('')
       streamingContentRef.current = ''
+      streamingReasoningRef.current = ''
       console.error('Error sending message:', err)
     }
   }, [conversationId, isStreaming, updateConversationTitle, updateStreamingContent])
@@ -396,7 +435,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       
       // Reset streaming state
       setStreamingContent('')
+      setStreamingReasoning('')
       streamingContentRef.current = ''
+      streamingReasoningRef.current = ''
 
       // Get the last user message to use as context
       const lastUserMessage = messages.filter(msg => msg.role === 'user').slice(-1)[0]
@@ -415,7 +456,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           // Create temporary streaming message
           setStreamingMessageId('streaming-temp')
           setStreamingContent('')
+          setStreamingReasoning('')
           streamingContentRef.current = ''
+          streamingReasoningRef.current = ''
           
           setMessages(prev => {
             const now = Date.now()
@@ -442,6 +485,14 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           
           // Accumulate content and trigger batched update
           streamingContentRef.current += chunkData.chunk
+          updateStreamingContent()
+        },
+
+        onReasoningChunk: (data: unknown) => {
+          const reasoningData = data as { chunk: string; content_type: string }
+          
+          // Accumulate reasoning content and trigger batched update
+          streamingReasoningRef.current += reasoningData.chunk
           updateStreamingContent()
         },
 
@@ -473,7 +524,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setIsStreaming(false)
           setStreamingMessageId(null)
           setStreamingContent('')
+          setStreamingReasoning('')
           streamingContentRef.current = ''
+          streamingReasoningRef.current = ''
         },
 
         onError: (data: unknown) => {
@@ -490,7 +543,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setIsStreaming(false)
           setStreamingMessageId(null)
           setStreamingContent('')
+          setStreamingReasoning('')
           streamingContentRef.current = ''
+          streamingReasoningRef.current = ''
         },
 
         onConnectionError: (error) => {
@@ -498,7 +553,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setIsStreaming(false)
           setStreamingMessageId(null)
           setStreamingContent('')
+          setStreamingReasoning('')
           streamingContentRef.current = ''
+          streamingReasoningRef.current = ''
           
           // Clean up streaming state
           if (batchUpdateTimeoutRef.current) {
@@ -513,7 +570,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           setIsStreaming(false)
           setStreamingMessageId(null)
           setStreamingContent('')
+          setStreamingReasoning('')
           streamingContentRef.current = ''
+          streamingReasoningRef.current = ''
           
           // Clean up streaming state
           if (batchUpdateTimeoutRef.current) {
@@ -582,7 +641,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setIsStreaming(false)
       setStreamingMessageId(null)
       setStreamingContent('')
+      setStreamingReasoning('')
       streamingContentRef.current = ''
+      streamingReasoningRef.current = ''
       console.error('Error generating AI response:', err)
     }
   }, [conversationId, isStreaming, messages, updateConversationTitle, updateStreamingContent])
@@ -614,5 +675,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     streamingMessageId,
     toolExecutions,
     streamingContent, // Expose streaming content for optimized components
+    streamingReasoning, // Expose streaming reasoning content
+    reasoningStartTime: reasoningStartTimeRef.current,
   }
 } 

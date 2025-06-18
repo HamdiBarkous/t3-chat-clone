@@ -238,6 +238,7 @@ export interface Message {
   conversation_id: UUID;
   role: 'user' | 'assistant'; // simplified string literals for components
   content: string;
+  reasoning?: string; // Add reasoning field to store reasoning content
   model_used?: string;
   status: MessageStatus;
   created_at: string;
