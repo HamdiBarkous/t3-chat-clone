@@ -180,15 +180,23 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           })
 
           const uploadedDocs = await Promise.all(uploadPromises)
+          console.log('Documents uploaded successfully:', uploadedDocs)
           
-          // Update the user message with document metadata
-          setMessages(prev => 
-            prev.map(msg => 
+          // Update the user message with document metadata - ensure proper state update
+          setMessages(prev => {
+            const updatedMessages = prev.map(msg => 
               msg.id === userMessageId
-                ? { ...msg, documents: uploadedDocs }
+                ? { 
+                    ...msg, 
+                    documents: uploadedDocs,
+                    // Force re-render by updating timestamp slightly
+                    timestamp: msg.timestamp + 1
+                  }
                 : msg
             )
-          )
+            console.log('Updated messages with documents:', updatedMessages.find(m => m.id === userMessageId)?.documents)
+            return updatedMessages
+          })
         } catch (error) {
           console.error('File upload failed:', error)
           setError('Some files failed to upload, but your message was sent.')
