@@ -9,7 +9,6 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ChatLayout } from '@/components/chat/ChatLayout';
 import { ChatInterface } from '@/components/chat/ChatInterface';
 import { CustomizationSidebar } from '@/components/chat/CustomizationSidebar';
-import { NewConversationModal } from '@/components/conversation/NewConversationModal';
 import { useConversations } from '@/contexts/ConversationsContext';
 import { useState, useMemo, useEffect, use } from 'react';
 import { useRouter } from 'next/navigation';
@@ -25,7 +24,7 @@ function ConversationPage({ params }: ConversationPageProps) {
   const router = useRouter();
   const resolvedParams = use(params);
   const conversationId = resolvedParams.id;
-  const [isNewConversationModalOpen, setIsNewConversationModalOpen] = useState(false);
+
   
   // Customization state
   const [showCustomization, setShowCustomization] = useState(false);
@@ -119,21 +118,16 @@ function ConversationPage({ params }: ConversationPageProps) {
     }
   }, [loading, conversations, selectedConversation, router]);
 
-  const handleNewChat = () => {
-    setIsNewConversationModalOpen(true);
-  };
-
-  const handleCreateConversation = async (data: { model: string; systemPrompt?: string; title?: string }) => {
+  const handleNewChat = async () => {
     try {
+      // Create conversation with default settings
       const newConversation = await createConversation({
-        title: data.title,
-        current_model: data.model,
-        system_prompt: data.systemPrompt,
+        current_model: 'openai/gpt-4o',
+        system_prompt: 'You are a helpful assistant',
       });
       
       if (newConversation) {
         router.push(`/conversations/${newConversation.id}`);
-        setIsNewConversationModalOpen(false);
       }
     } catch (error) {
       console.error('Failed to create conversation:', error);
@@ -204,12 +198,6 @@ function ConversationPage({ params }: ConversationPageProps) {
           <div className="text-text-muted">Conversation not found</div>
         </div>
       )}
-
-      <NewConversationModal
-        isOpen={isNewConversationModalOpen}
-        onClose={() => setIsNewConversationModalOpen(false)}
-        onCreateConversation={handleCreateConversation}
-      />
 
       {/* Customization Sidebar */}
       <CustomizationSidebar

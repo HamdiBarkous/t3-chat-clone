@@ -5,7 +5,7 @@
 
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { MessageList } from './MessageList';
 import { MessageInput } from './MessageInput';
@@ -20,7 +20,13 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ conversationId, conversation }: ChatInterfaceProps) {
   const [currentModel, setCurrentModel] = useState(conversation?.current_model || 'openai/gpt-4o');
+  const initialMessageSentRef = useRef(false);
   const searchParams = useSearchParams();
+  
+  // Reset initial message flag when conversation changes
+  useEffect(() => {
+    initialMessageSentRef.current = false;
+  }, [conversationId]);
   
   // Use real-time hooks
   const { 
@@ -39,6 +45,21 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
   
   const { updateConversation } = useConversations();
 
+  // Check if this is a branched conversation
+  const isBranchedConversation = conversation?.title?.startsWith('Branch from ');
+
+  const handleSendMessage = useCallback(async (content: string, files?: File[], enabledTools?: string[], reasoning?: any) => {
+    if ((!content.trim() && (!files || files.length === 0)) || isStreaming) return;
+    
+    const useTools = enabledTools && enabledTools.length > 0;
+    
+    try {
+      await sendMessage(content.trim(), currentModel, files, useTools, enabledTools, reasoning);
+    } catch (error) {
+      console.error('Failed to send message:', error);
+    }
+  }, [isStreaming, sendMessage, currentModel]);
+
   // Auto-generate AI response if requested (for retry functionality)
   useEffect(() => {
     const shouldAutoGenerate = searchParams.get('autoGenerateResponse') === 'true';
@@ -54,20 +75,40 @@ export function ChatInterface({ conversationId, conversation }: ChatInterfacePro
     }
   }, [searchParams, loading, messages, isStreaming, generateAIResponse, conversation?.current_model, currentModel]);
 
-  // Check if this is a branched conversation
-  const isBranchedConversation = conversation?.title?.startsWith('Branch from ');
+  // Handle initial message from home page
+  useEffect(() => {
+    const initialMessage = searchParams.get('initialMessage');
+    
+    if (initialMessage && !loading && messages.length === 0 && !isStreaming && !initialMessageSentRef.current) {
+      const enabledToolsParam = searchParams.get('enabledTools');
+      const reasoningParam = searchParams.get('reasoning');
+      
+      const enabledTools = enabledToolsParam ? enabledToolsParam.split(',') : [];
+      const reasoning = reasoningParam === 'true';
+      const useTools = enabledTools && enabledTools.length > 0;
+      
 
-  const handleSendMessage = async (content: string, files?: File[], enabledTools?: string[], reasoning?: any) => {
-    if ((!content.trim() && (!files || files.length === 0)) || isStreaming) return;
-    
-    const useTools = enabledTools && enabledTools.length > 0;
-    
-    try {
-      await sendMessage(content.trim(), currentModel, files, useTools, enabledTools, reasoning);
-    } catch (error) {
-      console.error('Failed to send message:', error);
+      
+      // Mark as sent immediately to prevent duplicates
+      initialMessageSentRef.current = true;
+      
+      // Send the initial message directly without going through handleSendMessage callback
+      sendMessage(initialMessage.trim(), currentModel, undefined, useTools, enabledTools, reasoning)
+        .catch(error => {
+          console.error('Failed to send initial message:', error);
+        });
+      
+      // Clean up URL parameters
+      const url = new URL(window.location.href);
+      url.searchParams.delete('initialMessage');
+      url.searchParams.delete('enabledTools');
+      url.searchParams.delete('reasoning');
+      window.history.replaceState({}, '', url.toString());
+      
+      // Clean up sessionStorage
+      sessionStorage.removeItem('pendingFiles');
     }
-  };
+   }, [searchParams, loading, messages, isStreaming, sendMessage, currentModel]);
 
   const handleModelChange = async (model: string) => {
     setCurrentModel(model);

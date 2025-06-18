@@ -48,8 +48,11 @@ export function MessageList({
     }
   }, [messages.length, scrollToBottom]);
 
-  // Sort messages by timestamp to ensure proper chronological ordering
-  const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
+  // Sort messages by timestamp and deduplicate by ID to ensure proper chronological ordering
+  const uniqueMessages = messages.filter((message, index, array) => 
+    array.findIndex(m => m.id === message.id) === index
+  );
+  const sortedMessages = [...uniqueMessages].sort((a, b) => a.timestamp - b.timestamp);
 
   // Determine if AI is generating response (streaming an assistant message)
   const isResponseGenerating = !!streamingMessageId && isLoading;
