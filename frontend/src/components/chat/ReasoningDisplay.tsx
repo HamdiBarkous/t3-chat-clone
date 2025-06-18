@@ -23,14 +23,34 @@ export function ReasoningDisplay({
 }: ReasoningDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [thinkingTime, setThinkingTime] = useState<number | null>(null);
+  const [finalThinkingTime, setFinalThinkingTime] = useState<number | null>(null);
   const autoCollapseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const thinkingTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const hasStartedAutoCollapseRef = useRef(false);
 
-  // Calculate thinking time during streaming
+  // Handle streaming time updates
   useEffect(() => {
     if (isStreaming && startTime) {
+      // Reset state for new reasoning session
+      setFinalThinkingTime(null);
+      hasStartedAutoCollapseRef.current = false;
+      setIsExpanded(true);
+      
+      // Clear any existing interval
+      if (thinkingTimeIntervalRef.current) {
+        clearInterval(thinkingTimeIntervalRef.current);
+      }
+      
+      // Clear any existing auto-collapse timer
+      if (autoCollapseTimeoutRef.current) {
+        clearTimeout(autoCollapseTimeoutRef.current);
+        autoCollapseTimeoutRef.current = null;
+      }
+      
+      // Start live time updates during streaming
       const interval = setInterval(() => {
-        setThinkingTime((Date.now() - startTime) / 1000);
+        const currentTime = (Date.now() - startTime) / 1000;
+        setThinkingTime(currentTime);
       }, 100);
       thinkingTimeIntervalRef.current = interval;
       
@@ -39,16 +59,34 @@ export function ReasoningDisplay({
           clearInterval(thinkingTimeIntervalRef.current);
         }
       };
-    } else if (!isStreaming && startTime) {
-      // Calculate final thinking time when streaming stops
-      setThinkingTime((Date.now() - startTime) / 1000);
+    }
+  }, [isStreaming, startTime]);
+
+  // Handle completion and auto-collapse
+  useEffect(() => {
+    if (!isStreaming && startTime && !hasStartedAutoCollapseRef.current) {
+      // Calculate and store final thinking time
+      const finalTime = (Date.now() - startTime) / 1000;
+      setFinalThinkingTime(finalTime);
+      setThinkingTime(finalTime);
+      
+      // Clear streaming interval
+      if (thinkingTimeIntervalRef.current) {
+        clearInterval(thinkingTimeIntervalRef.current);
+        thinkingTimeIntervalRef.current = null;
+      }
       
       // Start auto-collapse timer (3 seconds after completion)
       autoCollapseTimeoutRef.current = setTimeout(() => {
         setIsExpanded(false);
       }, 3000);
+      
+      hasStartedAutoCollapseRef.current = true;
     }
+  }, [isStreaming, startTime]);
 
+  // Reset state when component unmounts or reasoning changes
+  useEffect(() => {
     return () => {
       if (autoCollapseTimeoutRef.current) {
         clearTimeout(autoCollapseTimeoutRef.current);
@@ -57,7 +95,7 @@ export function ReasoningDisplay({
         clearInterval(thinkingTimeIntervalRef.current);
       }
     };
-  }, [isStreaming, startTime]);
+  }, []);
 
   // Clear auto-collapse if user manually interacts
   const handleToggle = () => {
@@ -82,6 +120,9 @@ export function ReasoningDisplay({
     return `${seconds.toFixed(1)}s`;
   };
 
+  // Use final time if available, otherwise current streaming time
+  const displayTime = finalThinkingTime || thinkingTime;
+
   return (
     <div className="mb-4">
       {/* Reasoning Header - Always visible */}
@@ -96,9 +137,9 @@ export function ReasoningDisplay({
           <span className="text-sm font-medium text-blue-400">
             {isStreaming ? 'Thinking...' : 'Reasoning'}
           </span>
-          {thinkingTime !== null && (
+          {displayTime !== null && (
             <span className="text-xs text-text-muted">
-              {isStreaming ? 'for' : 'thought for'} {formatTime(thinkingTime)}
+              {isStreaming ? 'for' : 'thought for'} {formatTime(displayTime)}
             </span>
           )}
         </div>
