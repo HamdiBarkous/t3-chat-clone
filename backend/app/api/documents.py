@@ -91,6 +91,42 @@ async def get_document(
         raise HTTPException(status_code=500, detail="Failed to retrieve document")
 
 
+@router.get("/{message_id}/documents/{document_id}/image")
+async def get_document_image(
+    message_id: UUID,
+    document_id: UUID,
+    current_user: dict = Depends(get_current_user),
+    document_service: DocumentService = Depends(get_document_service)
+):
+    """Get image content as base64 data URL for display"""
+    user_id = UUID(current_user["id"])
+    
+    try:
+        document = await document_service.get_document(
+            document_id=document_id,
+            user_id=user_id,
+            include_content=True
+        )
+        
+        if not document:
+            raise HTTPException(status_code=404, detail="Document not found")
+        
+        if not document.is_image:
+            raise HTTPException(status_code=400, detail="Document is not an image")
+        
+        if not document.image_base64:
+            raise HTTPException(status_code=404, detail="Image data not found")
+        
+        # Return as data URL
+        data_url = f"data:image/{document.file_type};base64,{document.image_base64}"
+        return {"data_url": data_url}
+        
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+    except Exception:
+        raise HTTPException(status_code=500, detail="Failed to retrieve image")
+
+
 @router.put("/{message_id}/documents/{document_id}", response_model=DocumentResponse)
 async def update_document(
     message_id: UUID,
@@ -177,6 +213,7 @@ async def documents_health_check():
             "file_upload",
             "text_extraction", 
             "pdf_support",
-            "code_files_support"
+            "code_files_support",
+            "image_display"
         ]
     } 

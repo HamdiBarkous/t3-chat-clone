@@ -25,6 +25,7 @@ import 'katex/dist/katex.min.css';
 interface MarkdownRendererProps {
   content: string;
   className?: string;
+  isStreaming?: boolean;
 }
 
 /**
@@ -232,7 +233,7 @@ function preprocessMathContent(content: string): string {
   return processed;
 }
 
-export function MarkdownRenderer({ content, className = '' }: MarkdownRendererProps) {
+export const MarkdownRenderer = React.memo(function MarkdownRenderer({ content, className = '', isStreaming = false }: MarkdownRendererProps) {
   // Preprocess the content to fix math rendering issues
   const processedContent = preprocessMathContent(content);
   
@@ -482,4 +483,4 @@ export function MarkdownRenderer({ content, className = '' }: MarkdownRendererPr
       </ReactMarkdown>
     </div>
   );
-}
+});

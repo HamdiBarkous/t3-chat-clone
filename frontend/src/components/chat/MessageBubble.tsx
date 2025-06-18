@@ -1,11 +1,12 @@
 /**
  * Message Bubble Component
  * Displays individual messages with different styles for user and assistant
+ * Optimized for streaming performance with React.memo
  */
 
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, memo } from 'react';
 import { clsx } from 'clsx';
 import { useRouter } from 'next/navigation';
 import type { Message } from '@/types/api';
@@ -18,13 +19,17 @@ import { useConversations } from '@/contexts/ConversationsContext';
 interface MessageBubbleProps {
   message: Message;
   isStreaming?: boolean;
+  streamingContent?: string; // Direct streaming content for performance
 }
 
-export function MessageBubble({ message, isStreaming = false }: MessageBubbleProps) {
+// Memoized component to prevent unnecessary re-renders during streaming
+export function MessageBubble({ message, isStreaming = false, streamingContent }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
   const router = useRouter();
   const { branchConversation, editMessage, retryMessage } = useConversations();
+  
+
   const [isBranching, setIsBranching] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [isRetrying, setIsRetrying] = useState(false);
@@ -99,64 +104,13 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
 
   return (
     <div className={clsx(
-      'flex w-full mb-6',
+      'flex w-full mb-6 group',
       isUser ? 'justify-end' : 'justify-start'
     )}>
       <div className={clsx(
         'flex flex-col max-w-[80%]',
         isUser ? 'items-end' : 'items-start'
       )}>
-        {/* Document Attachments (for user messages) */}
-        {isUser && message.documents && message.documents.length > 0 && (
-          <div className="mb-2 max-w-full">
-            {/* Separate images from regular documents */}
-            {(() => {
-              const images = message.documents.filter(doc => doc.is_image);
-              const regularDocs = message.documents.filter(doc => !doc.is_image);
-              
-              return (
-                <>
-                  {/* Display images */}
-                  {images.length > 0 && (
-                    <div className="mb-2">
-                      <div className="text-xs text-text-muted mb-1">
-                        Image{images.length > 1 ? 's' : ''} ({images.length}):
-                      </div>
-                      <div className="grid grid-cols-2 gap-2 max-w-sm">
-                        {images.map((doc) => (
-                          <ImageDisplay
-                            key={doc.id}
-                            document={doc}
-                            size="sm"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-
-                  {/* Display regular documents */}
-                  {regularDocs.length > 0 && (
-                    <div>
-                      <div className="text-xs text-text-muted mb-1">
-                        Attached file{regularDocs.length > 1 ? 's' : ''} ({regularDocs.length}):
-                      </div>
-                      <div className="flex flex-wrap gap-1">
-                        {regularDocs.map((doc) => (
-                          <DocumentBadge
-                            key={doc.id}
-                            document={doc}
-                            size="sm"
-                          />
-                        ))}
-                      </div>
-                    </div>
-                  )}
-                </>
-              );
-            })()}
-          </div>
-        )}
-
         {/* Message Content */}
         {isUser ? (
           // User messages in a subtle box using CSS custom properties
@@ -196,59 +150,134 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
         ) : (
           // AI messages blend into background (no box) using CSS custom properties
           <div className="text-primary">
-            {message.content ? (
-              <MarkdownRenderer content={message.content} />
-            ) : isStreaming ? (
-              // Show typing indicator when streaming and no content yet
-              <div className="flex items-center gap-1.5 py-2">
-                <div className="w-1.5 h-1.5 purple-accent rounded-full animate-bounce" />
-                <div className="w-1.5 h-1.5 bg-purple-dark rounded-full animate-bounce" style={{ animationDelay: '0.2s' }} />
-                <div className="w-1.5 h-1.5 purple-accent rounded-full animate-bounce" style={{ animationDelay: '0.4s' }} />
-              </div>
-            ) : null}
-            {isStreaming && message.content && (
-              <span className="inline-block w-2 h-5 purple-accent ml-1 animate-pulse" />
-            )}
+            {(() => {
+              // Use streaming content if available and currently streaming, otherwise use message content
+              const contentToRender = isStreaming && streamingContent !== undefined 
+                ? streamingContent 
+                : message.content;
+              
+              if (contentToRender) {
+                return (
+                  <MarkdownRenderer 
+                    content={contentToRender} 
+                    isStreaming={isStreaming}
+                  />
+                );
+              } else {
+                return (
+                  <div className="text-text-muted italic">
+                    {isStreaming ? 'Thinking...' : 'No content'}
+                  </div>
+                );
+              }
+            })()}
           </div>
         )}
 
-        {/* Metadata */}
+        {/* Document Attachments (for user messages) */}
+        {isUser && message.documents && message.documents.length > 0 && (
+          <div className="mt-3 max-w-full">
+            {/* Separate images from regular documents */}
+            {(() => {
+              const images = message.documents.filter(doc => doc.is_image);
+              const regularDocs = message.documents.filter(doc => !doc.is_image);
+              
+              return (
+                <>
+                  {/* Display images */}
+                  {images.length > 0 && (
+                    <div className="mb-3">
+                      <div className="text-xs text-text-muted mb-2 font-medium">
+                        Image{images.length > 1 ? 's' : ''} ({images.length}):
+                      </div>
+                      <div className={clsx(
+                        "gap-3",
+                        images.length === 1 ? "flex justify-start" : "grid grid-cols-2 max-w-md"
+                      )}>
+                        {images.map((doc) => (
+                          <ImageDisplay
+                            key={doc.id}
+                            document={doc}
+                            size={images.length === 1 ? "md" : "sm"}
+                            className="rounded-lg shadow-sm border border-border"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Display regular documents */}
+                  {regularDocs.length > 0 && (
+                    <div>
+                      <div className="text-xs text-text-muted mb-2 font-medium">
+                        Attached file{regularDocs.length > 1 ? 's' : ''} ({regularDocs.length}):
+                      </div>
+                      <div className="flex flex-wrap gap-2">
+                        {regularDocs.map((doc) => (
+                          <DocumentBadge
+                            key={doc.id}
+                            document={doc}
+                            size="sm"
+                          />
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </>
+              );
+            })()}
+          </div>
+        )}
+
+        {/* Message Actions Row */}
         <div className={clsx(
-          'flex items-center gap-2 mt-1 text-xs text-text-muted',
-          isUser ? 'flex-row-reverse' : 'flex-row'
+          'flex items-center gap-3 mt-2 text-xs text-text-muted transition-opacity',
+          isUser ? 'justify-end' : 'justify-start'
         )}>
+          {/* Timestamp */}
           <span>{formatTimestamp(message.created_at)}</span>
           
-          {/* Status indicators */}
-          {message.role === 'user' && (
-            <div className="flex items-center gap-1">
-              {message.status === MessageStatus.COMPLETED && (
-                <svg className="w-3 h-3 text-text-muted" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
-                </svg>
-              )}
-              {message.status === MessageStatus.FAILED && (
-                <svg className="w-3 h-3 text-destructive" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
-                </svg>
-              )}
-            </div>
+          {/* Model name for assistant messages */}
+          {isAssistant && message.model_used && !isStreaming && (
+            <span className="text-purple-light">
+              {message.model_used.replace('openai/', '').replace('anthropic/', '')}
+            </span>
           )}
+          
+                     {/* Streaming indicator */}
+           {isStreaming && (
+             <span className="text-green-accent flex items-center gap-1">
+               <div className="w-2 h-2 bg-green-accent rounded-full animate-pulse"></div>
+             </span>
+           )}
 
-          {/* Action buttons */}
+          {/* Action buttons - only show on hover and when not streaming */}
           {!isStreaming && (
-            <div className="flex items-center gap-1">
+            <>
+              {/* Branch conversation button */}
+              <button
+                onClick={handleBranchFromHere}
+                disabled={isBranching}
+                className="opacity-0 group-hover:opacity-100 hover:text-green-400 transition-all duration-200 flex items-center gap-1"
+                title="Branch conversation from here"
+              >
+                <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+                {isBranching ? 'Branching...' : 'Branch'}
+              </button>
+
               {/* Edit button for user messages */}
-              {isUser && !isEditing && (
+              {isUser && (
                 <button
                   onClick={startEditing}
-                  className="flex items-center gap-1 px-2 py-1 rounded text-xs hover:bg-muted transition-colors text-text-muted hover:text-text-secondary"
+                  className="opacity-0 group-hover:opacity-100 hover:text-purple-light transition-all duration-200 flex items-center gap-1"
                   title="Edit message"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
-                  <span>Edit</span>
+                  Edit
                 </button>
               )}
 
@@ -257,43 +286,17 @@ export function MessageBubble({ message, isStreaming = false }: MessageBubblePro
                 <button
                   onClick={handleRetryMessage}
                   disabled={isRetrying}
-                  className={clsx(
-                    'flex items-center gap-1 px-2 py-1 rounded text-xs',
-                    'hover:bg-muted transition-colors',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                    isRetrying ? 'text-text-muted' : 'text-text-muted hover:text-text-secondary'
-                  )}
-                  title="Retry response"
+                  className="opacity-0 group-hover:opacity-100 hover:text-purple-light transition-all duration-200 flex items-center gap-1"
+                  title="Retry this response"
                 >
                   <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
                   </svg>
-                  <span>{isRetrying ? 'Retrying...' : 'Retry'}</span>
+                  {isRetrying ? 'Retrying...' : 'Retry'}
                 </button>
               )}
-
-              {/* Branch button for assistant messages */}
-              {isAssistant && (
-                <button
-                  onClick={handleBranchFromHere}
-                  disabled={isBranching}
-                  className={clsx(
-                    'flex items-center gap-1 px-2 py-1 rounded text-xs',
-                    'hover:bg-muted transition-colors',
-                    'disabled:opacity-50 disabled:cursor-not-allowed',
-                    isBranching ? 'text-text-muted' : 'text-text-muted hover:text-text-secondary'
-                  )}
-                  title="Branch from here"
-                >
-                  <svg className="w-3 h-3" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                  <span>{isBranching ? 'Branching...' : 'Branch'}</span>
-                </button>
-              )}
-            </div>
+            </>
           )}
-
         </div>
       </div>
     </div>

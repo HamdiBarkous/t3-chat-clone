@@ -1,11 +1,11 @@
 /**
  * Message List Component
- * Displays a scrollable list of messages with auto-scroll to bottom
+ * Displays a scrollable list of messages with simple auto-scroll on new messages
  */
 
 'use client';
 
-import React, { useEffect, useRef } from 'react';
+import React, { useEffect, useRef, useCallback } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { ToolExecution, type ToolCall } from './ToolExecution';
 import type { Message } from '@/types/api';
@@ -16,6 +16,7 @@ interface MessageListProps {
   isLoading?: boolean;
   isLoadingConversation?: boolean;
   toolExecutions?: ToolCall[];
+  streamingContent?: string;
 }
 
 export function MessageList({ 
@@ -23,43 +24,25 @@ export function MessageList({
   streamingMessageId,
   isLoading = false,
   isLoadingConversation = false,
-  toolExecutions
+  toolExecutions,
+  streamingContent
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
 
-  // Auto-scroll to bottom when new messages arrive or streaming starts
-  useEffect(() => {
+  // Simple scroll to bottom function
+  const scrollToBottom = useCallback(() => {
     if (messagesEndRef.current) {
       messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
     }
-  }, [messages.length, streamingMessageId]);
+  }, []);
 
-  // Auto-scroll during streaming when content is being added
+  // Auto-scroll when new messages arrive
   useEffect(() => {
-    if (isLoading && streamingMessageId && messagesEndRef.current) {
-      // Smooth scroll when streaming starts
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (messages.length > 0) {
+      scrollToBottom();
     }
-  }, [isLoading, streamingMessageId]);
-
-  // Auto-scroll during content updates for streaming message
-  useEffect(() => {
-    if (streamingMessageId && messagesEndRef.current) {
-      // Find the streaming message and scroll to it smoothly
-      const streamingMessage = messages.find(m => m.id === streamingMessageId);
-      if (streamingMessage && streamingMessage.content) {
-        // Use a slight delay to ensure the content has rendered
-        const timeoutId = setTimeout(() => {
-          if (messagesEndRef.current) {
-            messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
-          }
-        }, 50);
-        
-        return () => clearTimeout(timeoutId);
-      }
-    }
-  }, [messages, streamingMessageId]);
+  }, [messages.length, scrollToBottom]);
 
   // Sort messages by timestamp to ensure proper chronological ordering
   const sortedMessages = [...messages].sort((a, b) => a.timestamp - b.timestamp);
@@ -113,6 +96,7 @@ export function MessageList({
             key={message.id}
             message={message}
             isStreaming={streamingMessageId === message.id}
+            streamingContent={streamingMessageId === message.id ? streamingContent : undefined}
           />
         ))}
 

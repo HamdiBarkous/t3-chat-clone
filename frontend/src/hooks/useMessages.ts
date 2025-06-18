@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import { apiClient, ApiError, supabase } from '@/lib/api'
 import { streamingService, StreamingCallbacks } from '@/lib/streaming'
 import type { Message, MessageListResponse, MessageResponse } from '@/types/api'
@@ -38,6 +38,7 @@ interface UseMessagesReturn {
   isStreaming: boolean
   streamingMessageId: string | null
   toolExecutions: ToolCall[]
+  streamingContent: string // Direct access to streaming content for optimization
 }
 
 // Helper function to convert MessageResponse to Message with timestamp
@@ -57,8 +58,24 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [toolExecutions, setToolExecutions] = useState<ToolCall[]>([])
   
+  // Optimized streaming state management
+  const [streamingContent, setStreamingContent] = useState<string>('')
+  const streamingContentRef = useRef<string>('')
+  const batchUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+  
   // Get conversation hook for title updates
   const { updateConversationTitle } = useConversations()
+
+  // Simplified batched content update function
+  const updateStreamingContent = useCallback(() => {
+    if (batchUpdateTimeoutRef.current) {
+      clearTimeout(batchUpdateTimeoutRef.current)
+    }
+    
+    batchUpdateTimeoutRef.current = setTimeout(() => {
+      setStreamingContent(streamingContentRef.current)
+    }, 50) // 20fps update rate for smooth streaming
+  }, [])
 
   const loadMessages = useCallback(async () => {
     if (!conversationId) {
@@ -92,6 +109,10 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setError(null)
       setIsStreaming(true)
       setToolExecutions([]) // Clear previous tool executions
+      
+      // Reset streaming state
+      setStreamingContent('')
+      streamingContentRef.current = ''
 
       // Step 1: Create user message first (non-streaming endpoint)
       let userMessageId: string | null = null
@@ -159,15 +180,23 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           })
 
           const uploadedDocs = await Promise.all(uploadPromises)
+          console.log('Documents uploaded successfully:', uploadedDocs)
           
-          // Update the user message with document metadata
-          setMessages(prev => 
-            prev.map(msg => 
+          // Update the user message with document metadata - ensure proper state update
+          setMessages(prev => {
+            const updatedMessages = prev.map(msg => 
               msg.id === userMessageId
-                ? { ...msg, documents: uploadedDocs }
+                ? { 
+                    ...msg, 
+                    documents: uploadedDocs,
+                    // Force re-render by updating timestamp slightly
+                    timestamp: msg.timestamp + 1
+                  }
                 : msg
             )
-          )
+            console.log('Documents attached to message successfully')
+            return updatedMessages
+          })
         } catch (error) {
           console.error('File upload failed:', error)
           setError('Some files failed to upload, but your message was sent.')
@@ -184,6 +213,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onAssistantMessageStart: () => {
           // Create temporary streaming message with timestamp based on current state
           setStreamingMessageId('streaming-temp')
+          setStreamingContent('')
+          streamingContentRef.current = ''
+          
           setMessages(prev => {
             const now = Date.now()
             const lastMessageTime = prev.length > 0 ? Math.max(...prev.map(m => m.timestamp)) : now
@@ -193,7 +225,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
               id: 'streaming-temp',
               conversation_id: conversationId!,
               role: 'assistant',
-              content: '',
+              content: '', // Keep empty - use streamingContent for display
               status: MessageStatus.COMPLETED,
               created_at: new Date(timestamp).toISOString(),
               model_used: undefined,
@@ -207,27 +239,28 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onContentChunk: (data: unknown) => {
           const chunkData = data as ContentChunkData
           
-          // Update the streaming message with new content using functional update to avoid closure issues
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === 'streaming-temp'
-                ? { ...msg, content: msg.content + chunkData.chunk }
-                : msg
-            )
-          )
+          // Accumulate content and trigger batched update
+          streamingContentRef.current += chunkData.chunk
+          updateStreamingContent()
         },
 
         onAssistantMessageComplete: (data: unknown) => {
           const completeData = data as AssistantMessageCompleteData
           
-          // Replace temporary message with real one
+          // Clear any pending batch updates
+          if (batchUpdateTimeoutRef.current) {
+            clearTimeout(batchUpdateTimeoutRef.current)
+            batchUpdateTimeoutRef.current = null
+          }
+          
+          // Final update with complete content - update the actual message
           setMessages(prev => 
             prev.map(msg => 
               msg.id === 'streaming-temp'
                 ? {
                     ...msg,
                     id: completeData.id,
-                    content: completeData.content,
+                    content: completeData.content, // Use final content from server
                     status: MessageStatus.COMPLETED,
                     created_at: completeData.created_at,
                     model_used: completeData.model_used,
@@ -239,23 +272,41 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           
           setIsStreaming(false)
           setStreamingMessageId(null)
+          setStreamingContent('')
+          streamingContentRef.current = ''
         },
 
         onError: (data: unknown) => {
           const errorData = data as ErrorData
           setError(errorData.message || 'An error occurred while sending the message')
           
+          // Clean up streaming state
+          if (batchUpdateTimeoutRef.current) {
+            clearTimeout(batchUpdateTimeoutRef.current)
+            batchUpdateTimeoutRef.current = null
+          }
+          
           // Remove streaming message on error
           setMessages(prev => prev.filter(msg => msg.id !== 'streaming-temp'))
           
           setIsStreaming(false)
           setStreamingMessageId(null)
+          setStreamingContent('')
+          streamingContentRef.current = ''
         },
 
         onConnectionError: (error) => {
           setError('Connection error: ' + error.message)
           setIsStreaming(false)
           setStreamingMessageId(null)
+          setStreamingContent('')
+          streamingContentRef.current = ''
+          
+          // Clean up streaming state
+          if (batchUpdateTimeoutRef.current) {
+            clearTimeout(batchUpdateTimeoutRef.current)
+            batchUpdateTimeoutRef.current = null
+          }
           
           // Remove streaming message on connection error
           setMessages(prev => prev.filter(msg => msg.id !== 'streaming-temp'))
@@ -264,6 +315,14 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onConnectionClose: () => {
           setIsStreaming(false)
           setStreamingMessageId(null)
+          setStreamingContent('')
+          streamingContentRef.current = ''
+          
+          // Clean up streaming state
+          if (batchUpdateTimeoutRef.current) {
+            clearTimeout(batchUpdateTimeoutRef.current)
+            batchUpdateTimeoutRef.current = null
+          }
         },
 
         onTitleGenerationStarted: () => {
@@ -322,9 +381,11 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setError(errorMessage)
       setIsStreaming(false)
       setStreamingMessageId(null)
+      setStreamingContent('')
+      streamingContentRef.current = ''
       console.error('Error sending message:', err)
     }
-  }, [conversationId, isStreaming, updateConversationTitle])
+  }, [conversationId, isStreaming, updateConversationTitle, updateStreamingContent])
 
   // Generate AI response for existing conversation (used for retry functionality)
   const generateAIResponse = useCallback(async (model?: string) => {
@@ -333,6 +394,10 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     try {
       setError(null)
       setIsStreaming(true)
+      
+      // Reset streaming state
+      setStreamingContent('')
+      streamingContentRef.current = ''
 
       // Get the last user message to use as context
       const lastUserMessage = messages.filter(msg => msg.role === 'user').slice(-1)[0]
@@ -350,6 +415,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onAssistantMessageStart: () => {
           // Create temporary streaming message
           setStreamingMessageId('streaming-temp')
+          setStreamingContent('')
+          streamingContentRef.current = ''
+          
           setMessages(prev => {
             const now = Date.now()
             const lastMessageTime = prev.length > 0 ? Math.max(...prev.map(m => m.timestamp)) : now
@@ -359,7 +427,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
               id: 'streaming-temp',
               conversation_id: conversationId!,
               role: 'assistant',
-              content: '',
+              content: '', // Keep empty - use streamingContent for display
               status: MessageStatus.COMPLETED,
               created_at: new Date(timestamp).toISOString(),
               model_used: undefined,
@@ -373,17 +441,19 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onContentChunk: (data: unknown) => {
           const chunkData = data as ContentChunkData
           
-          setMessages(prev => 
-            prev.map(msg => 
-              msg.id === 'streaming-temp'
-                ? { ...msg, content: msg.content + chunkData.chunk }
-                : msg
-            )
-          )
+          // Accumulate content and trigger batched update
+          streamingContentRef.current += chunkData.chunk
+          updateStreamingContent()
         },
 
         onAssistantMessageComplete: (data: unknown) => {
           const completeData = data as AssistantMessageCompleteData
+          
+          // Clear any pending batch updates
+          if (batchUpdateTimeoutRef.current) {
+            clearTimeout(batchUpdateTimeoutRef.current)
+            batchUpdateTimeoutRef.current = null
+          }
           
           setMessages(prev => 
             prev.map(msg => 
@@ -391,7 +461,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
                 ? {
                     ...msg,
                     id: completeData.id,
-                    content: completeData.content,
+                    content: completeData.content, // Use final content from server
                     status: MessageStatus.COMPLETED,
                     created_at: completeData.created_at,
                     model_used: completeData.model_used,
@@ -403,22 +473,39 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           
           setIsStreaming(false)
           setStreamingMessageId(null)
+          setStreamingContent('')
+          streamingContentRef.current = ''
         },
 
         onError: (data: unknown) => {
           const errorData = data as ErrorData
-          setError(errorData.message || 'An error occurred while generating the response')
+          setError(errorData.message || 'An error occurred while generating response')
+          
+          // Clean up streaming state
+          if (batchUpdateTimeoutRef.current) {
+            clearTimeout(batchUpdateTimeoutRef.current)
+            batchUpdateTimeoutRef.current = null
+          }
           
           setMessages(prev => prev.filter(msg => msg.id !== 'streaming-temp'))
-          
           setIsStreaming(false)
           setStreamingMessageId(null)
+          setStreamingContent('')
+          streamingContentRef.current = ''
         },
 
         onConnectionError: (error) => {
           setError('Connection error: ' + error.message)
           setIsStreaming(false)
           setStreamingMessageId(null)
+          setStreamingContent('')
+          streamingContentRef.current = ''
+          
+          // Clean up streaming state
+          if (batchUpdateTimeoutRef.current) {
+            clearTimeout(batchUpdateTimeoutRef.current)
+            batchUpdateTimeoutRef.current = null
+          }
           
           setMessages(prev => prev.filter(msg => msg.id !== 'streaming-temp'))
         },
@@ -426,6 +513,14 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onConnectionClose: () => {
           setIsStreaming(false)
           setStreamingMessageId(null)
+          setStreamingContent('')
+          streamingContentRef.current = ''
+          
+          // Clean up streaming state
+          if (batchUpdateTimeoutRef.current) {
+            clearTimeout(batchUpdateTimeoutRef.current)
+            batchUpdateTimeoutRef.current = null
+          }
         },
 
         onTitleGenerationStarted: () => {
@@ -444,7 +539,6 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onToolCall: (data: unknown) => {
           const toolData = data as { name: string; arguments: Record<string, any>; status: string }
           
-          // Add new tool execution
           const newTool: ToolCall = {
             id: `${toolData.name}-${Date.now()}`,
             name: toolData.name,
@@ -459,7 +553,6 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onToolResult: (data: unknown) => {
           const resultData = data as { name: string; result: string; status: string }
           
-          // Update the corresponding tool with result
           setToolExecutions(prev => 
             prev.map(tool => 
               tool.name === resultData.name && tool.status === 'executing'
@@ -475,7 +568,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         }
       }
 
-      // Start streaming for AI response using the last user message
+      // Generate AI response using the last user message
       await streamingService.startStreamWithExistingMessage(
         conversationId, 
         lastUserMessage.content, 
@@ -489,14 +582,27 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setError(errorMessage)
       setIsStreaming(false)
       setStreamingMessageId(null)
+      setStreamingContent('')
+      streamingContentRef.current = ''
       console.error('Error generating AI response:', err)
     }
-  }, [conversationId, isStreaming, messages, updateConversationTitle])
+  }, [conversationId, isStreaming, messages, updateConversationTitle, updateStreamingContent])
 
-  // Load messages when conversation changes
+  // Cleanup on unmount
   useEffect(() => {
-    loadMessages()
-  }, [loadMessages])
+    return () => {
+      if (batchUpdateTimeoutRef.current) {
+        clearTimeout(batchUpdateTimeoutRef.current)
+      }
+    }
+  }, [])
+
+  // Reset conversation state when conversationId changes
+  useEffect(() => {
+    if (conversationId) {
+      loadMessages()
+    }
+  }, [conversationId, loadMessages])
 
   return {
     messages,
@@ -507,6 +613,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     loadMessages,
     isStreaming,
     streamingMessageId,
-    toolExecutions
+    toolExecutions,
+    streamingContent, // Expose streaming content for optimized components
   }
 } 
