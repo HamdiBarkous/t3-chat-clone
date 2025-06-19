@@ -21,12 +21,17 @@ interface ChatInterfaceProps {
 
 export function ChatInterface({ conversationId, conversation, onShowCustomization }: ChatInterfaceProps) {
   const [currentModel, setCurrentModel] = useState(conversation?.current_model || 'openai/gpt-4o');
+  const [initialToolsState, setInitialToolsState] = useState<{
+    enabledTools: string[];
+    reasoning: boolean;
+  } | null>(null);
   const initialMessageSentRef = useRef(false);
   const searchParams = useSearchParams();
   
-  // Reset initial message flag when conversation changes
+  // Reset initial message flag and tools state when conversation changes
   useEffect(() => {
     initialMessageSentRef.current = false;
+    setInitialToolsState(null);
   }, [conversationId]);
   
   // Use real-time hooks
@@ -88,7 +93,11 @@ export function ChatInterface({ conversationId, conversation, onShowCustomizatio
       const reasoning = reasoningParam === 'true';
       const useTools = enabledTools && enabledTools.length > 0;
       
-
+      // Store initial tools state to pass to MessageInput
+      setInitialToolsState({
+        enabledTools,
+        reasoning
+      });
       
       // Mark as sent immediately to prevent duplicates
       initialMessageSentRef.current = true;
@@ -168,6 +177,8 @@ export function ChatInterface({ conversationId, conversation, onShowCustomizatio
         currentModel={currentModel}
         onModelChange={handleModelChange}
         onShowCustomization={onShowCustomization}
+        initialEnabledTools={initialToolsState?.enabledTools}
+        initialReasoning={initialToolsState?.reasoning}
       />
     </div>
   );
