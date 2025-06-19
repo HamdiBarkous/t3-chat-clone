@@ -8,6 +8,7 @@
 import React, { useEffect, useRef, useCallback } from 'react';
 import { MessageBubble } from './MessageBubble';
 import { ToolExecution, type ToolCall } from './ToolExecution';
+import { MessageSkeleton } from '@/components/ui/Skeleton';
 import type { Message } from '@/types/api';
 
 interface MessageListProps {
@@ -60,19 +61,11 @@ export function MessageList({
   // Show conversation loading state when switching conversations
   if (isLoadingConversation) {
     return (
-      <div className="flex-1 flex items-center justify-center p-8">
-        <div className="relative w-8 h-8">
-          {/* Spinning gradient icon */}
-          <div className="absolute inset-0 bg-gradient-to-r from-primary via-purple-dark to-primary rounded-full animate-spin animate-pulse" 
-               style={{ animationDuration: '1.5s' }}>
-          </div>
-          
-          {/* Inner icon */}
-          <div className="absolute inset-1 bg-background rounded-full flex items-center justify-center">
-            <svg className="w-4 h-4 text-primary animate-pulse" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
-            </svg>
-          </div>
+      <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide">
+        <div className="max-w-4xl mx-auto space-y-6">
+          {Array.from({ length: 3 }).map((_, index) => (
+            <MessageSkeleton key={index} />
+          ))}
         </div>
       </div>
     );

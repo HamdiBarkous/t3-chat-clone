@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { clsx } from 'clsx';
 import { useConversations } from '@/contexts/ConversationsContext';
+import { ConversationSkeleton } from '@/components/ui/Skeleton';
 import type { ConversationListItem } from '@/types/api';
 
 interface ConversationListProps {
@@ -378,13 +379,10 @@ export function ConversationList({
 
   if (loading) {
     return (
-      <div className="p-4 text-center">
-        <div className="flex items-center justify-center space-x-2 mb-3">
-          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-          <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-        </div>
-        <div className="text-text-muted text-sm font-medium">Loading conversations...</div>
+      <div className="space-y-1">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <ConversationSkeleton key={index} />
+        ))}
       </div>
     );
   }
@@ -444,7 +442,7 @@ export function ConversationList({
                   key={conversation.id}
                   className={clsx(
                     'conversation-card relative rounded-xl group cursor-pointer',
-                    'transition-all duration-300 ease-out transform-gpu',
+                    'transition-all duration-300 ease-out transform-gpu animate-in fade-in-0',
                     'hover:shadow-lg hover:shadow-black/10 hover:-translate-y-0.5',
                     selectedConversationId === conversation.id
                       ? 'selected bg-secondary border border-border'

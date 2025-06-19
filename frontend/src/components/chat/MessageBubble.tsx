@@ -15,6 +15,7 @@ import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
 import { ImageDisplay } from '@/components/ui/ImageDisplay';
 import { useConversations } from '@/contexts/ConversationsContext';
+import { useToast } from '@/components/ui/Toast';
 import { ReasoningDisplay } from './ReasoningDisplay';
 
 interface MessageBubbleProps {
@@ -31,6 +32,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
   const isAssistant = message.role === 'assistant';
   const router = useRouter();
   const { branchConversation, editMessage, retryMessage } = useConversations();
+  const { showToast } = useToast();
   
 
   const [isBranching, setIsBranching] = useState(false);
@@ -53,7 +55,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
         router.push(`/conversations/${newConversation.id}`);
       }
     } catch (error) {
-      console.error('Error branching conversation:', error);
+      showToast('Failed to branch conversation', 'error');
     } finally {
       setIsBranching(false);
     }
@@ -70,7 +72,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
         router.push(`/conversations/${newConversation.id}?autoGenerateResponse=true`);
       }
     } catch (error) {
-      console.error('Error editing message:', error);
+      showToast('Failed to edit message', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -87,7 +89,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
         router.push(`/conversations/${newConversation.id}?autoGenerateResponse=true`);
       }
     } catch (error) {
-      console.error('Error retrying message:', error);
+      showToast('Failed to retry message', 'error');
     } finally {
       setIsRetrying(false);
     }
@@ -108,17 +110,18 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
       if (message.content) {
         await navigator.clipboard.writeText(message.content);
         setIsCopied(true);
+        showToast('Message copied to clipboard', 'success', 2000);
         // Reset the copied state after 2 seconds
         setTimeout(() => setIsCopied(false), 2000);
       }
     } catch (error) {
-      console.error('Failed to copy message:', error);
+      showToast('Failed to copy message', 'error');
     }
   };
 
   return (
     <div className={clsx(
-      'flex w-full mb-6 group',
+      'flex w-full mb-6 group animate-in fade-in-0 slide-in-from-bottom-2 duration-500',
       isUser ? 'justify-end' : 'justify-start'
     )}>
       <div className={clsx(

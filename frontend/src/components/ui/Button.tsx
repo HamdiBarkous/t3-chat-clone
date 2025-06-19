@@ -21,12 +21,12 @@ export function Button({
   children,
   ...props
 }: ButtonProps) {
-  const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed';
+  const baseStyles = 'inline-flex items-center justify-center rounded-lg font-medium transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background disabled:opacity-50 disabled:cursor-not-allowed transform hover:scale-[1.02] active:scale-[0.98]';
   
   const variants = {
-    primary: 'bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80',
-    secondary: 'bg-secondary text-secondary-foreground hover:bg-muted active:bg-muted/80',
-    ghost: 'text-text-primary hover:bg-muted active:bg-muted/80',
+    primary: 'bg-primary text-primary-foreground hover:bg-primary/90 active:bg-primary/80 shadow-lg shadow-primary/20 hover:shadow-primary/30',
+    secondary: 'bg-secondary text-secondary-foreground hover:bg-muted active:bg-muted/80 shadow-md hover:shadow-lg',
+    ghost: 'text-text-primary hover:bg-muted active:bg-muted/80 hover:shadow-sm',
   };
   
   const sizes = {

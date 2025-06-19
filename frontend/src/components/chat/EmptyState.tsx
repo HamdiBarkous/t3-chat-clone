@@ -30,8 +30,8 @@ export function EmptyState({ className, variant = 'chat' }: EmptyStateProps) {
         {/* Main content */}
         <div className="relative z-10 text-center">
           {/* Enhanced icon with gradient background */}
-          <div className="relative mb-6">
-            <div className="w-20 h-20 bg-gradient-to-br from-primary/30 via-primary/25 to-purple-dark/20 rounded-3xl mx-auto flex items-center justify-center border border-primary/30 shadow-lg shadow-primary/10 backdrop-blur-sm">
+          <div className="relative mb-6 group">
+            <div className="w-20 h-20 bg-gradient-to-br from-primary/30 via-primary/25 to-purple-dark/20 rounded-3xl mx-auto flex items-center justify-center border border-primary/30 shadow-lg shadow-primary/10 backdrop-blur-sm transition-all duration-300 group-hover:scale-105 group-hover:shadow-xl group-hover:shadow-primary/20">
               <svg className="w-10 h-10 text-primary drop-shadow-sm" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z" />
               </svg>

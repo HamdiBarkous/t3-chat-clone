@@ -129,11 +129,18 @@ export function FileUpload({
         onDrop={handleDrop}
         onClick={handleClick}
         className={clsx(
-          'relative cursor-pointer',
-          isDragging && !disabled && 'opacity-75',
+          'relative cursor-pointer transition-all duration-200',
+          isDragging && !disabled && 'opacity-75 scale-[1.02] transform',
           disabled && 'cursor-not-allowed opacity-50'
         )}
       >
+        {/* Drag overlay */}
+        {isDragging && !disabled && (
+          <div className="absolute inset-0 bg-primary/10 border-2 border-primary border-dashed rounded-lg flex items-center justify-center z-10 animate-in fade-in duration-200">
+            <div className="text-primary font-medium text-sm">Drop files here</div>
+          </div>
+        )}
+        
         {children}
         
         <input
