@@ -37,6 +37,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
   const [isRetrying, setIsRetrying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [isCopied, setIsCopied] = useState(false);
 
 
 
@@ -99,6 +100,19 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
   const cancelEditing = () => {
     setIsEditing(false);
     setEditContent(message.content);
+  };
+
+  const handleCopyMessage = async () => {
+    try {
+      if (message.content) {
+        await navigator.clipboard.writeText(message.content);
+        setIsCopied(true);
+        // Reset the copied state after 2 seconds
+        setTimeout(() => setIsCopied(false), 2000);
+      }
+    } catch (error) {
+      console.error('Failed to copy message:', error);
+    }
   };
 
   return (
@@ -283,6 +297,26 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
                   </svg>
                   Edit
+                </button>
+              )}
+
+              {/* Copy button for assistant messages */}
+              {isAssistant && !isStreaming && (
+                <button
+                  onClick={handleCopyMessage}
+                  className="opacity-0 group-hover:opacity-100 hover:bg-accent/10 hover:text-accent transition-all duration-200 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium"
+                  title="Copy message"
+                >
+                  {isCopied ? (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                    </svg>
+                  ) : (
+                    <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                    </svg>
+                  )}
+                  {isCopied ? 'Copied!' : 'Copy'}
                 </button>
               )}
 
