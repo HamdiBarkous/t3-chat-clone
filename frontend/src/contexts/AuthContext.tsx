@@ -7,6 +7,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { supabase } from '@/lib/supabase';
+import { getAuthRedirectUrl } from '@/lib/utils';
 import type { 
   AuthContextType, 
   AuthState, 
@@ -111,7 +112,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           data: {
             name: credentials.name || credentials.email.split('@')[0],
           },
-          emailRedirectTo: `${window.location.origin}/auth/confirm`,
+          emailRedirectTo: getAuthRedirectUrl('/auth/confirm'),
         },
       });
 
@@ -159,7 +160,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const resetPassword = async (email: string) => {
     const { error } = await supabase.auth.resetPasswordForEmail(email, {
-      redirectTo: `${window.location.origin}/reset-password`,
+      redirectTo: getAuthRedirectUrl('/reset-password'),
     });
 
     if (error) {

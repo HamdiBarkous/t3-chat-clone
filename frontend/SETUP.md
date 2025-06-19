@@ -15,6 +15,10 @@ NEXT_PUBLIC_API_BASE_URL=http://localhost:8000/api/v1
 # App Configuration
 NEXT_PUBLIC_APP_NAME=T3.chat
 NEXT_PUBLIC_APP_VERSION=1.0.0
+
+# Production Site URL (for email redirects)
+# Set this to your production domain in production environment
+NEXT_PUBLIC_SITE_URL=https://t3-chat-clone-delta.vercel.app
 ```
 
 ## Getting Supabase Credentials
