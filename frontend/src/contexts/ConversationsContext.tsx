@@ -7,7 +7,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError } from '@/lib/api';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import type { 
   ConversationListItem, 
   ConversationCreate, 
@@ -45,6 +45,7 @@ const ConversationsContext = createContext<ConversationsContextType | undefined>
 const CONVERSATIONS_PER_PAGE = 20;
 
 export function ConversationsProvider({ children }: { children: React.ReactNode }) {
+  const { user, initialized: authInitialized } = useAuth()
   const [conversations, setConversations] = useState<ConversationListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -306,20 +307,34 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     )
   }, [])
 
-  // Load conversations on mount (only once) - but wait for auth
+  // Load conversations when auth is ready and user is authenticated
   useEffect(() => {
     const initializeConversations = async () => {
-      if (!initialized) {
-        // Wait for authentication to be ready
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          fetchConversations(0, false)
+      if (!initialized && authInitialized) {
+        if (user) {
+          // User is authenticated, load conversations
+          await fetchConversations(0, false)
+        } else {
+          // User is not authenticated, stop loading
+          setLoading(false)
+          setInitialized(true)
         }
       }
     }
     
     initializeConversations()
-  }, [fetchConversations, initialized])
+  }, [fetchConversations, initialized, authInitialized, user])
+
+  // Reset conversations when user logs out
+  useEffect(() => {
+    if (authInitialized && !user && initialized) {
+      // User logged out, reset state
+      setConversations([])
+      setLoading(false)
+      setError(null)
+      setHasMore(true)
+    }
+  }, [authInitialized, user, initialized])
 
   const value: ConversationsContextType = {
     conversations,
