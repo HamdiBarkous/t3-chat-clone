@@ -442,19 +442,16 @@ export function ConversationList({
                   key={conversation.id}
                   className={clsx(
                     'conversation-card relative rounded-xl group cursor-pointer',
-                    'transition-all duration-300 ease-out transform-gpu animate-in fade-in-0',
+                    'transition-all duration-300 ease-out transform-gpu',
                     'hover:shadow-lg hover:shadow-black/10 hover:-translate-y-0.5',
                     selectedConversationId === conversation.id
                       ? 'selected bg-secondary border border-border'
                       : 'hover:bg-gradient-to-r hover:from-muted hover:to-muted/80 border border-transparent',
-                    newConversationIds.has(conversation.id) && 'animate-slide-in-up-stagger',
+                    'animate-in fade-in-0',
                     isBranch && 'ml-6 relative before:absolute before:left-[-24px] before:top-1/2 before:w-4 before:h-px before:bg-border before:transform before:-translate-y-1/2',
                     isBranch && index > 0 && 'before:content-[""] before:absolute before:left-[-24px] before:top-0 before:w-px before:h-1/2 before:bg-border'
                   )}
                   onClick={() => onConversationSelect?.(conversation.id)}
-                  style={{
-                    animationDelay: newConversationIds.has(conversation.id) ? `${groupIndex * 100 + index * 50}ms` : '0ms'
-                  }}
                 >
 
                   
@@ -521,11 +518,7 @@ export function ConversationList({
           >
             {loadingMore ? (
               <div className="flex items-center justify-center space-x-2">
-                <div className="flex space-x-1">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0s]" />
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
-                </div>
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 <span>Loading more...</span>
               </div>
             ) : (

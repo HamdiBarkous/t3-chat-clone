@@ -92,7 +92,10 @@ export function Sidebar({
 
   const handleNewChat = useCallback(() => {
     onNewChat?.();
-    onClose?.();
+    // Only close sidebar on mobile (when window width is less than 768px)
+    if (window.innerWidth < 768) {
+      onClose?.();
+    }
   }, [onNewChat, onClose]);
 
   return (

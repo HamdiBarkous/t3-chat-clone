@@ -9,6 +9,7 @@ import { AuthGuard } from '@/components/auth/AuthGuard';
 import { ChatLayout } from '@/components/chat/ChatLayout';
 import { ChatInterface } from '@/components/chat/ChatInterface';
 import { CustomizationSidebar } from '@/components/chat/CustomizationSidebar';
+import { MessageSkeleton } from '@/components/ui/Skeleton';
 import { useConversations } from '@/contexts/ConversationsContext';
 import { useSupabaseMCP } from '@/hooks/useProfile';
 import { useState, useMemo, useEffect, use } from 'react';
@@ -182,8 +183,12 @@ function ConversationPage({ params }: ConversationPageProps) {
           showCustomization={showCustomization}
           onCustomizationToggle={handleCustomizationToggle}
         >
-          <div className="flex-1 flex items-center justify-center">
-            <div className="text-text-muted">Loading conversation...</div>
+          <div className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide">
+            <div className="max-w-4xl mx-auto space-y-6">
+              {Array.from({ length: 2 }).map((_, index) => (
+                <MessageSkeleton key={index} />
+              ))}
+            </div>
           </div>
         </ChatLayout>
       </AuthGuard>

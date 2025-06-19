@@ -195,12 +195,9 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
                 return (
                   <div className="text-text-muted italic">
                     {isStreaming ? (
-                      <div className="flex items-center gap-1">
-                        <div className="flex gap-1">
-                          <div className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                          <div className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                          <div className="w-1 h-1 bg-text-muted rounded-full animate-bounce"></div>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 border border-text-muted border-t-transparent rounded-full animate-spin"></div>
+                        <span>Generating response...</span>
                       </div>
                     ) : 'No content'}
                   </div>
