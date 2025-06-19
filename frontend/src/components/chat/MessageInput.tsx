@@ -23,6 +23,8 @@ interface MessageInputProps {
   currentModel?: string;
   onModelChange?: (model: string) => void;
   onShowCustomization?: () => void;
+  initialEnabledTools?: string[];
+  initialReasoning?: boolean;
 }
 
 export function MessageInput({
@@ -31,6 +33,8 @@ export function MessageInput({
   currentModel = 'openai/gpt-4o-mini',
   onModelChange,
   onShowCustomization,
+  initialEnabledTools,
+  initialReasoning,
 }: MessageInputProps) {
   const [message, setMessage] = useState('');
   const [isFocused, setIsFocused] = useState(false);
@@ -95,6 +99,30 @@ export function MessageInput({
       textareaRef.current.focus();
     }
   }, [disabled]);
+
+  // Set initial enabled tools
+  useEffect(() => {
+    if (initialEnabledTools && initialEnabledTools.length > 0) {
+      // Separate web search tools from other MCP tools
+      const webSearchTools = initialEnabledTools.filter(tool => tool === 'tavily' || tool === 'firecrawl');
+      const mcpTools = initialEnabledTools.filter(tool => tool !== 'tavily' && tool !== 'firecrawl');
+      
+      if (webSearchTools.length > 0) {
+        setSearchEnabled(true);
+      }
+      
+      if (mcpTools.length > 0) {
+        setEnabledTools(mcpTools);
+      }
+    }
+  }, [initialEnabledTools]);
+
+  // Set initial reasoning state
+  useEffect(() => {
+    if (initialReasoning !== undefined && currentModel) {
+      setReasoningByModel(prev => ({ ...prev, [currentModel]: initialReasoning }));
+    }
+  }, [initialReasoning, currentModel]);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();

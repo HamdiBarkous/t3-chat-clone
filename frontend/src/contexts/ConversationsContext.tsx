@@ -7,7 +7,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { apiClient, ApiError } from '@/lib/api';
-import { supabase } from '@/lib/supabase';
+import { useAuth } from '@/contexts/AuthContext';
 import type { 
   ConversationListItem, 
   ConversationCreate, 
@@ -45,6 +45,7 @@ const ConversationsContext = createContext<ConversationsContextType | undefined>
 const CONVERSATIONS_PER_PAGE = 20;
 
 export function ConversationsProvider({ children }: { children: React.ReactNode }) {
+  const { user, initialized: authInitialized } = useAuth()
   const [conversations, setConversations] = useState<ConversationListItem[]>([])
   const [loading, setLoading] = useState(true)
   const [loadingMore, setLoadingMore] = useState(false)
@@ -306,20 +307,27 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     )
   }, [])
 
-  // Load conversations on mount (only once) - but wait for auth
+  // Load conversations when user is authenticated
   useEffect(() => {
-    const initializeConversations = async () => {
-      if (!initialized) {
-        // Wait for authentication to be ready
-        const { data: { session } } = await supabase.auth.getSession()
-        if (session) {
-          fetchConversations(0, false)
-        }
-      }
+    if (authInitialized && user && !initialized) {
+      // User is authenticated, load conversations
+      fetchConversations(0, false)
+    } else if (authInitialized && !user) {
+      // User is not authenticated, stop loading and reset state
+      setConversations([])
+      setLoading(false)
+      setError(null)
+      setHasMore(true)
+      setInitialized(true)
     }
-    
-    initializeConversations()
-  }, [fetchConversations, initialized])
+  }, [fetchConversations, initialized, authInitialized, user])
+
+  // Reset initialized flag when user changes (to allow re-loading)
+  useEffect(() => {
+    if (authInitialized) {
+      setInitialized(false)
+    }
+  }, [authInitialized, user])
 
   const value: ConversationsContextType = {
     conversations,
