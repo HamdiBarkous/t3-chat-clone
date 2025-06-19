@@ -307,34 +307,27 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     )
   }, [])
 
-  // Load conversations when auth is ready and user is authenticated
+  // Load conversations when user is authenticated
   useEffect(() => {
-    const initializeConversations = async () => {
-      if (!initialized && authInitialized) {
-        if (user) {
-          // User is authenticated, load conversations
-          await fetchConversations(0, false)
-        } else {
-          // User is not authenticated, stop loading
-          setLoading(false)
-          setInitialized(true)
-        }
-      }
-    }
-    
-    initializeConversations()
-  }, [fetchConversations, initialized, authInitialized, user])
-
-  // Reset conversations when user logs out
-  useEffect(() => {
-    if (authInitialized && !user && initialized) {
-      // User logged out, reset state
+    if (authInitialized && user && !initialized) {
+      // User is authenticated, load conversations
+      fetchConversations(0, false)
+    } else if (authInitialized && !user) {
+      // User is not authenticated, stop loading and reset state
       setConversations([])
       setLoading(false)
       setError(null)
       setHasMore(true)
+      setInitialized(true)
     }
-  }, [authInitialized, user, initialized])
+  }, [fetchConversations, initialized, authInitialized, user])
+
+  // Reset initialized flag when user changes (to allow re-loading)
+  useEffect(() => {
+    if (authInitialized) {
+      setInitialized(false)
+    }
+  }, [authInitialized, user])
 
   const value: ConversationsContextType = {
     conversations,
