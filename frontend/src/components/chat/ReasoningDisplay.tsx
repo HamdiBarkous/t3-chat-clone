@@ -1,133 +1,56 @@
 /**
  * Reasoning Display Component
- * Shows AI reasoning content with auto-collapse functionality
+ * Shows AI reasoning content with basic collapse functionality
  */
 
 'use client';
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import { clsx } from 'clsx';
 
 interface ReasoningDisplayProps {
   reasoning: string;
   isStreaming?: boolean;
-  streamingReasoning?: string;
-  startTime?: number; // When reasoning started (for timing)
+  startTime?: number;
 }
 
 export function ReasoningDisplay({ 
   reasoning, 
   isStreaming = false, 
-  streamingReasoning = '',
   startTime
 }: ReasoningDisplayProps) {
   const [isExpanded, setIsExpanded] = useState(true);
-  const [thinkingTime, setThinkingTime] = useState<number | null>(null);
-  const [finalThinkingTime, setFinalThinkingTime] = useState<number | null>(null);
-  const autoCollapseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
-  const thinkingTimeIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const hasStartedAutoCollapseRef = useRef(false);
+  const [elapsedTime, setElapsedTime] = useState<number | null>(null);
 
-  // Handle streaming time updates
+  // Calculate elapsed time for display
   useEffect(() => {
     if (isStreaming && startTime) {
-      // Reset state for new reasoning session
-      setFinalThinkingTime(null);
-      hasStartedAutoCollapseRef.current = false;
-      setIsExpanded(true);
-      
-      // Clear any existing interval
-      if (thinkingTimeIntervalRef.current) {
-        clearInterval(thinkingTimeIntervalRef.current);
-      }
-      
-      // Clear any existing auto-collapse timer
-      if (autoCollapseTimeoutRef.current) {
-        clearTimeout(autoCollapseTimeoutRef.current);
-        autoCollapseTimeoutRef.current = null;
-      }
-      
-      // Start live time updates during streaming
       const interval = setInterval(() => {
-        const currentTime = (Date.now() - startTime) / 1000;
-        setThinkingTime(currentTime);
-      }, 100);
-      thinkingTimeIntervalRef.current = interval;
+        setElapsedTime(Date.now() - startTime);
+      }, 500); // Update every 500ms
       
-      return () => {
-        if (thinkingTimeIntervalRef.current) {
-          clearInterval(thinkingTimeIntervalRef.current);
-        }
-      };
+      return () => clearInterval(interval);
+    } else if (!isStreaming && startTime) {
+      // Set final time when streaming ends
+      setElapsedTime(Date.now() - startTime);
     }
   }, [isStreaming, startTime]);
 
-  // Handle completion and auto-collapse
-  useEffect(() => {
-    if (!isStreaming && startTime && !hasStartedAutoCollapseRef.current) {
-      // Calculate and store final thinking time
-      const finalTime = (Date.now() - startTime) / 1000;
-      setFinalThinkingTime(finalTime);
-      setThinkingTime(finalTime);
-      
-      // Clear streaming interval
-      if (thinkingTimeIntervalRef.current) {
-        clearInterval(thinkingTimeIntervalRef.current);
-        thinkingTimeIntervalRef.current = null;
-      }
-      
-      // Start auto-collapse timer (3 seconds after completion)
-      autoCollapseTimeoutRef.current = setTimeout(() => {
-        setIsExpanded(false);
-      }, 3000);
-      
-      hasStartedAutoCollapseRef.current = true;
-    }
-  }, [isStreaming, startTime]);
-
-  // Reset state when component unmounts or reasoning changes
-  useEffect(() => {
-    return () => {
-      if (autoCollapseTimeoutRef.current) {
-        clearTimeout(autoCollapseTimeoutRef.current);
-      }
-      if (thinkingTimeIntervalRef.current) {
-        clearInterval(thinkingTimeIntervalRef.current);
-      }
-    };
-  }, []);
-
-  // Clear auto-collapse if user manually interacts
-  const handleToggle = () => {
-    if (autoCollapseTimeoutRef.current) {
-      clearTimeout(autoCollapseTimeoutRef.current);
-      autoCollapseTimeoutRef.current = null;
-    }
-    setIsExpanded(!isExpanded);
-  };
-
-  const currentReasoning = isStreaming ? streamingReasoning : reasoning;
-  
   // Don't render if no reasoning content
-  if (!currentReasoning && !isStreaming) {
+  if (!reasoning && !isStreaming) {
     return null;
   }
 
-  const formatTime = (seconds: number) => {
-    if (seconds < 1) {
-      return `${Math.round(seconds * 1000)}ms`;
-    }
-    return `${seconds.toFixed(1)}s`;
+  const formatTime = (ms: number) => {
+    const seconds = ms / 1000;
+    return seconds < 1 ? `${Math.round(ms)}ms` : `${seconds.toFixed(1)}s`;
   };
-
-  // Use final time if available, otherwise current streaming time
-  const displayTime = finalThinkingTime || thinkingTime;
 
   return (
     <div className="mb-4">
-      {/* Reasoning Header - Always visible */}
+      {/* Reasoning Header */}
       <button
-        onClick={handleToggle}
+        onClick={() => setIsExpanded(!isExpanded)}
         className="w-full flex items-center justify-between p-3 bg-muted/30 border-l-4 border-blue-500 rounded-r hover:bg-muted/40 transition-colors"
       >
         <div className="flex items-center gap-2">
@@ -137,43 +60,31 @@ export function ReasoningDisplay({
           <span className="text-sm font-medium text-blue-400">
             {isStreaming ? 'Thinking...' : 'Reasoning'}
           </span>
-          {displayTime !== null && (
+          {elapsedTime && (
             <span className="text-xs text-text-muted">
-              {isStreaming ? 'for' : 'thought for'} {formatTime(displayTime)}
+              ({formatTime(elapsedTime)})
             </span>
           )}
         </div>
         
-        <div className="flex items-center gap-2">
-          {/* Auto-collapse indicator */}
-          {!isStreaming && isExpanded && autoCollapseTimeoutRef.current && (
-            <span className="text-xs text-text-muted animate-pulse">
-              auto-collapsing...
-            </span>
-          )}
-          
-          {/* Expand/Collapse Icon */}
-          <svg 
-            className={clsx(
-              "w-4 h-4 text-text-muted transition-transform",
-              isExpanded ? "rotate-180" : ""
-            )} 
-            fill="none" 
-            stroke="currentColor" 
-            viewBox="0 0 24 24"
-          >
-            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
-          </svg>
-        </div>
+        <svg 
+          className={clsx(
+            "w-4 h-4 text-text-muted transition-transform",
+            isExpanded ? "rotate-180" : ""
+          )} 
+          fill="none" 
+          stroke="currentColor" 
+          viewBox="0 0 24 24"
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 15l7-7 7 7" />
+        </svg>
       </button>
 
-      {/* Reasoning Content - Collapsible */}
+      {/* Reasoning Content */}
       {isExpanded && (
         <div className="bg-muted/20 border-l-4 border-blue-500/30 rounded-br p-3 mt-1">
           <div className="text-sm text-text-muted whitespace-pre-wrap font-mono">
-            {currentReasoning || (isStreaming && (
-              <span className="animate-pulse">Starting to think...</span>
-            ))}
+            {reasoning || (isStreaming && 'Starting to think...')}
             {isStreaming && (
               <span className="inline-block w-2 h-4 bg-blue-400 ml-1 animate-pulse"></span>
             )}

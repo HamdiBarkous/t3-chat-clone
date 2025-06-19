@@ -9,11 +9,13 @@
 import React, { useState } from 'react';
 import { clsx } from 'clsx';
 import { useRouter } from 'next/navigation';
+import { GitBranch, Copy, RotateCcw, Edit3, Check } from 'lucide-react';
 import type { Message } from '@/types/api';
 import { MarkdownRenderer } from '@/components/ui/MarkdownRenderer';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
 import { ImageDisplay } from '@/components/ui/ImageDisplay';
 import { useConversations } from '@/contexts/ConversationsContext';
+import { useToast } from '@/components/ui/Toast';
 import { ReasoningDisplay } from './ReasoningDisplay';
 
 interface MessageBubbleProps {
@@ -30,6 +32,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
   const isAssistant = message.role === 'assistant';
   const router = useRouter();
   const { branchConversation, editMessage, retryMessage } = useConversations();
+  const { showToast } = useToast();
   
 
   const [isBranching, setIsBranching] = useState(false);
@@ -37,6 +40,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
   const [isRetrying, setIsRetrying] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const [editContent, setEditContent] = useState(message.content);
+  const [isCopied, setIsCopied] = useState(false);
 
 
 
@@ -51,7 +55,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
         router.push(`/conversations/${newConversation.id}`);
       }
     } catch (error) {
-      console.error('Error branching conversation:', error);
+      showToast('Failed to branch conversation', 'error');
     } finally {
       setIsBranching(false);
     }
@@ -68,7 +72,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
         router.push(`/conversations/${newConversation.id}?autoGenerateResponse=true`);
       }
     } catch (error) {
-      console.error('Error editing message:', error);
+      showToast('Failed to edit message', 'error');
     } finally {
       setIsSaving(false);
     }
@@ -85,7 +89,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
         router.push(`/conversations/${newConversation.id}?autoGenerateResponse=true`);
       }
     } catch (error) {
-      console.error('Error retrying message:', error);
+      showToast('Failed to retry message', 'error');
     } finally {
       setIsRetrying(false);
     }
@@ -101,9 +105,23 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
     setEditContent(message.content);
   };
 
+  const handleCopyMessage = async () => {
+    try {
+      if (message.content) {
+        await navigator.clipboard.writeText(message.content);
+        setIsCopied(true);
+        showToast('Message copied to clipboard', 'success', 2000);
+        // Reset the copied state after 2 seconds
+        setTimeout(() => setIsCopied(false), 2000);
+      }
+    } catch (error) {
+      showToast('Failed to copy message', 'error');
+    }
+  };
+
   return (
     <div className={clsx(
-      'flex w-full mb-6 group',
+      'flex w-full mb-6 group animate-in fade-in-0 slide-in-from-bottom-2 duration-500',
       isUser ? 'justify-end' : 'justify-start'
     )}>
       <div className={clsx(
@@ -149,16 +167,6 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
         ) : (
           // AI messages blend into background (no box) using CSS custom properties
           <div className="text-primary">
-            {/* Reasoning Display - Show for assistant messages with reasoning */}
-            {isAssistant && (message.reasoning || (isStreaming && streamingReasoning)) && (
-              <ReasoningDisplay
-                reasoning={message.reasoning || ''}
-                isStreaming={isStreaming}
-                streamingReasoning={streamingReasoning}
-                startTime={reasoningStartTime || undefined}
-              />
-            )}
-            
             {/* Main Content */}
             {(() => {
               // Use streaming content if available and currently streaming, otherwise use message content
@@ -177,12 +185,9 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
                 return (
                   <div className="text-text-muted italic">
                     {isStreaming ? (
-                      <div className="flex items-center gap-1">
-                        <div className="flex gap-1">
-                          <div className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                          <div className="w-1 h-1 bg-text-muted rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                          <div className="w-1 h-1 bg-text-muted rounded-full animate-bounce"></div>
-                        </div>
+                      <div className="flex items-center gap-2">
+                        <div className="w-3 h-3 border border-text-muted border-t-transparent rounded-full animate-spin"></div>
+                        <span>Generating response...</span>
                       </div>
                     ) : 'No content'}
                   </div>
@@ -266,9 +271,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
                 className="opacity-0 group-hover:opacity-100 hover:bg-green-500/10 hover:text-green-400 transition-all duration-200 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium"
                 title="Branch conversation from here"
               >
-                <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                </svg>
+                <GitBranch className="w-3.5 h-3.5" />
                 {isBranching ? 'Branching...' : 'Branch'}
               </button>
 
@@ -279,10 +282,24 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
                   className="opacity-0 group-hover:opacity-100 hover:bg-blue-500/10 hover:text-blue-400 transition-all duration-200 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium"
                   title="Edit message"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
-                  </svg>
+                  <Edit3 className="w-3.5 h-3.5" />
                   Edit
+                </button>
+              )}
+
+              {/* Copy button for assistant messages */}
+              {isAssistant && !isStreaming && (
+                <button
+                  onClick={handleCopyMessage}
+                  className="opacity-0 group-hover:opacity-100 hover:bg-accent/10 hover:text-accent transition-all duration-200 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium"
+                  title="Copy message"
+                >
+                  {isCopied ? (
+                    <Check className="w-3.5 h-3.5" />
+                  ) : (
+                    <Copy className="w-3.5 h-3.5" />
+                  )}
+                  {isCopied ? 'Copied!' : 'Copy'}
                 </button>
               )}
 
@@ -294,9 +311,7 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
                   className="opacity-0 group-hover:opacity-100 hover:bg-purple-500/10 hover:text-purple-400 transition-all duration-200 flex items-center gap-1.5 px-2 py-1 rounded-md text-xs font-medium disabled:opacity-50"
                   title="Retry this response"
                 >
-                  <svg className="w-3.5 h-3.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                  </svg>
+                  <RotateCcw className="w-3.5 h-3.5" />
                   {isRetrying ? 'Retrying...' : 'Retry'}
                 </button>
               )}

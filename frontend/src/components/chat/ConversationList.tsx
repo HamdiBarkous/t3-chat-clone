@@ -8,6 +8,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { clsx } from 'clsx';
 import { useConversations } from '@/contexts/ConversationsContext';
+import { ConversationSkeleton } from '@/components/ui/Skeleton';
 import type { ConversationListItem } from '@/types/api';
 
 interface ConversationListProps {
@@ -378,13 +379,10 @@ export function ConversationList({
 
   if (loading) {
     return (
-      <div className="p-4 text-center">
-        <div className="flex items-center justify-center space-x-2 mb-3">
-          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-          <div className="w-2 h-2 bg-primary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-          <div className="w-2 h-2 bg-primary rounded-full animate-bounce"></div>
-        </div>
-        <div className="text-text-muted text-sm font-medium">Loading conversations...</div>
+      <div className="space-y-1">
+        {Array.from({ length: 5 }).map((_, index) => (
+          <ConversationSkeleton key={index} />
+        ))}
       </div>
     );
   }
@@ -449,14 +447,11 @@ export function ConversationList({
                     selectedConversationId === conversation.id
                       ? 'selected bg-secondary border border-border'
                       : 'hover:bg-gradient-to-r hover:from-muted hover:to-muted/80 border border-transparent',
-                    newConversationIds.has(conversation.id) && 'animate-slide-in-up-stagger',
+                    'animate-in fade-in-0',
                     isBranch && 'ml-6 relative before:absolute before:left-[-24px] before:top-1/2 before:w-4 before:h-px before:bg-border before:transform before:-translate-y-1/2',
                     isBranch && index > 0 && 'before:content-[""] before:absolute before:left-[-24px] before:top-0 before:w-px before:h-1/2 before:bg-border'
                   )}
                   onClick={() => onConversationSelect?.(conversation.id)}
-                  style={{
-                    animationDelay: newConversationIds.has(conversation.id) ? `${groupIndex * 100 + index * 50}ms` : '0ms'
-                  }}
                 >
 
                   
@@ -523,11 +518,7 @@ export function ConversationList({
           >
             {loadingMore ? (
               <div className="flex items-center justify-center space-x-2">
-                <div className="flex space-x-1">
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0s]" />
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.2s]" />
-                  <div className="w-1.5 h-1.5 bg-primary rounded-full animate-bounce [animation-delay:0.4s]" />
-                </div>
+                <div className="w-4 h-4 border-2 border-primary border-t-transparent rounded-full animate-spin" />
                 <span>Loading more...</span>
               </div>
             ) : (

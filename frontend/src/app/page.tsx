@@ -146,22 +146,8 @@ function HomePage() {
     setSupabaseReadOnly(true);
   };
 
-  // Show loading state while conversations are loading
-  if (loading) {
-    return (
-      <ChatLayout
-        onNewChat={handleNewChat}
-        selectedConversationId={undefined}
-        onConversationSelect={handleConversationSelect}
-        showCustomization={showCustomization}
-        onCustomizationToggle={handleCustomizationToggle}
-      >
-        <div className="flex-1 flex items-center justify-center">
-          <div className="text-text-muted">Loading conversations...</div>
-        </div>
-      </ChatLayout>
-    );
-  }
+  // Show loading state while conversations are loading - but since this is home page, 
+  // we don't really need to show loading for conversations, just show the interface
 
   return (
     <ChatLayout

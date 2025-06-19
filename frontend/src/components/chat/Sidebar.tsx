@@ -6,6 +6,7 @@
 'use client';
 
 import React, { useRef, useEffect, useCallback } from 'react';
+import { LogOut } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
 import { Button } from '@/components/ui/Button';
 import { ConversationList } from './ConversationList';
@@ -91,7 +92,10 @@ export function Sidebar({
 
   const handleNewChat = useCallback(() => {
     onNewChat?.();
-    onClose?.();
+    // Only close sidebar on mobile (when window width is less than 768px)
+    if (window.innerWidth < 768) {
+      onClose?.();
+    }
   }, [onNewChat, onClose]);
 
   return (
@@ -172,9 +176,7 @@ export function Sidebar({
               className="p-1 text-text-muted hover:text-text-primary transition-colors rounded hover:bg-muted"
               title="Sign out"
             >
-              <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013 3v1" />
-              </svg>
+              <LogOut className="w-5 h-5" />
             </button>
           </div>
         </div>

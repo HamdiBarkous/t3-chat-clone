@@ -36,6 +36,25 @@ export function ToolExecution({
 }: ToolExecutionProps) {
   const [isCollapsed, setIsCollapsed] = useState(false);
   
+  // Auto-collapse logic
+  useEffect(() => {
+    if (autoCollapse && !isResponseGenerating && tools.length > 0) {
+      // Check if all tools are completed
+      const allCompleted = tools.every(tool => 
+        tool.status === 'completed' || tool.status === 'failed'
+      );
+      
+      if (allCompleted) {
+        // Auto-collapse after a delay
+        const timer = setTimeout(() => {
+          setIsCollapsed(true);
+        }, 3000); // 3 second delay
+        
+        return () => clearTimeout(timer);
+      }
+    }
+  }, [tools, isResponseGenerating, autoCollapse]);
+
   const completedCount = tools.filter(tool => tool.status === 'completed').length;
   const executingCount = tools.filter(tool => tool.status === 'executing').length;
   const failedCount = tools.filter(tool => tool.status === 'failed').length;
@@ -44,15 +63,13 @@ export function ToolExecution({
   // Auto-collapse when all tools are finished and AI response generation starts
   useEffect(() => {
     if (autoCollapse && allToolsFinished && isResponseGenerating) {
-      const timer = setTimeout(() => {
-        setIsCollapsed(true);
-      }, 1500); // Small delay to let user see completion
-      
-      return () => clearTimeout(timer);
+      setIsCollapsed(true);
     }
   }, [autoCollapse, allToolsFinished, isResponseGenerating]);
   
-  if (tools.length === 0) return null;
+  if (!tools || tools.length === 0) {
+    return null;
+  }
 
   // Generate compact summary for collapsed view
   const generateCompactSummary = () => {
