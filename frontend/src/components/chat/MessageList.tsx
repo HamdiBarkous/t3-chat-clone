@@ -163,7 +163,7 @@ export function MessageList({
     }
 
     // Add individual reasoning phases to timeline 
-    // This allows reasoning to be properly ordered with tools
+    // This allows reasoning to be properly ordered with tools chronologically
     if (reasoningPhases && reasoningPhases.length > 0) {
       reasoningPhases.forEach(reasoningPhase => {
         timeline.push({
@@ -173,6 +173,27 @@ export function MessageList({
           id: reasoningPhase.id
         });
       });
+    }
+
+    // Add current streaming reasoning if it exists and is different from completed phases
+    if (streamingMessageId && streamingReasoning && reasoningStartTime) {
+      // Check if this streaming reasoning is already captured in reasoningPhases
+      const isAlreadyCaptured = reasoningPhases.some(phase => 
+        phase.content.includes(streamingReasoning.substring(0, 50)) // Compare first 50 chars
+      );
+      
+      if (!isAlreadyCaptured) {
+        timeline.push({
+          type: 'reasoning',
+          timestamp: reasoningStartTime,
+          data: {
+            id: `streaming-reasoning-${reasoningStartTime}`,
+            content: streamingReasoning,
+            startTime: reasoningStartTime
+          },
+          id: `streaming-reasoning-${reasoningStartTime}`
+        });
+      }
     }
 
     // Special handling for streaming messages to ensure correct chronological placement
@@ -269,11 +290,12 @@ export function MessageList({
             );
           } else if (timelineItem.type === 'reasoning') {
             const reasoningPhase = timelineItem.data as { id: string; content: string; startTime: number; endTime?: number };
+            const isStreamingReasoning = reasoningPhase.id.startsWith('streaming-reasoning-');
             return (
               <div key={reasoningPhase.id} className="mb-6">
                 <ReasoningDisplay 
                   reasoning={reasoningPhase.content}
-                  isStreaming={false}
+                  isStreaming={isStreamingReasoning}
                   startTime={reasoningPhase.startTime}
                 />
               </div>
