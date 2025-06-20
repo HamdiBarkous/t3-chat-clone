@@ -39,6 +39,12 @@ interface UseMessagesReturn {
   isStreaming: boolean
   streamingMessageId: string | null
   toolExecutions: ToolCall[]
+  reasoningPhases: Array<{
+    id: string;
+    content: string;
+    startTime: number;
+    endTime?: number;
+  }>
   streamingContent: string // Direct access to streaming content for optimization
   streamingReasoning: string // Direct access to streaming reasoning content
   reasoningStartTime: number | null // When current reasoning started
@@ -61,22 +67,34 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
   const [streamingMessageId, setStreamingMessageId] = useState<string | null>(null)
   const [toolExecutions, setToolExecutions] = useState<ToolCall[]>([])
   
-  // Optimized streaming state management
-  const [streamingContent, setStreamingContent] = useState<string>('')
-  const [streamingReasoning, setStreamingReasoning] = useState<string>('')
-  const streamingContentRef = useRef<string>('')
-  const streamingReasoningRef = useRef<string>('')
+  // Streaming state
+  const [streamingContent, setStreamingContent] = useState('')
+  const [streamingReasoning, setStreamingReasoning] = useState('')
+  const [reasoningStartTime, setReasoningStartTime] = useState<number | null>(null)
+  
+  // Track individual reasoning phases for chronological ordering
+  const [reasoningPhases, setReasoningPhases] = useState<Array<{
+    id: string;
+    content: string;
+    startTime: number;
+    endTime?: number;
+  }>>([])
+  
+  // Refs for accumulating streaming data
+  const streamingContentRef = useRef('')
+  const streamingReasoningRef = useRef('')
   const batchUpdateTimeoutRef = useRef<NodeJS.Timeout | null>(null)
   
   // Reasoning timing tracking
   const reasoningStartTimeRef = useRef<number | null>(null)
+  const currentReasoningPhaseRef = useRef<string | null>(null)
   
   // Deduplication tracking
   const lastSentMessageRef = useRef<{ content: string; timestamp: number } | null>(null)
   
   // Get conversation hook for title updates
   const { updateConversationTitle } = useConversations()
-
+  
   // Simplified batched content update function
   const updateStreamingContent = useCallback(() => {
     if (batchUpdateTimeoutRef.current) {
@@ -88,6 +106,25 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setStreamingReasoning(streamingReasoningRef.current)
     }, 50) // 20fps update rate for smooth streaming
   }, [])
+
+  // Reset conversation state when conversationId changes
+  useEffect(() => {
+    if (conversationId) {
+      setMessages([])
+      setToolExecutions([])
+      setReasoningPhases([])
+      setError(null)
+      setIsStreaming(false)
+      setStreamingMessageId(null)
+      setStreamingContent('')
+      setStreamingReasoning('')
+      setReasoningStartTime(null)
+      streamingContentRef.current = ''
+      streamingReasoningRef.current = ''
+      reasoningStartTimeRef.current = null
+      currentReasoningPhaseRef.current = null
+    }
+  }, [conversationId])
 
   const loadMessages = useCallback(async () => {
     if (!conversationId) {
@@ -122,7 +159,6 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     if (lastSentMessageRef.current && 
         lastSentMessageRef.current.content === content && 
         now - lastSentMessageRef.current.timestamp < 1000) {
-      console.log('Duplicate message prevented');
       return;
     }
     
@@ -137,6 +173,11 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
       setStreamingReasoning('')
       streamingContentRef.current = ''
       streamingReasoningRef.current = ''
+      
+      // Clear tool executions for new message to prevent persistence
+      setToolExecutions([]);
+      setReasoningPhases([]);
+      currentReasoningPhaseRef.current = null;
 
       // Step 1: Create user message first (non-streaming endpoint)
       let userMessageId: string | null = null
@@ -204,7 +245,6 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
           })
 
           const uploadedDocs = await Promise.all(uploadPromises)
-          console.log('Documents uploaded successfully:', uploadedDocs)
           
           // Update the user message with document metadata - ensure proper state update
           setMessages(prev => {
@@ -218,7 +258,6 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
                   }
                 : msg
             )
-            console.log('Documents attached to message successfully')
             return updatedMessages
           })
         } catch (error) {
@@ -275,12 +314,34 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onReasoningChunk: (data: unknown) => {
           const reasoningData = data as { chunk: string; content_type: string }
           
-          // Start timing if this is the first reasoning chunk
-          if (reasoningStartTimeRef.current === null) {
+          // Track reasoning start time for chronological ordering
+          if (!reasoningStartTimeRef.current) {
             reasoningStartTimeRef.current = Date.now()
+            setReasoningStartTime(reasoningStartTimeRef.current)
           }
           
-          // Accumulate reasoning content and trigger batched update
+          // Only create new reasoning phase if we don't have a current one
+          // Reasoning is continuous until interrupted by tool execution
+          if (!currentReasoningPhaseRef.current) {
+            // Start new reasoning phase
+            const newPhaseId = `reasoning-${Date.now()}`
+            currentReasoningPhaseRef.current = newPhaseId
+            
+            setReasoningPhases(prev => [...prev, {
+              id: newPhaseId,
+              content: reasoningData.chunk,
+              startTime: Date.now(),
+            }])
+          } else {
+            // Continue current reasoning phase (append content)
+            setReasoningPhases(prev => prev.map(phase => 
+              phase.id === currentReasoningPhaseRef.current
+                ? { ...phase, content: phase.content + reasoningData.chunk }
+                : phase
+            ))
+          }
+          
+          // Continue accumulating for the main display
           streamingReasoningRef.current += reasoningData.chunk
           updateStreamingContent()
         },
@@ -377,14 +438,12 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         },
 
         onTitleGenerationStarted: () => {
-          console.log('Title generation started for conversation:', conversationId)
+          // Title generation started
         },
 
         onTitleComplete: (data: unknown) => {
-          const titleData = data as { conversation_id: string; title: string }
-          console.log('Title generated:', titleData.title)
+          const titleData = data as { title: string }
           
-          // Update conversation title in the conversations list
           if (conversationId) {
             updateConversationTitle(conversationId, titleData.title)
           }
@@ -393,35 +452,51 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onToolCall: (data: unknown) => {
           const toolData = data as { name: string; arguments: Record<string, unknown>; status: string }
           
+          // End current reasoning phase when tool execution starts
+          if (currentReasoningPhaseRef.current) {
+            const currentTime = Date.now()
+            setReasoningPhases(prev => prev.map(phase => 
+              phase.id === currentReasoningPhaseRef.current && !phase.endTime
+                ? { ...phase, endTime: currentTime }
+                : phase
+            ))
+            currentReasoningPhaseRef.current = null
+          }
+          
           // Add new tool execution
           const newTool: ToolCall = {
             id: `${toolData.name}-${Date.now()}`,
             name: toolData.name,
-            arguments: toolData.arguments,
             status: 'executing',
-            startTime: Date.now()
+            startTime: Date.now(),
+            arguments: toolData.arguments,
           }
-          
-          setToolExecutions(prev => [...prev, newTool])
+
+          setToolExecutions(prev => {
+            const updated = [...prev, newTool]
+            return updated
+          })
         },
 
         onToolResult: (data: unknown) => {
-          const resultData = data as { name: string; result: string; status: string }
+          const resultData = data as { name: string; result?: unknown; error?: string; }
           
-          // Update the corresponding tool with result
-          setToolExecutions(prev => 
-            prev.map(tool => 
-              tool.name === resultData.name && tool.status === 'executing'
-                ? {
-                    ...tool,
-                    status: 'completed' as const,
-                    result: resultData.result,
-                    endTime: Date.now()
-                  }
-                : tool
-            )
-          )
-        }
+          setToolExecutions(prev => {
+            const updated = prev.map(tool => {
+              if (tool.name === resultData.name && tool.status === 'executing') {
+                return {
+                  ...tool,
+                  status: (resultData.error ? 'failed' : 'completed') as 'failed' | 'completed',
+                  result: typeof resultData.result === 'string' ? resultData.result : resultData.result ? JSON.stringify(resultData.result) : undefined,
+                  error: resultData.error,
+                  endTime: Date.now()
+                }
+              }
+              return tool
+            })
+            return updated
+          })
+        },
       }
 
       // Start streaming for AI response only (user message already created)
@@ -506,7 +581,34 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onReasoningChunk: (data: unknown) => {
           const reasoningData = data as { chunk: string; content_type: string }
           
-          // Accumulate reasoning content and trigger batched update
+          // Track reasoning start time for chronological ordering
+          if (!reasoningStartTimeRef.current) {
+            reasoningStartTimeRef.current = Date.now()
+            setReasoningStartTime(reasoningStartTimeRef.current)
+          }
+          
+          // Only create new reasoning phase if we don't have a current one
+          // Reasoning is continuous until interrupted by tool execution
+          if (!currentReasoningPhaseRef.current) {
+            // Start new reasoning phase
+            const newPhaseId = `reasoning-${Date.now()}`
+            currentReasoningPhaseRef.current = newPhaseId
+            
+            setReasoningPhases(prev => [...prev, {
+              id: newPhaseId,
+              content: reasoningData.chunk,
+              startTime: Date.now(),
+            }])
+          } else {
+            // Continue current reasoning phase (append content)
+            setReasoningPhases(prev => prev.map(phase => 
+              phase.id === currentReasoningPhaseRef.current
+                ? { ...phase, content: phase.content + reasoningData.chunk }
+                : phase
+            ))
+          }
+          
+          // Continue accumulating for the main display
           streamingReasoningRef.current += reasoningData.chunk
           updateStreamingContent()
         },
@@ -598,12 +700,11 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         },
 
         onTitleGenerationStarted: () => {
-          console.log('Title generation started for conversation:', conversationId)
+          // Title generation started
         },
 
         onTitleComplete: (data: unknown) => {
-          const titleData = data as { conversation_id: string; title: string }
-          console.log('Title generated:', titleData.title)
+          const titleData = data as { title: string }
           
           if (conversationId) {
             updateConversationTitle(conversationId, titleData.title)
@@ -613,33 +714,51 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
         onToolCall: (data: unknown) => {
           const toolData = data as { name: string; arguments: Record<string, unknown>; status: string }
           
+          // End current reasoning phase when tool execution starts
+          if (currentReasoningPhaseRef.current) {
+            const currentTime = Date.now()
+            setReasoningPhases(prev => prev.map(phase => 
+              phase.id === currentReasoningPhaseRef.current && !phase.endTime
+                ? { ...phase, endTime: currentTime }
+                : phase
+            ))
+            currentReasoningPhaseRef.current = null
+          }
+          
+          // Add new tool execution
           const newTool: ToolCall = {
             id: `${toolData.name}-${Date.now()}`,
             name: toolData.name,
-            arguments: toolData.arguments,
             status: 'executing',
-            startTime: Date.now()
+            startTime: Date.now(),
+            arguments: toolData.arguments,
           }
-          
-          setToolExecutions(prev => [...prev, newTool])
+
+          setToolExecutions(prev => {
+            const updated = [...prev, newTool]
+            return updated
+          })
         },
 
         onToolResult: (data: unknown) => {
-          const resultData = data as { name: string; result: string; status: string }
+          const resultData = data as { name: string; result?: unknown; error?: string; }
           
-          setToolExecutions(prev => 
-            prev.map(tool => 
-              tool.name === resultData.name && tool.status === 'executing'
-                ? {
-                    ...tool,
-                    status: 'completed' as const,
-                    result: resultData.result,
-                    endTime: Date.now()
-                  }
-                : tool
-            )
-          )
-        }
+          setToolExecutions(prev => {
+            const updated = prev.map(tool => {
+              if (tool.name === resultData.name && tool.status === 'executing') {
+                return {
+                  ...tool,
+                  status: (resultData.error ? 'failed' : 'completed') as 'failed' | 'completed',
+                  result: typeof resultData.result === 'string' ? resultData.result : resultData.result ? JSON.stringify(resultData.result) : undefined,
+                  error: resultData.error,
+                  endTime: Date.now()
+                }
+              }
+              return tool
+            })
+            return updated
+          })
+        },
       }
 
       // Generate AI response using the last user message
@@ -695,8 +814,9 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     isStreaming,
     streamingMessageId,
     toolExecutions,
-    streamingContent, // Expose streaming content for optimized components
-    streamingReasoning, // Expose streaming reasoning content
+    reasoningPhases,
+    streamingContent,
+    streamingReasoning,
     reasoningStartTime: reasoningStartTimeRef.current,
   }
 } 

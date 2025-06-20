@@ -167,16 +167,6 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
         ) : (
           // AI messages blend into background (no box) using CSS custom properties
           <div className="text-primary">
-            {/* Reasoning Display - Show for assistant messages with reasoning */}
-            {isAssistant && (message.reasoning || (isStreaming && streamingReasoning)) && (
-              <ReasoningDisplay
-                reasoning={message.reasoning || ''}
-                isStreaming={isStreaming}
-                streamingReasoning={streamingReasoning}
-                startTime={reasoningStartTime || undefined}
-              />
-            )}
-            
             {/* Main Content */}
             {(() => {
               // Use streaming content if available and currently streaming, otherwise use message content

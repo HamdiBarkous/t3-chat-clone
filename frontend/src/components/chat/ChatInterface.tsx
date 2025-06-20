@@ -46,7 +46,8 @@ export function ChatInterface({ conversationId, conversation, onShowCustomizatio
     toolExecutions,
     streamingContent,
     streamingReasoning,
-    reasoningStartTime
+    reasoningStartTime,
+    reasoningPhases
   } = useMessages(conversationId);
   
   const { updateConversation } = useConversations();
@@ -165,6 +166,7 @@ export function ChatInterface({ conversationId, conversation, onShowCustomizatio
         isLoading={isStreaming}
         isLoadingConversation={loading && messages.length === 0}
         toolExecutions={toolExecutions}
+        reasoningPhases={reasoningPhases}
         streamingContent={streamingContent}
         streamingReasoning={streamingReasoning}
         reasoningStartTime={reasoningStartTime}
