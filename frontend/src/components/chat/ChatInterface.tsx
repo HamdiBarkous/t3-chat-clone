@@ -135,10 +135,10 @@ export function ChatInterface({ conversationId, conversation, onShowCustomizatio
   };
 
   return (
-    <div className="flex-1 flex flex-col h-full">
+    <div className="flex-1 flex flex-col h-full min-h-0">
       {/* Branched Conversation Indicator */}
       {isBranchedConversation && (
-        <div className="border-b border-primary/20 bg-primary/10 p-3">
+        <div className="border-b border-primary/20 bg-primary/10 p-3 flex-shrink-0">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-center gap-2 text-sm text-primary">
               <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -152,7 +152,7 @@ export function ChatInterface({ conversationId, conversation, onShowCustomizatio
 
       {/* Error Display */}
       {error && (
-        <div className="border-b border-destructive/20 bg-destructive/10 p-3">
+        <div className="border-b border-destructive/20 bg-destructive/10 p-3 flex-shrink-0">
           <div className="max-w-4xl mx-auto">
             <p className="text-sm text-destructive">{error}</p>
           </div>
@@ -173,15 +173,17 @@ export function ChatInterface({ conversationId, conversation, onShowCustomizatio
       />
 
       {/* Message Input */}
-      <MessageInput
-        onSendMessage={handleSendMessage}
-        disabled={isStreaming || loading}
-        currentModel={currentModel}
-        onModelChange={handleModelChange}
-        onShowCustomization={onShowCustomization}
-        initialEnabledTools={initialToolsState?.enabledTools}
-        initialReasoning={initialToolsState?.reasoning}
-      />
+      <div className="flex-shrink-0">
+        <MessageInput
+          onSendMessage={handleSendMessage}
+          disabled={isStreaming || loading}
+          currentModel={currentModel}
+          onModelChange={handleModelChange}
+          onShowCustomization={onShowCustomization}
+          initialEnabledTools={initialToolsState?.enabledTools}
+          initialReasoning={initialToolsState?.reasoning}
+        />
+      </div>
     </div>
   );
 } 

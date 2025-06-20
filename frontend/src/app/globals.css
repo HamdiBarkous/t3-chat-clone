@@ -151,6 +151,7 @@ body {
   scrollbar-width: none;
   /* Safari and Chrome */
   -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
 }
 
 .scrollbar-hide::-webkit-scrollbar {
@@ -681,4 +682,47 @@ select {
 
 select:focus {
   background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 20 20'%3e%3cpath stroke='%237c3aed' stroke-linecap='round' stroke-linejoin='round' stroke-width='1.5' d='m6 8 4 4 4-4'/%3e%3c/svg%3e");
+}
+
+/* Prevent layout shifts and ensure stable container heights */
+.chat-container {
+  height: 100vh;
+  overflow: hidden;
+}
+
+.message-container {
+  min-height: 0;
+  overflow: hidden;
+}
+
+/* Ensure smooth scrolling doesn't cause layout jumps */
+.scrollbar-hide {
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  -webkit-overflow-scrolling: touch;
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;
+}
+
+/* Prevent content jumping during state changes */
+.flex-1 {
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Stable height for message bubbles */
+.message-bubble {
+  contain: layout style;
+}
+
+/* Prevent rapid animation during streaming */
+.streaming-content {
+  will-change: auto;
+}
+
+/* Enhanced UI animations */
+.animate-in {
+  animation-fill-mode: both;
 }

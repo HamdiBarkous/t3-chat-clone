@@ -104,7 +104,7 @@ export function useMessages(conversationId: string | null): UseMessagesReturn {
     batchUpdateTimeoutRef.current = setTimeout(() => {
       setStreamingContent(streamingContentRef.current)
       setStreamingReasoning(streamingReasoningRef.current)
-    }, 50) // 20fps update rate for smooth streaming
+    }, 100) // Reduced to 10fps to prevent layout thrashing
   }, [])
 
   // Reset conversation state when conversationId changes
