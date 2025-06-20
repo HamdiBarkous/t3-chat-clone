@@ -27,7 +27,7 @@ interface MessageBubbleProps {
 }
 
 // Memoized component to prevent unnecessary re-renders during streaming
-export function MessageBubble({ message, isStreaming = false, streamingContent, streamingReasoning, reasoningStartTime }: MessageBubbleProps) {
+export const MessageBubble = React.memo(function MessageBubble({ message, isStreaming = false, streamingContent, streamingReasoning, reasoningStartTime }: MessageBubbleProps) {
   const isUser = message.role === 'user';
   const isAssistant = message.role === 'assistant';
   const router = useRouter();
@@ -121,11 +121,11 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
 
   return (
     <div className={clsx(
-      'flex w-full mb-6 group animate-in fade-in-0 slide-in-from-bottom-2 duration-500',
+      'flex w-full mb-6 group animate-in fade-in-0 slide-in-from-bottom-2 duration-500 message-bubble',
       isUser ? 'justify-end' : 'justify-start'
     )}>
       <div className={clsx(
-        'flex flex-col max-w-[80%]',
+        'flex flex-col max-w-[80%] message-container',
         isUser ? 'items-end' : 'items-start'
       )}>
         {/* Message Content */}
@@ -321,4 +321,4 @@ export function MessageBubble({ message, isStreaming = false, streamingContent, 
       </div>
     </div>
   );
-} 
+}); 

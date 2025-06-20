@@ -42,20 +42,87 @@ export function MessageList({
 }: MessageListProps) {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
+  const lastMessageCountRef = useRef(0);
+  const shouldAutoScrollRef = useRef(true);
+  const scrollTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Simple scroll to bottom function
+  // Improved scroll to bottom function with layout preservation
   const scrollToBottom = useCallback(() => {
-    if (messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (!messagesEndRef.current || !shouldAutoScrollRef.current) return;
+    
+    // Clear any pending scroll to prevent rapid firing
+    if (scrollTimeoutRef.current) {
+      clearTimeout(scrollTimeoutRef.current);
     }
+    
+    // Use requestAnimationFrame to ensure DOM is ready
+    scrollTimeoutRef.current = setTimeout(() => {
+      requestAnimationFrame(() => {
+        if (messagesEndRef.current) {
+          // Use scrollTo instead of scrollIntoView for better control
+          const container = containerRef.current;
+          if (container) {
+            container.scrollTo({
+              top: container.scrollHeight,
+              behavior: 'smooth'
+            });
+          }
+        }
+      });
+    }, 50); // Small delay to let content settle
   }, []);
 
-  // Auto-scroll when new messages arrive
+  // Check if user has scrolled up (to disable auto-scroll)
+  const handleScroll = useCallback(() => {
+    if (!containerRef.current) return;
+    
+    const container = containerRef.current;
+    const isAtBottom = container.scrollTop + container.clientHeight >= container.scrollHeight - 100;
+    shouldAutoScrollRef.current = isAtBottom;
+  }, []);
+
+  // Auto-scroll only when new messages arrive and user hasn't scrolled up
   useEffect(() => {
-    if (messages.length > 0) {
+    const newMessageCount = messages.length;
+    const hasNewMessage = newMessageCount > lastMessageCountRef.current;
+    
+    // Don't auto-scroll during AI streaming responses
+    const isAIResponding = isLoading && streamingMessageId;
+    
+    if (hasNewMessage && shouldAutoScrollRef.current && !isAIResponding) {
       scrollToBottom();
     }
-  }, [messages.length, scrollToBottom]);
+    
+    lastMessageCountRef.current = newMessageCount;
+  }, [messages.length, scrollToBottom, isLoading, streamingMessageId]);
+
+  // Remove auto-scroll during streaming content updates
+  // Users can manually scroll to see new content if they want
+  // useEffect(() => {
+  //   if (streamingMessageId && (streamingContent || streamingReasoning) && shouldAutoScrollRef.current) {
+  //     scrollToBottom();
+  //   }
+  // }, [streamingMessageId, streamingContent, streamingReasoning, scrollToBottom]);
+
+  // Add scroll event listener
+  useEffect(() => {
+    const container = containerRef.current;
+    if (!container) return;
+
+    container.addEventListener('scroll', handleScroll, { passive: true });
+    return () => {
+      container.removeEventListener('scroll', handleScroll);
+      if (scrollTimeoutRef.current) {
+        clearTimeout(scrollTimeoutRef.current);
+      }
+    };
+  }, [handleScroll]);
+
+  // Reset auto-scroll when switching conversations
+  useEffect(() => {
+    shouldAutoScrollRef.current = true;
+    lastMessageCountRef.current = 0;
+  }, [messages[0]?.conversation_id]); // Reset when conversation changes
 
   // Sort messages by timestamp and deduplicate by ID to ensure proper chronological ordering
   const uniqueMessages = messages.filter((message, index, array) => 
@@ -168,6 +235,12 @@ export function MessageList({
     <div 
       ref={containerRef}
       className="flex-1 overflow-y-auto px-4 py-6 scrollbar-hide"
+      style={{
+        // Ensure stable height to prevent layout jumps
+        minHeight: '0',
+        // Use momentum scrolling on iOS
+        WebkitOverflowScrolling: 'touch'
+      }}
     >
       <div className="max-w-4xl mx-auto">
         {/* Render Chronological Timeline */}
@@ -216,8 +289,8 @@ export function MessageList({
           </div>
         )}
 
-        {/* Bottom spacer for auto-scroll */}
-        <div ref={messagesEndRef} />
+        {/* Bottom spacer for auto-scroll - with minimum height to prevent layout jumps */}
+        <div ref={messagesEndRef} className="h-4" />
       </div>
     </div>
   );

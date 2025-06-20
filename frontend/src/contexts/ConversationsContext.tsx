@@ -324,6 +324,27 @@ export function ConversationsProvider({ children }: { children: React.ReactNode 
     }
   }, [fetchConversations, authInitialized, user])
 
+  // Prevent auto-refresh on tab visibility change to avoid rerenders when switching tabs
+  useEffect(() => {
+    const handleVisibilityChange = (e: Event) => {
+      // Prevent any automatic refresh behavior when tab becomes visible
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
+    if (typeof window !== 'undefined') {
+      document.addEventListener('visibilitychange', handleVisibilityChange, true);
+      window.addEventListener('focus', handleVisibilityChange, true);
+      window.addEventListener('pageshow', handleVisibilityChange, true);
+      
+      return () => {
+        document.removeEventListener('visibilitychange', handleVisibilityChange, true);
+        window.removeEventListener('focus', handleVisibilityChange, true);
+        window.removeEventListener('pageshow', handleVisibilityChange, true);
+      };
+    }
+  }, [])
+
   const value: ConversationsContextType = {
     conversations,
     loading,
