@@ -10,6 +10,8 @@ class ProfileBase(BaseModel):
     supabase_access_token: Optional[str] = None
     supabase_project_ref: Optional[str] = None
     supabase_read_only: Optional[bool] = True
+    # API Key Management
+    openrouter_api_key: Optional[str] = None
 
 
 class ProfileCreate(ProfileBase):

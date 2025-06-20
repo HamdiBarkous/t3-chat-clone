@@ -18,6 +18,7 @@ export interface AIModel {
   }
   reasoning_capable?: boolean
   reasoning_by_default?: boolean
+  requires_api_key?: boolean
 }
 
 interface UseModelsReturn {

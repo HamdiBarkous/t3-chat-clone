@@ -200,13 +200,33 @@ export function MessageList({
     const adjustedTimeline = timeline.map(item => {
       if (item.type === 'message') {
         const message = item.data as Message;
-        // If this is a streaming message and we have tool executions, ensure it comes after tools
-        if (streamingMessageId === message.id && toolExecutions && toolExecutions.length > 0) {
-          const latestToolTime = Math.max(...toolExecutions.map(t => t.endTime || t.startTime));
-          return {
-            ...item,
-            timestamp: latestToolTime + 1 // Place slightly after the latest tool
-          };
+        // If this is a streaming message, ensure it comes after all thinking and tools
+        if (streamingMessageId === message.id) {
+          const latestTimestamps: number[] = [];
+          
+          // Get latest tool execution time
+          if (toolExecutions && toolExecutions.length > 0) {
+            latestTimestamps.push(...toolExecutions.map(t => t.endTime || t.startTime));
+          }
+          
+          // Get latest reasoning phase time
+          if (reasoningPhases && reasoningPhases.length > 0) {
+            latestTimestamps.push(...reasoningPhases.map(r => r.endTime || r.startTime));
+          }
+          
+          // Get streaming reasoning time
+          if (reasoningStartTime) {
+            latestTimestamps.push(reasoningStartTime);
+          }
+          
+          // Place the streaming message after all thinking and tool phases
+          if (latestTimestamps.length > 0) {
+            const latestTime = Math.max(...latestTimestamps);
+            return {
+              ...item,
+              timestamp: latestTime + 100 // Place well after the latest thinking/tool
+            };
+          }
         }
       }
       return item;

@@ -6,6 +6,8 @@ from app.core.config import settings
 from app.infrastructure.openrouter import openrouter_client
 from app.services.message_service import MessageService
 from app.services.conversation_service import ConversationService
+from app.services.tool_service import ToolService
+from app.infrastructure.repositories.supabase.profile_repository import SupabaseProfileRepository
 
 
 class OpenRouterService:
@@ -62,11 +64,48 @@ class OpenRouterService:
         
         return name_mapping.get(model_id, api_name)
 
-    async def get_available_models(self) -> List[Dict[str, Any]]:
-        """Get available models from OpenRouter"""
+    async def validate_api_key(self, api_key: str) -> tuple[bool, str]:
+        """Validate OpenRouter API key by making a test request"""
+        if not api_key or not api_key.strip():
+            return False, "API key cannot be empty"
+            
+        # Check basic format
+        if not (api_key.startswith("sk-or-v1-") or api_key.startswith("sk-or-")):
+            return False, "Invalid API key format. OpenRouter keys should start with 'sk-or-v1-' or 'sk-or-'"
+            
+        try:
+            # Create a temporary client with the provided API key
+            test_client = openrouter_client.with_api_key(api_key)
+            
+            # Make a minimal test request to validate the key
+            test_messages = [{"role": "user", "content": "test"}]
+            await test_client.chat_completion(
+                messages=test_messages,
+                model="openai/gpt-4o-mini",  # Use the cheapest model for testing
+                max_tokens=1,  # Minimal tokens to reduce cost
+                temperature=0.0
+            )
+            
+            return True, "API key is valid"
+            
+        except ValueError as e:
+            error_msg = str(e).lower()
+            if "401" in error_msg or "unauthorized" in error_msg or "invalid" in error_msg:
+                return False, "Invalid API key. Please check your OpenRouter API key."
+            elif "402" in error_msg or "credits" in error_msg or "payment" in error_msg:
+                return False, "API key is valid but has insufficient credits. Please add credits to your OpenRouter account."
+            elif "429" in error_msg or "rate limit" in error_msg:
+                return False, "Rate limit exceeded. Please try again in a few minutes."
+            else:
+                return False, f"API key validation failed: {str(e)}"
+        except Exception as e:
+            return False, f"Unable to validate API key: {str(e)}"
+
+    async def get_available_models(self, user_id: Optional[str] = None) -> List[Dict[str, Any]]:
+        """Get all available models from OpenRouter with lock status indicators"""
         models = await openrouter_client.get_available_models()
         
-        # Define allowed models
+        # Define all allowed models
         allowed_models = {
             "google/gemini-2.5-flash-lite-preview-06-17",
             "google/gemini-2.5-flash",
@@ -83,7 +122,7 @@ class OpenRouterService:
             "deepseek/deepseek-chat-v3-0324"
         }
         
-        # Filter and format models for easier frontend consumption
+        # Format models for frontend consumption - show all models with lock status
         formatted_models = []
         for model in models:
             model_id = model.get("id")
@@ -95,6 +134,9 @@ class OpenRouterService:
                 api_name = model.get("name", model_id)
                 clean_name = self._get_clean_model_name(model_id, api_name)
                 
+                # Mark if model requires user API key
+                requires_api_key = model_id != "openai/gpt-4o-mini"
+                
                 formatted_models.append({
                     "id": model_id,
                     "name": clean_name,
@@ -103,6 +145,7 @@ class OpenRouterService:
                     "top_provider": model.get("top_provider", {}),
                     "reasoning_capable": reasoning_capable,
                     "reasoning_by_default": reasoning_by_default,
+                    "requires_api_key": requires_api_key,
                 })
         
         return formatted_models
@@ -111,16 +154,11 @@ class OpenRouterService:
     def tool_service(self):
         """Lazy load tool service to avoid circular imports"""
         if self._tool_service is None:
-            from app.services.tool_service import ToolService
             self._tool_service = ToolService()
         return self._tool_service
 
-    async def get_user_tool_service(self, user_id: str) -> 'ToolService':
+    async def get_user_tool_service(self, user_id: str):
         """Get a user-specific tool service with their credentials"""
-        from app.services.tool_service import ToolService
-        from app.infrastructure.repositories.supabase.profile_repository import SupabaseProfileRepository
-        from uuid import UUID
-        
         profile_repo = SupabaseProfileRepository()
         return ToolService(user_id=UUID(user_id), profile_repo=profile_repo)
 
@@ -144,6 +182,22 @@ class OpenRouterService:
 
         # Determine which model to use
         model_to_use = model or conversation.current_model
+        
+        # Get user profile to check for custom API key
+        from app.services.profile_service import ProfileService
+        from app.infrastructure.repositories.supabase.profile_repository import SupabaseProfileRepository
+        profile_service = ProfileService(SupabaseProfileRepository())
+        profile = await profile_service.get_profile(user_uuid)
+        
+        # Validate access to premium models
+        if model_to_use != "openai/gpt-4o-mini":
+            if not profile or not profile.openrouter_api_key:
+                raise ValueError(f"Model {model_to_use} requires a personal OpenRouter API key. Please add your API key in settings to access premium models.")
+        
+        # Use custom OpenRouter client if user has their own API key
+        client_to_use = openrouter_client
+        if profile and profile.openrouter_api_key and model_to_use != "openai/gpt-4o-mini":
+            client_to_use = openrouter_client.with_api_key(profile.openrouter_api_key)
 
         # Get conversation context
         context_messages = await self.message_service.get_conversation_context_for_ai(
@@ -159,7 +213,7 @@ class OpenRouterService:
             })
 
         # Make OpenRouter API call
-        openrouter_messages = openrouter_client.format_messages_for_openrouter(
+        openrouter_messages = client_to_use.format_messages_for_openrouter(
             formatted_messages, 
             conversation.system_prompt
         )
@@ -176,7 +230,7 @@ class OpenRouterService:
         
         try:
             # Stream with or without tools
-            async for chunk in openrouter_client.chat_completion_stream(
+            async for chunk in client_to_use.chat_completion_stream(
                 messages=openrouter_messages,
                 model=model_to_use,
                 temperature=conversation.temperature or 1.0,
@@ -285,7 +339,7 @@ class OpenRouterService:
                             accumulated_tool_calls = {}
                             
                             # Continue conversation to see if AI wants to call more tools
-                            async for follow_up_chunk in openrouter_client.chat_completion_stream(
+                            async for follow_up_chunk in client_to_use.chat_completion_stream(
                                 messages=current_messages,
                                 model=model_to_use,
                                 temperature=conversation.temperature or 1.0,

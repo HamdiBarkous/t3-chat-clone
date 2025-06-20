@@ -33,9 +33,10 @@ async def get_available_models(
     current_user: dict = Depends(get_current_user),
     openrouter_service: OpenRouterService = Depends(get_openrouter_service)
 ):
-    """Get list of available AI models from OpenRouter"""
+    """Get list of available AI models from OpenRouter filtered by user access"""
     try:
-        models = await openrouter_service.get_available_models()
+        user_id = current_user.get("id")
+        models = await openrouter_service.get_available_models(user_id=user_id)
         return models
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to fetch models: {str(e)}")

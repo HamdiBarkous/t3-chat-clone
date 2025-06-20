@@ -5,15 +5,19 @@ import json
 
 
 class OpenRouterClient:
-    def __init__(self):
+    def __init__(self, api_key: Optional[str] = None):
         self.base_url = settings.openrouter_base_url
-        self.api_key = settings.openrouter_api_key
+        self.api_key = api_key or settings.openrouter_api_key
         self.headers = {
             "Authorization": f"Bearer {self.api_key}",
             "Content-Type": "application/json",
             "HTTP-Referer": "https://your-app.com",  # Required by OpenRouter
             "X-Title": settings.app_name,
         }
+    
+    def with_api_key(self, api_key: str) -> 'OpenRouterClient':
+        """Create a new instance with a different API key"""
+        return OpenRouterClient(api_key=api_key)
 
     async def get_available_models(self) -> List[Dict[str, Any]]:
         """Get list of available models from OpenRouter"""
@@ -89,17 +93,33 @@ class OpenRouterClient:
                 response.raise_for_status()
                 return response.json()
             except httpx.HTTPStatusError as e:
+                error_detail = "Unknown error"
+                try:
+                    error_response = e.response.json()
+                    error_detail = error_response.get('error', {}).get('message', e.response.text)
+                except Exception:
+                    error_detail = e.response.text
+                
                 # Provide user-friendly error messages for common issues
-                if e.response.status_code == 402:
-                    raise ValueError(f"Insufficient credits for {model}. This model requires more tokens than available.")
+                if e.response.status_code == 401:
+                    raise ValueError("Invalid API key. Please check your OpenRouter API key and try again.")
+                elif e.response.status_code == 402:
+                    if "credits" in error_detail.lower():
+                        raise ValueError("Insufficient credits for this model. Please add credits to your OpenRouter account.")
+                    else:
+                        raise ValueError("Payment required. Please check your OpenRouter account balance.")
                 elif e.response.status_code == 429:
-                    raise ValueError(f"Rate limit exceeded for {model}. Please try again later.")
+                    raise ValueError("Rate limit exceeded. Please try again in a few minutes.")
                 elif e.response.status_code == 404:
-                    raise ValueError(f"Model {model} not found or not available.")
+                    raise ValueError(f"Model '{model}' is not available. Please try a different model.")
+                elif e.response.status_code == 422:
+                    raise ValueError(f"Invalid request for model '{model}'. Please check your input and try again.")
                 else:
-                    raise ValueError(f"OpenRouter API error: {e.response.status_code} - {e.response.text}")
+                    raise ValueError(f"OpenRouter API error ({e.response.status_code}): {error_detail}")
+            except httpx.TimeoutException:
+                raise ValueError(f"Request timed out for model '{model}'. Please try again.")
             except Exception as e:
-                raise ValueError(f"OpenRouter request failed for {model}: {str(e)}")
+                raise ValueError(f"Failed to connect to OpenRouter for model '{model}': {str(e)}")
 
     async def chat_completion_stream(
         self, 
@@ -188,27 +208,36 @@ class OpenRouterClient:
             except httpx.HTTPStatusError as e:
                 error_detail = "Unknown error"
                 try:
-                    error_detail = await e.response.aread()
-                    error_detail = error_detail.decode('utf-8')
+                    error_content = await e.response.aread()
+                    error_text = error_content.decode('utf-8')
+                    try:
+                        error_response = json.loads(error_text)
+                        error_detail = error_response.get('error', {}).get('message', error_text)
+                    except json.JSONDecodeError:
+                        error_detail = error_text
                 except Exception:
                     error_detail = f"HTTP {e.response.status_code}"
                 
                 # Provide user-friendly error messages for common issues
-                if e.response.status_code == 402:
+                if e.response.status_code == 401:
+                    raise ValueError("Invalid API key. Please check your OpenRouter API key and try again.")
+                elif e.response.status_code == 402:
                     if "credits" in error_detail.lower():
-                        raise ValueError(f"Insufficient credits for {model}. This model requires more tokens than available.")
+                        raise ValueError("Insufficient credits for this model. Please add credits to your OpenRouter account.")
                     else:
-                        raise ValueError(f"Payment required for {model}. Please check your OpenRouter credits.")
+                        raise ValueError("Payment required. Please check your OpenRouter account balance.")
                 elif e.response.status_code == 429:
-                    raise ValueError(f"Rate limit exceeded for {model}. Please try again later.")
+                    raise ValueError("Rate limit exceeded. Please try again in a few minutes.")
                 elif e.response.status_code == 404:
-                    raise ValueError(f"Model {model} not found or not available.")
+                    raise ValueError(f"Model '{model}' is not available. Please try a different model.")
+                elif e.response.status_code == 422:
+                    raise ValueError(f"Invalid request for model '{model}'. Please check your input and try again.")
                 else:
-                    raise ValueError(f"OpenRouter streaming API error: {e.response.status_code} - {error_detail}")
+                    raise ValueError(f"OpenRouter streaming API error ({e.response.status_code}): {error_detail}")
             except httpx.TimeoutException:
-                raise ValueError(f"OpenRouter streaming request timed out for {model}")
+                raise ValueError(f"Request timed out for model '{model}'. Please try again.")
             except Exception as e:
-                raise ValueError(f"OpenRouter streaming request failed for {model}: {str(e)}")
+                raise ValueError(f"Failed to connect to OpenRouter for model '{model}': {str(e)}")
 
     def format_messages_for_openrouter(self, messages: List[Dict[str, Any]], system_prompt: Optional[str] = None) -> List[Dict[str, Any]]:
         """Format messages for OpenRouter API - handles both text and vision messages"""

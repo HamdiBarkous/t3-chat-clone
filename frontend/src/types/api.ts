@@ -122,6 +122,8 @@ export interface ProfileResponse {
   supabase_access_token?: string;
   supabase_project_ref?: string;
   supabase_read_only?: boolean;
+  // API Key Management
+  openrouter_api_key?: string;
   created_at: string;
   updated_at: string;
 }
@@ -133,6 +135,12 @@ export interface ProfileUpdate {
   supabase_access_token?: string;
   supabase_project_ref?: string;
   supabase_read_only?: boolean;
+  // API Key Management
+  openrouter_api_key?: string;
+}
+
+export interface ApiKeyUpdate {
+  api_key?: string;
 }
 
 // Model types
@@ -144,6 +152,9 @@ export interface ModelInfo {
     prompt: number;
     completion: number;
   };
+  reasoning_capable?: boolean;
+  reasoning_by_default?: boolean;
+  requires_api_key?: boolean;
 }
 
 // API Response types

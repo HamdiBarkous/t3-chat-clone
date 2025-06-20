@@ -8,7 +8,7 @@
 import React, { useState, useRef, useEffect, useMemo } from 'react';
 import { clsx } from 'clsx';
 import { OpenAI } from '@lobehub/icons';
-import { Brain } from 'lucide-react';
+import { Brain, Lock, LockOpen } from 'lucide-react';
 
 interface ModelInfo {
   id: string;
@@ -16,6 +16,7 @@ interface ModelInfo {
   context_length?: number;
   reasoning_capable?: boolean;
   reasoning_by_default?: boolean;
+  requires_api_key?: boolean;
 }
 
 interface ModelSelectorProps {
@@ -27,6 +28,9 @@ interface ModelSelectorProps {
   // Reasoning props - now per model
   reasoningByModel?: Record<string, boolean>;
   onReasoningToggle?: (model: string, enabled: boolean) => void;
+  // API key status
+  hasApiKey?: boolean;
+  onApiKeyRequired?: () => void;
 }
 
 interface GroupedModels {
@@ -84,6 +88,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   className = '',
   reasoningByModel,
   onReasoningToggle,
+  hasApiKey = false,
+  onApiKeyRequired,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
   const [openUpward, setOpenUpward] = useState(false);
@@ -157,6 +163,14 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
   }, [isOpen]);
 
   const handleModelSelect = (modelId: string) => {
+    const model = models.find(m => m.id === modelId);
+    
+    // Check if model requires API key and user doesn't have one
+    if (model?.requires_api_key && !hasApiKey) {
+      onApiKeyRequired?.();
+      return;
+    }
+    
     onChange(modelId);
     setIsOpen(false);
   };
@@ -205,6 +219,34 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
     );
   };
 
+  // Render lock indicator for premium models
+  const renderLockIndicator = (model: ModelInfo) => {
+    if (!model.requires_api_key) return null;
+    
+    const isLocked = !hasApiKey;
+    const Icon = isLocked ? Lock : LockOpen;
+    
+    return (
+      <div
+        className="flex items-center"
+        title={
+          isLocked 
+            ? 'Requires API key - Click to add your OpenRouter API key'
+            : 'Premium model unlocked with your API key'
+        }
+      >
+        <Icon 
+          size={14}
+          className={`${
+            isLocked 
+              ? 'text-yellow-500' 
+              : 'text-green-500'
+          }`}
+        />
+      </div>
+    );
+  };
+
   return (
     <div ref={dropdownRef} className={clsx('relative', className)}>
       {/* Trigger Button */}
@@ -229,6 +271,7 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
           </div>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-2">
+              {currentModel && renderLockIndicator(currentModel)}
               {currentModel && (
                 renderReasoningIndicator(
                   currentModel,
@@ -294,7 +337,9 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
 
                 {/* Models in Company */}
                 <div className="mx-3 mb-3 space-y-1 bg-card/20 backdrop-blur-sm rounded-lg p-2 border border-border/10">
-                  {companyModels.map((model) => (
+                  {companyModels.map((model) => {
+                    const isLocked = model.requires_api_key && !hasApiKey;
+                    return (
                     <button
                       key={model.id}
                       type="button"
@@ -306,20 +351,31 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                         'transform hover:scale-[1.01] active:scale-[0.99]',
                         model.id === value
                           ? 'bg-primary/15 text-primary border border-primary/40 shadow-md shadow-primary/10'
+                          : isLocked
+                          ? 'text-text-muted/70 hover:text-text-muted border border-transparent hover:border-yellow-200/30 bg-yellow-50/20 dark:bg-yellow-900/10'
                           : 'text-text-primary hover:text-text-primary/90 border border-transparent hover:border-border/30'
                       )}
                     >
                       <div className="flex items-center gap-3 min-w-0 flex-1">
                         <div className="min-w-0 flex-1">
                           <div className="flex items-center gap-2">
+                            {renderLockIndicator(model)}
                             {renderReasoningIndicator(
                               model,
                               !model.reasoning_by_default,
                               reasoningByModel?.[model.id] || false
                             )}
-                            <span className="font-medium truncate group-hover:text-text-primary transition-colors">
+                            <span className={clsx(
+                              "font-medium truncate transition-colors",
+                              isLocked ? "group-hover:text-text-muted" : "group-hover:text-text-primary"
+                            )}>
                               {model.name}
                             </span>
+                            {isLocked && (
+                              <span className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-1.5 py-0.5 rounded">
+                                API Key Required
+                              </span>
+                            )}
                           </div>
                           {model.context_length && (
                             <div className="text-xs text-text-muted/70 group-hover:text-text-muted/90 transition-colors">
@@ -335,7 +391,8 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                         </svg>
                       )}
                     </button>
-                  ))}
+                    );
+                  })}
                 </div>
               </div>
             ))}

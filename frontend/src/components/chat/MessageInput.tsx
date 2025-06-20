@@ -12,6 +12,7 @@ import { FileUpload, useFileUpload } from '@/components/ui/FileUpload';
 import { DocumentBadge } from '@/components/ui/DocumentBadge';
 import { ImagePreview } from '@/components/ui/ImagePreview';
 import { useModels } from '@/hooks/useModels';
+import { useApiKey } from '@/hooks/useProfile';
 import { MCPTools } from '@/components/chat/MCPTools';
 import { WebSearch } from '@/components/chat/WebSearch';
 
@@ -54,6 +55,9 @@ export function MessageInput({
   
   // Get models from backend
   const { models, loading: modelsLoading } = useModels();
+  
+  // Get API key status
+  const { hasApiKey } = useApiKey();
   
 
   
@@ -380,6 +384,8 @@ export function MessageInput({
                 className="w-64"
                 reasoningByModel={reasoningByModel}
                 onReasoningToggle={handleReasoningToggle}
+                hasApiKey={hasApiKey}
+                onApiKeyRequired={onShowCustomization}
               />
               <WebSearch
                 enabled={searchEnabled}

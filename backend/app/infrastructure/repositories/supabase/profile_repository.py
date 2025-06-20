@@ -50,8 +50,16 @@ class SupabaseProfileRepository:
     async def update(self, profile_id: UUID, profile_data: ProfileRowUpdate) -> Optional[ProfileRow]:
         """Update an existing profile"""
         try:
-            # Build update data excluding None values
-            update_data = {k: v for k, v in profile_data.model_dump().items() if v is not None}
+            # Build update data - include all fields that are not None, plus explicit None for openrouter_api_key removal
+            update_data = {}
+            
+            for field_name, field_value in profile_data.model_dump().items():
+                if field_value is not None:
+                    update_data[field_name] = field_value
+            
+            # Special case: if openrouter_api_key is explicitly set to None (for removal), include it
+            if hasattr(profile_data, 'openrouter_api_key') and profile_data.openrouter_api_key is None:
+                update_data['openrouter_api_key'] = None
             
             if not update_data:
                 return await self.get_by_id(profile_id)
@@ -125,7 +133,9 @@ class SupabaseProfileRepository:
                 preferred_model=getattr(profile_data, 'preferred_model', None),
                 supabase_access_token=getattr(profile_data, 'supabase_access_token', None),
                 supabase_project_ref=getattr(profile_data, 'supabase_project_ref', None),
-                supabase_read_only=getattr(profile_data, 'supabase_read_only', None)
+                supabase_read_only=getattr(profile_data, 'supabase_read_only', None),
+                # API Key Management
+                openrouter_api_key=getattr(profile_data, 'openrouter_api_key', None)
             )
             return await self.update(user_id, update_data)
         except Exception as e:

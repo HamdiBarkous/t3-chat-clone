@@ -1,8 +1,9 @@
 'use client';
 
 import React, { useState } from 'react';
-import { X, Eye, EyeOff, Database, Shield } from 'lucide-react';
+import { X, Eye, EyeOff, Database, Shield, Key } from 'lucide-react';
 import clsx from 'clsx';
+import { ApiKeyManager } from '@/components/ui/ApiKeyManager';
 
 interface CustomizationSidebarProps {
   isOpen: boolean;
@@ -224,6 +225,16 @@ export const CustomizationSidebar: React.FC<CustomizationSidebarProps> = ({
               <p className="text-xs text-text-muted/70">
                 Controls the diversity of word choices. Lower values for more predictable responses.
               </p>
+            </div>
+
+            {/* API Key Management */}
+            <div className="space-y-4 border-t border-border/30 pt-6">
+              <div className="flex items-center gap-2">
+                <Key className="w-4 h-4 text-primary" />
+                <label className="text-sm font-medium text-text-primary">Model Access</label>
+              </div>
+              
+              <ApiKeyManager />
             </div>
 
             {/* Supabase MCP Integration */}

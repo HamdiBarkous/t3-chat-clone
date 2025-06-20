@@ -2,6 +2,7 @@ from typing import Optional
 from uuid import UUID
 
 from app.schemas.profile import ProfileCreate, ProfileUpdate, ProfileResponse
+from app.services.openrouter_service import OpenRouterService
 
 
 class ProfileService:
@@ -49,4 +50,24 @@ class ProfileService:
 
     async def delete_profile(self, user_id: UUID) -> bool:
         """Delete user profile"""
-        return await self.profile_repository.delete_profile(user_id) 
+        return await self.profile_repository.delete_profile(user_id)
+    
+    async def update_user_api_key(self, user_id: UUID, api_key: Optional[str]) -> Optional[ProfileResponse]:
+        """Update user's OpenRouter API key with validation"""
+        # If removing the API key, no validation needed
+        if api_key is None or api_key.strip() == "":
+            profile_data = ProfileUpdate(openrouter_api_key=None)
+            return await self.update_profile(user_id, profile_data)
+        class DummyService:
+            pass
+        
+        openrouter_service = OpenRouterService(DummyService(), DummyService())
+        is_valid, error_message = await openrouter_service.validate_api_key(api_key.strip())
+        
+        if not is_valid:
+            # Raise a ValueError with the specific validation error
+            raise ValueError(error_message)
+        
+        # API key is valid, save it
+        profile_data = ProfileUpdate(openrouter_api_key=api_key.strip())
+        return await self.update_profile(user_id, profile_data) 

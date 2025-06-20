@@ -87,6 +87,8 @@ class ProfileRow(SupabaseModel):
     supabase_access_token: Optional[str] = None
     supabase_project_ref: Optional[str] = None
     supabase_read_only: bool = True
+    # API Key Management
+    openrouter_api_key: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 
@@ -146,6 +148,8 @@ class ProfileRowCreate(SupabaseModel):
     supabase_access_token: Optional[str] = None
     supabase_project_ref: Optional[str] = None
     supabase_read_only: Optional[bool] = True
+    # API Key Management
+    openrouter_api_key: Optional[str] = None
 
 
 class ProfileRowUpdate(SupabaseModel):
@@ -156,6 +160,8 @@ class ProfileRowUpdate(SupabaseModel):
     supabase_access_token: Optional[str] = None
     supabase_project_ref: Optional[str] = None
     supabase_read_only: Optional[bool] = None
+    # API Key Management
+    openrouter_api_key: Optional[str] = None
 
 
 # Extended models that include related data for complex queries
