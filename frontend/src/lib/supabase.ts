@@ -17,7 +17,7 @@ const isMissingCredentials = typeof window !== 'undefined' && (!supabaseUrl || !
 // Create the client with fallback values for build time
 const _supabase = createClient(url, key, {
   auth: {
-    autoRefreshToken: true,
+    autoRefreshToken: false, // Disable auto refresh on window focus to prevent rerenders
     persistSession: true,
     detectSessionInUrl: true,
     storageKey: 't3-chat-auth', // Use a unique storage key
