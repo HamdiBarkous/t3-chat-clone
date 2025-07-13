@@ -371,11 +371,6 @@ export const ModelSelector: React.FC<ModelSelectorProps> = ({
                             )}>
                               {model.name}
                             </span>
-                            {isLocked && (
-                              <span className="text-xs text-yellow-600 dark:text-yellow-400 bg-yellow-100 dark:bg-yellow-900/30 px-1.5 py-0.5 rounded">
-                                API Key Required
-                              </span>
-                            )}
                           </div>
                           {model.context_length && (
                             <div className="text-xs text-text-muted/70 group-hover:text-text-muted/90 transition-colors">

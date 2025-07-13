@@ -20,7 +20,7 @@ interface ChatInterfaceProps {
 }
 
 export function ChatInterface({ conversationId, conversation, onShowCustomization }: ChatInterfaceProps) {
-  const [currentModel, setCurrentModel] = useState(conversation?.current_model || 'openai/gpt-4o');
+  const [currentModel, setCurrentModel] = useState(conversation?.current_model || 'openai/gpt-4o-mini');
   const [initialToolsState, setInitialToolsState] = useState<{
     enabledTools: string[];
     reasoning: boolean;

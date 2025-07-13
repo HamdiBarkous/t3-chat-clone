@@ -47,7 +47,7 @@ function HomePage() {
   const originalSupabaseReadOnly = supabaseMCPConfig.supabase_read_only;
   
   // Message input state
-  const [currentModel, setCurrentModel] = useState('openai/gpt-4o');
+  const [currentModel, setCurrentModel] = useState('openai/gpt-4o-mini');
   
   // Use real conversations hook
   const { loading, createConversation } = useConversations();

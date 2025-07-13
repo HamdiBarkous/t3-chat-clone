@@ -152,7 +152,7 @@ function ConversationPage({ params }: ConversationPageProps) {
     try {
       // Create conversation with default settings
       const newConversation = await createConversation({
-        current_model: 'openai/gpt-4o',
+        current_model: 'openai/gpt-4o-mini',
         system_prompt: 'You are a helpful assistant',
       });
       
