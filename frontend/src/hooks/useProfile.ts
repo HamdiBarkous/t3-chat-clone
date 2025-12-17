@@ -108,7 +108,9 @@ export function useApiKey(): UseApiKeyReturn {
       setError(null);
       const profileData = await apiClient.get<ProfileResponse>('/user/profile');
       setHasApiKey(!!profileData.openrouter_api_key);
-      setAvailableModels(profileData.available_models || ['openai/gpt-4o-mini']);
+      // Model access is determined by whether user has API key
+      // Has key = all models available, no key = only gpt-4o-mini
+      setAvailableModels(['openai/gpt-4o-mini']);
     } catch (err: unknown) {
       console.error('Failed to fetch profile:', err);
       setError(err instanceof Error ? err.message : 'Failed to fetch profile');
