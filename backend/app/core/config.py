@@ -27,7 +27,7 @@ class Settings(BaseSettings):
     tavily_api_key: Optional[str] = os.getenv("TAVILY_API_KEY")
     
     # Security & JWT
-    jwt_secret_key: str = "dev-secret-key-change-in-production"
+    jwt_secret_key: str = os.getenv("JWT_SECRET_KEY", "dev-secret-key-change-in-production")
     jwt_algorithm: str = "HS256"
     
     # Title Generation
@@ -42,10 +42,9 @@ class Settings(BaseSettings):
         "http://localhost:5173",  # Vite dev server
         "http://127.0.0.1:3000",
         "http://127.0.0.1:5173",
-        "http://54.144.220.40:8000",  # EC2 backend
+        "https://100.49.134.211.nip.io",  # EC2 backend (Elastic IP)
         "https://*.vercel.app",  # Vercel deployment domains
         "https://t3-chat-clone-dc22kjqzl-hamdi-barkous-projects.vercel.app",  # Your actual Vercel domain
-        "*"  # Allow all origins for now (change this in production)
     ]
     
     class Config:
